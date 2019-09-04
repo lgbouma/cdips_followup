@@ -1,0 +1,123 @@
+HATS554-051 = TIC65805840.01
+= GAIA 5617126180115568256
+
+....
+the CDIPS vetting report is in this folder.
+
+------
+On the absolute RV of the cluster and star
+
+The star was quoted by Kharchenko+13 as an NGC 2354 member (300 Myr old).  The
+kinematics and parallaxes look pretty good (see attached).  This cluster was
+quoted by Soubiran+19 to have an RV of 34.4 +/- 0.2 km/s.
+
+((The Soubiran cluster RV, 34.4 +/- 0.2 km/s, has an uncertainty that is being
+quoted for the mean. In other words, Soubiran et al scaled it down by sqrt(N),
+where there were N=31 Gaia DR2 stars with RVs for the cluster. So the typical
+scatter in RVs for cluster members is then ~0.2*sqrt(31) ~= 1km/s.   An
+independent measurement of the cluster RV from RAVE (Conrad+2017) is 33.4 +/-
+0.3 km/s.))
+
+The star has a gamma velocity of 29.59 +- 0.67 km/s from WiFeS, 30.79 +- 0.03
+km/s from HARPS, and 30.86 +- 0.01 km/s from FEROS. So it's pretty close to the
+cluster value, (and may be within the actually spread of the distribution if
+you looked at the reference).  The quick reduction of the FEROS data gives a
+metallicity of [Fe/H] = -0.2 +- 0.2, and vsini = 15 +- 0.7 km/s.
+
+So overall, the ~30-31km/s from the WiFeS/HARPS/FEROS RVs seem pretty
+consistent with the star being a cluster member.
+
+(( HOWEVER true assessment of the statistical weight of this statement depends
+on what the velocity distribution of neighboring stars in ra/dec/parallax space
+is)).
+
+------
+
+The proper motion is a little bit off... compared to the Kharchenko members.
+
+Conrad+17 also found [Fe/H] = -0.1 +/- 0.1 for NGC 2354 based on RAVE spectra,
+consistent with the metallicity from Feros.
+
+Conrad+17 also derived an independent cluster age of log(t) = 8.1, i.e. ~120
+Myr instead of the ~300 Myr found by Kharchenko+13.
+
+
+------
+
+How do the proper motions compare to the Cantat-Gaudin values?  CG18 gives
+
+Cluster
+pmRA = -2.885 +/- 0.106  mas/yr (where the uncertainty is without sqrt shenanigans)
+pmDEC = 1.832 +/- 0.111  mas/yr
+plx = 0.753 +/- 0.035    mas
+
+For this star, we have ---
+pmRA = -2.348 +/- 0.024 mas/yr
+pmDEC = 0.978 +/- 0.022 mas/yr
+plx = 0.96 ± 0.02 mas
+
+And the RVs have
+Soubiran+19 RV = 34.4 +/- 0.2 km/s.
+Star RV ~30-31km/s from the WiFeS/HARPS/FEROS
+
+Note that the radius containing 50% of members was found by CG18 to be
+0.152 degrees ~= 550 arcseconds... (much bigg
+
+Expected distance is 1278.5 pc. (And this radius corresponds to
+550arcsec*1278.5pc = 703175.0 AU = 3.4 pc).
+(The typical OC radius is like 10 pc).
+
+The star has d = 1/omega_as = 1039 pc.
+And a rather confidently quoted parallax as above.
+However if the parallax were systematically off by 0.1 milliarcsec (and in the
+direction that pushed it lower)... 
+
+Recall that the Gaia systematic global parallax offset is of order 100
+microarcsec = 0.1 mas.
+
+Leung & Bovy 2019 showed that this offset varies with color, apparent
+magnitude, and effective temperature 
+
+They report it is like tilde -20 microarcsec for G_BP-G_RP = 0.7
+tilde -40 microarcsec for G=13.
+
+And tilde -60 microarcsec for fainter, redder stars (Which presumably make up
+most of the cluster)
+
+So it could be that the clusters are estimated to be systematically further
+(smaller parallax) than the blue members.
+
+====================
+
+So let's be clear about the cluster membership.
+
+If you believe the ERROR BARS... and perhaps you SHOULD... this thing is on the
+cluster OUTSKIRTS.
+
+Neither its proper motions, its parallax, nor its radial velocity agree within
+the uncertainties of the cluster parameters. It's perhaps 200 pc too close,
+compared to predictions.
+
+In addition, CG18 did not report it as a member.
+
+====================
+
+TODO:
+* how can we tell if it is a member or not? I would say the kinematics are
+  SUGGESTIVE BUT INCONCLUSIVE. b/c of the error bars, above.
+
+well...
+* the stellar properties from the HR diagram imply an age constraint. if it
+  consistent with the 100-300 Myr found by Conrad17 and/or K13, good.
+
+* the rotation might be extractable?
+
+Regardless, it seems like even after brief inspection, we should be skeptical
+of the cluster membership.
+
+The standard 4-panel
+parallax   pmDec vs pmRA
+G vs Bp-Rp  Dec vs RA
+
+plots might look a fair bit worse with the CG18 members instead of the
+Kharchenko ones...

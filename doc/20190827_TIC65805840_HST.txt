@@ -1,0 +1,5 @@
+- have there been any HST observations of this cluster? that'd be wild...
+
+  - answer: no.
+  - MAST gives Panstarrs-1 observations. And nearby (but not coincident) SWIFT
+    observations. But no HST observations.

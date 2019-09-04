@@ -1,0 +1,41 @@
+One thought:
+
+From Gaia, query everything at similar parallax as the cluster (like ~0.85 mas, plus or minus 0.3 mas).
+
+proper motions of mu_delta, mu_alpha* = 1.8, -2.5, plus or minus 3 or 4 mas/yr.
+
+RA, dec J2000
+108.503 -25.724   (center of cluster), plus or minus 0.5 degrees (circle).
+
+----------
+
+get the positions, proper motions, 3-band photometry, parallaxes.
+
+Overplot the CLUSTER MEMBERS reported by CG18. (And maybe by K13).
+
+And see how your target star differs from other stars in this neighborhood.
+
+(And if it does... i.e. whether the error bars should be trusted, or not).
+
+----------
+
+ran it as NGC 2354 neighborhood query:
+
+select g.source_id, g.phot_bp_mean_mag, g.phot_rp_mean_mag, g.phot_g_mean_mag,
+g.parallax, g.ra, g.dec, g.pmra, g.pmdec
+from gaiadr2.gaia_source as g
+WHERE
+g.parallax > 0.60
+and
+g.parallax < 1.10
+and
+g.dec < -25.2
+and
+g.dec > -26.2
+and
+g.ra > 108
+and
+g.ra < 109
+and
+g.phot_g_mean_mag < 17
+

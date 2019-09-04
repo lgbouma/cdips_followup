@@ -1,0 +1,59 @@
+	'34:J/MNRAS/470/3937/clusters' with 41 column(s) and 1 row(s)
+
+In [2]: result[34]
+Out[2]:
+<Table masked=True length=1>
+   _r   Cluster    UCAC4      RA_ICRS     DE_ICRS    f.mag   a.mag    of  ...   PM1   PM2kinem PM2join   PM3   ClassM1 ClassM2 ClassM3
+ arcsec                         deg         deg       mag     mag         ...
+float64 bytes17   bytes10     float64     float64   float32 float32 uint8 ... float32 float32  float32 float32  int16   int16   int16
+------- -------- ---------- ----------- ----------- ------- ------- ----- ... ------- -------- ------- ------- ------- ------- -------
+  0.037 NGC_2354 322-021027 108.5876430 -25.6463425  13.435  13.446     0 ...    0.93     1.00    1.00    0.96       1       1       1
+
+In [3]: result[34].to_pandas().T
+Out[3]:
+                      0
+_r                0.037
+Cluster     b'NGC_2354'
+UCAC4     b'322-021027'
+RA_ICRS         108.588
+DE_ICRS        -25.6463
+f.mag            13.435
+a.mag            13.446
+of                    0
+db                    0
+Na                    7
+Nu                    7
+Nc                    4
+pmRA               -3.1
+pmDE                1.4
+Jmag             12.635
+Hmag             12.378
+Kmag             12.374
+Bmag             14.046
+Vmag             13.519
+gmag             13.745
+rmag             13.434
+imag             13.381
+g                     0
+c                     3
+H                     0
+A                     1
+b                     0
+h                     0
+Z                     0
+B                     0
+L                     0
+N                     1
+S                     1
+OutFlag               0
+PM1                0.93
+PM2kinem              1
+PM2join               1
+PM3                0.96
+ClassM1               1
+ClassM2               1
+ClassM3               1
+
+====================
+
+So using rattier proper motions, they reported it as a cluster member.

@@ -1,0 +1,38 @@
+Rafael's parameter's:
+
+From: Rafael Brahm <rbrahm@gmail.com>
+Date: Fri, Aug 9, 2019 at 9:27 AM
+Subject: Re: ZASPE for HATS554-051 (possible HJ in an open cluster)
+To: Joel Hartman <jhartman@astro.princeton.edu>
+
+
+Hi Joel,
+
+Parameters based on FEROS spectra below:
+
+        Teff= 6681.0 +/- 157.0
+        log(g)= 4.24 +/- 0.27
+        [Fe/H]= 0.22 +/- 0.083
+        vsin(i)= 14.89 +/- 0.474
+
+
+----------
+
+Conrad+17 found [Fe/H] = -0.1 +/- 0.1 for NGC 2354 based on RAVE spectra,
+consistent with the metallicity from Feros.
+
+JK, it was from Conrad+14...
+
+Fe/H = -0.109 +/- 0.163
+
+and the standard deviation was 0.282
+
+however this was just from 3 stars. So basically, it's not well-known.
+
+----------
+
+So here is another dimension -- the metallicity, on which this star might be a
+bit of an outlier.
+
+(However the mean metallicity of the cluster is so poorly known that I don't
+think it's a good case.)
