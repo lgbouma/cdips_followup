@@ -98,7 +98,17 @@ def make_observability_chart_multisite(
     name="WASP 4", sites=['keck','las campanas'], ra=None, dec=None,
     start_time=Time('2019-09-13 20:00:00'),
     end_time=Time('2020-07-31 20:00:00'),
-    outdir=None):
+    outdir=None,
+    overwrite=False):
+
+    outpath = os.path.join(
+        outdir,
+        'frac_visible_multisite.png'
+    )
+
+    if os.path.exists(outpath) and not overwrite:
+        print('found {}, skipping'.format(outpath))
+        return
 
     fracs = []
     for site in sites:
@@ -132,10 +142,6 @@ def make_observability_chart_multisite(
     ax.set_ylabel('hours visible per night')
     ax.set_ylim((0,12))
 
-    outpath = os.path.join(
-        outdir,
-        'frac_visible_multisite.png'
-    )
     fig.tight_layout()
     fig.savefig(outpath, dpi=300, bbox_inches='tight')
     print('saved {}'.format(outpath))
