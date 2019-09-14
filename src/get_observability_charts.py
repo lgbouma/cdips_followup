@@ -12,15 +12,10 @@ from astroplan import (
     AirmassConstraint
 )
 
-def make_observability_chart(name="WASP 4", site='keck', ra=None, dec=None,
-                             start_time=Time('2019-09-13 20:00:00'),
-                             end_time=Time('2020-07-31 20:00:00'),
-                             outdir='../results/followup_planning/WASP_4',
-                             check_months_observable=True):
-    """
-    2020A:
-        - Feb 1 - Jul 31 2020
-    """
+
+def get_observability_fraction(name="WASP 4", site='keck', ra=None, dec=None,
+                               start_time=Time('2019-09-13 20:00:00'),
+                               end_time=Time('2020-07-31 20:00:00')):
 
     if isinstance(name,str) and ra is None and dec is None:
         target = FixedTarget.from_name(name)
@@ -29,9 +24,6 @@ def make_observability_chart(name="WASP 4", site='keck', ra=None, dec=None,
         target = FixedTarget(coord=target_coord, name=name)
     else:
         raise NotImplementedError('failed to make target')
-
-    if not os.path.exists(outdir):
-        os.mkdir(outdir)
 
     observer = Observer.at_site(site)
 
@@ -59,6 +51,21 @@ def make_observability_chart(name="WASP 4", site='keck', ra=None, dec=None,
     ever_observable = np.array(ever_observable)
     frac = np.array(frac)
 
+    return frac, ever_observable, days
+
+
+
+def make_observability_chart_singlesite(
+    name="WASP 4", site='keck', ra=None, dec=None,
+    start_time=Time('2019-09-13 20:00:00'),
+    end_time=Time('2020-07-31 20:00:00'),
+    outdir=None):
+
+    frac, ever_observable, days = get_observability_fraction(
+        name=name, site=site, ra=ra, dec=dec,
+        start_time=start_time, end_time=end_time
+    )
+
     #
     # make the plot
     #
@@ -71,7 +78,7 @@ def make_observability_chart(name="WASP 4", site='keck', ra=None, dec=None,
     ax.set_xlim([days[0].plot_date, days[-1].plot_date])
     ax.set_title(
         '{}: altitude 20-85deg, airmass<3, w/in civil twilight'.format(name),
-        fontsize='small'
+        fontsize='xx-small'
     )
     plt.setp(ax.get_xticklabels(), rotation=90, ha='right')
 
@@ -86,17 +93,52 @@ def make_observability_chart(name="WASP 4", site='keck', ra=None, dec=None,
     fig.savefig(outpath, dpi=300, bbox_inches='tight')
     print('saved {}'.format(outpath))
 
+
+def make_observability_chart_multisite(
+    name="WASP 4", sites=['keck','las campanas'], ra=None, dec=None,
+    start_time=Time('2019-09-13 20:00:00'),
+    end_time=Time('2020-07-31 20:00:00'),
+    outdir=None):
+
+    fracs = []
+    for site in sites:
+        frac, _, days = get_observability_fraction(
+            name=name, site=site, ra=ra, dec=dec,
+            start_time=start_time, end_time=end_time
+        )
+        fracs.append(frac)
+
     #
-    # optionally computes observability on "best_months" grid of 0.5 hr
+    # make the plot
     #
-    if check_months_observable:
-        best_months = months_observable(constraints, observer, [target])
-        outfile = os.path.join(outdir,'months_observable.txt')
-        with open(outfile, 'w') as f:
-            f.write('for {}, got best-months on 0.5 hour grid:'.format(name))
-            f.write(repr(best_months))
-            f.write('where 1 = Jan, 2 = Feb, 3=March, etc.')
-        print('made {}'.format(outfile))
+    plt.close('all')
+    fig, ax = plt.subplots(figsize=(4,3))
+
+    for ix, frac in enumerate(fracs):
+        ax.plot_date(days.plot_date, frac*24, lw=1, alpha=1,
+                     fmt='C{}-'.format(ix), label=sites[ix])
+
+    ax.set_xlim([days[0].plot_date, days[-1].plot_date])
+    ax.set_title(
+        '{}: altitude 20-85deg, airmass<3, w/in civil twilight'.format(name),
+        fontsize='xx-small'
+    )
+    plt.setp(ax.get_xticklabels(), rotation=75, ha='right', fontsize='small')
+    plt.setp(ax.get_yticklabels(), fontsize='small')
+
+    ax.legend(loc='upper right', fontsize='xx-small')
+
+    ax.set_xlabel('time')
+    ax.set_ylabel('hours visible per night')
+    ax.set_ylim((0,12))
+
+    outpath = os.path.join(
+        outdir,
+        'frac_visible_multisite.png'
+    )
+    fig.tight_layout()
+    fig.savefig(outpath, dpi=300, bbox_inches='tight')
+    print('saved {}'.format(outpath))
 
 
 if __name__ == "__main__":
@@ -108,6 +150,5 @@ if __name__ == "__main__":
         ra=None, dec=None,
         outdir='../results/followup_planning/WASP_4',
         start_time=Time('2019-09-13 20:00:00', format='iso'),
-        end_time=Time('2020-09-13 20:00:00', format='iso'),
-        check_months_observable=False
+        end_time=Time('2020-09-13 20:00:00', format='iso')
     )
