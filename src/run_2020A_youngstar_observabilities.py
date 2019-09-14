@@ -3,7 +3,7 @@ from numpy import array as nparr
 import os
 from glob import glob
 
-from get_airmass_charts import make_airmass_chart
+from get_observability_charts import make_observability_chart
 
 from astropy.time import Time
 
@@ -29,7 +29,7 @@ def main(site='keck'):
         )
 
 if __name__ == "__main__":
-    # main(site='keck') # HIRES, Subaru
-    main(site='Kitt Peak National Observatory') # TRES(?), NEID
     main(site='Las Campanas Observatory') # PFS, PISCO
+    main(site='Kitt Peak National Observatory') # TRES(?), NEID
+    main(site='keck') # HIRES, Subaru
     # main(site='lapalma') # HARPS-N

@@ -12,11 +12,11 @@ from astroplan import (
     AirmassConstraint
 )
 
-def make_airmass_chart(name="WASP 4", site='keck', ra=None, dec=None,
-                       start_time=Time('2019-09-13 20:00:00'),
-                       end_time=Time('2020-07-31 20:00:00'),
-                       outdir='../results/followup_planning/WASP_4',
-                       check_months_observable=True):
+def make_observability_chart(name="WASP 4", site='keck', ra=None, dec=None,
+                             start_time=Time('2019-09-13 20:00:00'),
+                             end_time=Time('2020-07-31 20:00:00'),
+                             outdir='../results/followup_planning/WASP_4',
+                             check_months_observable=True):
     """
     2020A:
         - Feb 1 - Jul 31 2020
@@ -65,7 +65,7 @@ def make_airmass_chart(name="WASP 4", site='keck', ra=None, dec=None,
     plt.close('all')
     fig, ax = plt.subplots(figsize=(4,3))
 
-    ax.plot_date(days.plot_date, frac, label=name, lw=1,
+    ax.plot_date(days.plot_date, frac*24, label=name, lw=1,
                  alpha=1, fmt='k-')
 
     ax.set_xlim([days[0].plot_date, days[-1].plot_date])
@@ -76,7 +76,8 @@ def make_airmass_chart(name="WASP 4", site='keck', ra=None, dec=None,
     plt.setp(ax.get_xticklabels(), rotation=90, ha='right')
 
     ax.set_xlabel('time')
-    ax.set_ylabel('fraction visible')
+    ax.set_ylabel('hours visible per night')
+    ax.set_ylim((0,12))
 
     outpath = os.path.join(
         outdir,
