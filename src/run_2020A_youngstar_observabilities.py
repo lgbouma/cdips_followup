@@ -52,8 +52,10 @@ def multi_site(
             ra=ra, dec=dec,
             outdir=outdir,
             start_time=Time('2019-09-13 20:00:00', format='iso'),
-            end_time=Time('2020-09-13 20:00:00', format='iso')
+            end_time=Time('2020-09-13 20:00:00', format='iso'),
+            save_csv=True
         )
+        print('done with {}...'.format(name))
 
 
 if __name__ == "__main__":

@@ -99,7 +99,8 @@ def make_observability_chart_multisite(
     start_time=Time('2019-09-13 20:00:00'),
     end_time=Time('2020-07-31 20:00:00'),
     outdir=None,
-    overwrite=False):
+    overwrite=False,
+    save_csv=True):
 
     outpath = os.path.join(
         outdir,
@@ -145,6 +146,17 @@ def make_observability_chart_multisite(
     fig.tight_layout()
     fig.savefig(outpath, dpi=300, bbox_inches='tight')
     print('saved {}'.format(outpath))
+
+    if save_csv:
+        outcsv = outpath.replace('.png','.csv')
+        outdf = pd.DataFrame({
+            'plot_date':days.plot_date,
+        })
+        for ix, frac in enumerate(fracs):
+            label = sites[ix]
+            outdf[label] = frac*24
+        outdf.to_csv(outcsv, index=False)
+        print('made {}'.format(outcsv))
 
 
 if __name__ == "__main__":
