@@ -22,7 +22,7 @@ for g in $targetdirs; do
     str0=`dirname $t`
     str1=`basename $t`
 
-    ln -s `realpath $t` "$outdir"/"$str0"_"$str1"
+    ln -s `realpath $t` "$outdir"/"$str0"_"$str1" 2>/dev/null
   done
 
 done
