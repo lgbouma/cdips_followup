@@ -1,3 +1,4 @@
 data*
 results/followup_planning*
 *__pycache__*
+doc/*txt
