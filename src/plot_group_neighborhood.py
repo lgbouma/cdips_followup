@@ -452,6 +452,13 @@ def plot_group_neighborhood(
         zorder=8, label=targetname, markerfacecolor='yellow', markersize=16,
         marker='*', color='black', lw=0
     )
+    if extra_overplot:
+        ax5.scatter(
+            group_df_dr2['radial_velocity'], group_df_dr2['parallax'], c='k',
+            alpha=0.9, zorder=3, s=15, rasterized=True, linewidths=0,
+            label='CG18 P>{}'.format(cutoff_probability)
+        )
+
 
     ax5.legend(loc='best')
     ax5.set_xlabel('DR2 RV (if available) [km/s]', fontsize='xx-large')
@@ -469,9 +476,16 @@ def plot_group_neighborhood(
 
     fig.tight_layout()
 
-    outpath = '../results/{}_neighborhood.png'.format(groupname)
+    outpath = (
+        '../results/neighborhoods/{}_{}_neighborhood.png'.
+        format(targetname, groupname)
+    )
     if extra_overplot:
-        outpath = '../results/{}_neighborhood_extra.png'.format(groupname)
+        outpath = (
+            '../results/neighborhoods/{}_{}_neighborhood_extra.png'.
+            format(targetname, groupname)
+        )
+
     fig.savefig(outpath, dpi=300, bbox_inches='tight')
     print('made {}'.format(outpath))
 

@@ -36,7 +36,7 @@ gaiadir = os.path.join(homedir, '.gaia_cache')
 if not os.path.exists(gaiadir):
     os.mkdir(gaiadir)
 
-def main(overwrite=1):
+def main(overwrite=0):
 
     target_df = pd.read_csv('../data/20190912_youngstar_cands_with_gaia.csv')
 
@@ -61,16 +61,22 @@ def main(overwrite=1):
         # acquire the CG18 info, if it is available. (if not, skip this row,
         # for now..)
         groupname = str(target_row['name']).split(',')[0]
+        if groupname == 'IC2602':
+            groupname = 'IC_2602'
         if groupname not in cg18_clusters:
             print('found {} not in CG18 clusters. skip.'.format(groupname))
             continue
-        outpath = '../results/{}_neighborhood.png'.format(groupname)
-        #if os.path.exists(outpath):
-        #    print('found {}, skip'.format(outpath))
-        #    continue
 
         targetname = str(target_row['toi_or_ticid'])
         target_id = np.int64(target_row['source_id'])
+
+        outpath = (
+            '../results/neighborhoods/{}_{}_neighborhood.png'.
+            format(targetname, groupname)
+        )
+        if os.path.exists(outpath):
+            print('found {}, skip'.format(outpath))
+            continue
 
         cutoff_probability = 0.1
 
@@ -106,23 +112,34 @@ def main(overwrite=1):
 
         # now acquire the mean properties of the group, and query the neighborhood
         # based on those properties. the number of neighbor stars to randomly
-        # select is min(5* the number of group members, 5000).
+        # select is min(5* the number of group members, 5000). (cutoff group
+        # bounds based on parallax because further groups more uncertain).
         bounds = {}
         params = ['parallax', 'ra', 'dec']
+
+        plx_mean = group_df_dr2['parallax'].mean()
+        if plx_mean > 5:
+            n_std = 5
+        elif plx_mean > 3:
+            n_std = 4
+        else:
+            n_std = 3
+        print('bounding by {} stdevns'.format(n_std))
+
         for param in params:
 
             bounds[param+'_upper'] = (
-                group_df_dr2[param].mean() + 5*group_df_dr2[param].std()
+                group_df_dr2[param].mean() + n_std*group_df_dr2[param].std()
             )
 
             bounds[param+'_lower'] = (
-                group_df_dr2[param].mean() - 5*group_df_dr2[param].std()
+                group_df_dr2[param].mean() - n_std*group_df_dr2[param].std()
             )
 
         assert bounds['ra_upper'] < 360
         assert bounds['ra_lower'] > 0
 
-        n_max = min((50*len(group_df_dr2), 2000))
+        n_max = min((10*len(group_df_dr2), 10000))
         nbhd_df = query_neighborhood(bounds, groupname, n_max=n_max,
                                      overwrite=overwrite, is_cg18_group=True,
                                      is_kc19_group=False)
@@ -131,15 +148,16 @@ def main(overwrite=1):
         common = group_df_dr2.merge(nbhd_df, on='source_id', how='inner')
         snbhd_df = nbhd_df[~nbhd_df.source_id.isin(common.source_id)]
 
-        pmdec_min = group_df_dr2['pmdec'].mean() - 2*group_df_dr2['pmdec'].std()
-        pmdec_max = group_df_dr2['pmdec'].mean() + 2*group_df_dr2['pmdec'].std()
-        pmra_min = group_df_dr2['pmra'].mean() - 2*group_df_dr2['pmra'].std()
-        pmra_max = group_df_dr2['pmra'].mean() + 2*group_df_dr2['pmra'].std()
+        n_std = 5
+        pmdec_min = group_df_dr2['pmdec'].mean() - n_std*group_df_dr2['pmdec'].std()
+        pmdec_max = group_df_dr2['pmdec'].mean() + n_std*group_df_dr2['pmdec'].std()
+        pmra_min = group_df_dr2['pmra'].mean() - n_std*group_df_dr2['pmra'].std()
+        pmra_max = group_df_dr2['pmra'].mean() + n_std*group_df_dr2['pmra'].std()
 
-        pmdec_min = min((pmdec_min, target_df['pmdec']))
-        pmdec_max = max((pmdec_max, target_df['pmdec']))
-        pmra_min = min((pmdec_min, target_df['pmra']))
-        pmra_max = max((pmdec_max, target_df['pmra']))
+        pmdec_min = min((pmdec_min, float(target_df['pmdec'])))
+        pmdec_max = max((pmdec_max, float(target_df['pmdec'])))
+        pmra_min = min((pmra_min, float(target_df['pmra'])))
+        pmra_max = max((pmra_max, float(target_df['pmra'])))
 
         plot_group_neighborhood(targetname, groupname, group_df_dr2, target_df,
                                 nbhd_df, cutoff_probability, extra_overplot=0,
