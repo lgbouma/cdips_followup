@@ -91,7 +91,7 @@ def given_source_ids_get_gaia_data(source_ids, groupname, overwrite=True):
         )
 
     xmltouploadpath = os.path.join(gaiadir,'toupload_{}.xml'.format(groupname))
-    dlpath = os.path.join(gaiadir,'group{}_matches.xml.gz')
+    dlpath = os.path.join(gaiadir,'group{}_matches.xml.gz'.format(groupname))
 
     if overwrite:
         if os.path.exists(xmltouploadpath):
@@ -269,10 +269,11 @@ def query_neighborhood(bounds, groupname, n_max=2000, overwrite=True,
                 g_mag_limit=g_mag_limit
             )
 
-
-        # might do async if this times out. but it doesn't.
-        j = Gaia.launch_job(query=query, verbose=True, dump_to_file=True,
-                            output_file=dlpath)
+        # async jobs can avoid timeout
+        j = Gaia.launch_job_async(query=query, verbose=True, dump_to_file=True,
+                                  output_file=dlpath)
+        #j = Gaia.launch_job(query=query, verbose=True, dump_to_file=True,
+        #                    output_file=dlpath)
 
         Gaia.logout()
 
@@ -379,8 +380,8 @@ def plot_group_neighborhood(
     ax2.set_ylabel(r'pmDEC, $\mu_{{\delta}}$ [mas/yr]',
                    fontsize='xx-large')
 
-    ax2.set_ylim([pmdec_min, pmdec_max])
     ax2.set_xlim([pmra_min, pmra_max])
+    ax2.set_ylim([pmdec_min, pmdec_max])
 
     ##############
     # HR diagram # 
