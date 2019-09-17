@@ -3,3 +3,4 @@ results/followup_planning*
 *__pycache__*
 doc/*txt
 *.log
+results/*png
