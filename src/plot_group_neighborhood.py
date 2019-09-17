@@ -65,7 +65,8 @@ def given_votable_get_df(votablepath, assert_equal='source_id'):
 
     return df
 
-def given_source_ids_get_gaia_data(source_ids, groupname, overwrite=True):
+def given_source_ids_get_gaia_data(source_ids, groupname, overwrite=True,
+                                   enforce_all_sourceids_viable=True):
     """
     Args:
 
@@ -75,6 +76,9 @@ def given_source_ids_get_gaia_data(source_ids, groupname, overwrite=True):
 
         overwrite: if True, and finds that this crossmatch has already run,
         deletes previous cached output and reruns anyway.
+
+        enforce_all_sourceids_viable: if True, will raise an assertion error if
+        every source id does not return a result.
 
     Returns:
 
@@ -126,20 +130,26 @@ def given_source_ids_get_gaia_data(source_ids, groupname, overwrite=True):
 
     df = given_votable_get_df(dlpath, assert_equal='source_id')
 
-    if len(df) != len(source_ids):
+    if len(df) != len(source_ids) and enforce_all_sourceids_viable:
         errmsg = (
             'ERROR! got {} matches vs {} source id queries'.
             format(len(df), len(source_ids))
         )
-        print(errmsg)
-        import IPython; IPython.embed()
         raise AssertionError(errmsg)
+
+    if len(df) != len(source_ids) and not enforce_all_sourceids_viable:
+        wrnmsg = (
+            'WRN! got {} matches vs {} source id queries'.
+            format(len(df), len(source_ids))
+        )
+        print(wrnmsg)
 
     return df
 
 
 def query_neighborhood(bounds, groupname, n_max=2000, overwrite=True,
-                       is_cg18_group=True, is_kc19_group=False):
+                       is_cg18_group=True, is_kc19_group=False,
+                       is_k13_group=False):
     """
     Given the bounds in position and parallx corresponding to some group (e.g.,
     from Cantat-Gaudin+2018 or Kounkel & Covey 2019), get the DR2 stars from
@@ -168,6 +178,8 @@ def query_neighborhood(bounds, groupname, n_max=2000, overwrite=True,
         g_mag_limit=18
     elif is_kc19_group:
         g_mag_limit=18
+    elif is_k13_group:
+        g_mag_limit=16
 
     dlpath = os.path.join(
         gaiadir,'nbhd_group{}_matches.xml.gz'.format(groupname)
@@ -288,8 +300,14 @@ def plot_group_neighborhood(
     pmdec_min=None,
     pmdec_max=None,
     pmra_min=None,
-    pmra_max=None
+    pmra_max=None,
+    group_in_k13=False
 ):
+
+    if group_in_k13:
+        l = 'K13 P>{}'.format(cutoff_probability)
+    else:
+        l = 'CG18 P>{}'.format(cutoff_probability)
 
     fig, axs = plt.subplots(2, 3, figsize=(18,12))
 
@@ -304,10 +322,8 @@ def plot_group_neighborhood(
     )
     if extra_overplot:
         ax0.scatter(
-            group_df_dr2['pmdec'], group_df_dr2['parallax'],
-            c='k', alpha=0.9, zorder=3, s=15,
-            rasterized=True, linewidths=0,
-            label='CG18 P>{}'.format(cutoff_probability)
+            group_df_dr2['pmdec'], group_df_dr2['parallax'], c='k', alpha=0.9,
+            zorder=3, s=15, rasterized=True, linewidths=0, label=l
         )
 
     ax0.plot(
@@ -336,8 +352,7 @@ def plot_group_neighborhood(
     if extra_overplot:
         ax1.scatter(
             group_df_dr2['pmra'], group_df_dr2['parallax'], c='k', alpha=0.9,
-            zorder=3, s=15, rasterized=True, linewidths=0,
-            label='CG18 P>{}'.format(cutoff_probability)
+            zorder=3, s=15, rasterized=True, linewidths=0, label=l
         )
     ax1.plot(
         target_df['pmra'], target_df['parallax'], alpha=1, mew=0.5, zorder=8,
@@ -363,9 +378,8 @@ def plot_group_neighborhood(
     )
     if extra_overplot:
         ax2.scatter(
-            group_df_dr2['pmra'], group_df_dr2['pmdec'], c='k', alpha=0.9, zorder=3, s=15,
-            rasterized=True, linewidths=0,
-            label='CG18 P>{}'.format(cutoff_probability)
+            group_df_dr2['pmra'], group_df_dr2['pmdec'], c='k', alpha=0.9,
+            zorder=3, s=15, rasterized=True, linewidths=0, label=l
         )
     ax2.plot(
         target_df['pmra'], target_df['pmdec'], alpha=1, mew=0.5, zorder=8,
@@ -396,8 +410,7 @@ def plot_group_neighborhood(
     ax3.scatter(
         group_df_dr2['phot_bp_mean_mag']-group_df_dr2['phot_rp_mean_mag'],
         group_df_dr2['phot_g_mean_mag'],
-        c='k', alpha=1., zorder=3, s=15, rasterized=True, linewidths=0,
-        label='CG18 P>{}'.format(cutoff_probability)
+        c='k', alpha=1., zorder=3, s=15, rasterized=True, linewidths=0, label=l
     )
     ax3.plot(
         target_df['phot_bp_mean_mag']-target_df['phot_rp_mean_mag'],
@@ -425,8 +438,7 @@ def plot_group_neighborhood(
     )
     ax4.scatter(
         group_df_dr2['ra'], group_df_dr2['dec'], c='k', alpha=1., zorder=3,
-        s=15, rasterized=True, linewidths=0,
-        label='CG18 P>{}'.format(cutoff_probability)
+        s=15, rasterized=True, linewidths=0, label=l
     )
     ax4.plot(
         target_df['ra'], target_df['dec'], alpha=1, mew=0.5, zorder=8,
@@ -455,8 +467,7 @@ def plot_group_neighborhood(
     if extra_overplot:
         ax5.scatter(
             group_df_dr2['radial_velocity'], group_df_dr2['parallax'], c='k',
-            alpha=0.9, zorder=3, s=15, rasterized=True, linewidths=0,
-            label='CG18 P>{}'.format(cutoff_probability)
+            alpha=0.9, zorder=3, s=15, rasterized=True, linewidths=0, label=l
         )
 
 
@@ -536,7 +547,7 @@ def main(extra_overplot=0):
     n_max = min((50*len(group_df_dr2), 10000))
     nbhd_df = query_neighborhood(bounds, groupname, n_max=n_max,
                                  overwrite=overwrite, is_cg18_group=True,
-                                 is_kc19_group=False)
+                                 is_kc19_group=False, is_k13_group=False)
 
     # ensure no overlap between the group members and the neighborhood sample.
     common = group_df_dr2.merge(nbhd_df, on='source_id', how='inner')
