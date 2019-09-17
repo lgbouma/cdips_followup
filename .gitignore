@@ -4,3 +4,4 @@ results/followup_planning*
 doc/*txt
 *.log
 results/*png
+results/neighborhoods*
