@@ -187,7 +187,7 @@ def query_neighborhood(bounds, groupname, n_max=2000, overwrite=True,
             g.phot_g_mean_mag, g.parallax, g.ra, g.dec, g.pmra, g.pmdec,
             g.radial_velocity, g.radial_velocity_error
         from gaiadr2.gaia_source as g
-        WHERE
+        where
             g.parallax > {parallax_lower:.2f}
         and
             g.parallax < {parallax_upper:.2f}
@@ -225,7 +225,7 @@ def query_neighborhood(bounds, groupname, n_max=2000, overwrite=True,
                 g.phot_g_mean_mag, g.parallax, g.ra, g.dec, g.pmra, g.pmdec,
                 g.radial_velocity, g.radial_velocity_error
             from gaiadr2.gaia_source as g
-            WHERE
+            where
                 g.parallax > {parallax_lower:.2f}
             and
                 g.parallax < {parallax_upper:.2f}
@@ -283,7 +283,11 @@ def query_neighborhood(bounds, groupname, n_max=2000, overwrite=True,
 def plot_group_neighborhood(
     targetname, groupname, group_df_dr2, target_df, nbhd_df,
     cutoff_probability,
-    extra_overplot=0
+    extra_overplot=0,
+    pmdec_min=None,
+    pmdec_max=None,
+    pmra_min=None,
+    pmra_max=None
 ):
 
     fig, axs = plt.subplots(2, 3, figsize=(18,12))
@@ -317,7 +321,7 @@ def plot_group_neighborhood(
     ax0.set_xlabel(r'pmDEC, $\mu_{{\delta}}$ [mas/yr]', fontsize='xx-large')
     ax0.set_ylabel('star parallax [mas]', fontsize='xx-large')
 
-    ax0.set_xlim([-3,6])
+    ax0.set_xlim([pmdec_min, pmdec_max])
 
     ######################
     # parallax vs pm ra #
@@ -345,7 +349,7 @@ def plot_group_neighborhood(
                    fontsize='xx-large')
     ax1.set_ylabel('star parallax [mas]', fontsize='xx-large')
 
-    ax1.set_xlim([-7,3])
+    ax1.set_xlim([pmra_min, pmra_max])
 
     ##################
     # proper motions #
@@ -375,11 +379,8 @@ def plot_group_neighborhood(
     ax2.set_ylabel(r'pmDEC, $\mu_{{\delta}}$ [mas/yr]',
                    fontsize='xx-large')
 
-    ax2.set_ylim((-20,20))
-    ax2.set_xlim((-15,15))
-
-    ax2.set_ylim((-3,6))
-    ax2.set_xlim((-7,3))
+    ax2.set_ylim([pmdec_min, pmdec_max])
+    ax2.set_xlim([pmra_min, pmra_max])
 
     ##############
     # HR diagram # 
@@ -446,9 +447,9 @@ def plot_group_neighborhood(
         zorder=2, s=15, rasterized=True, linewidths=0, label='nbhd stars'
     )
     ax5.plot(
-        30.8, target_df['parallax'], alpha=1, mew=0.5, zorder=8,
-        label=targetname, markerfacecolor='yellow', markersize=16, marker='*',
-        color='black', lw=0
+        target_df['radial_velocity'], target_df['parallax'], alpha=1, mew=0.5,
+        zorder=8, label=targetname, markerfacecolor='yellow', markersize=16,
+        marker='*', color='black', lw=0
     )
 
     ax5.legend(loc='best')
