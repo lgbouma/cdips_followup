@@ -177,7 +177,7 @@ def query_neighborhood(bounds, groupname, n_max=2000, overwrite=True,
     if is_cg18_group:
         g_mag_limit=18
     elif is_kc19_group:
-        g_mag_limit=18
+        g_mag_limit=14
     elif is_k13_group:
         g_mag_limit=16
 
@@ -301,13 +301,19 @@ def plot_group_neighborhood(
     pmdec_max=None,
     pmra_min=None,
     pmra_max=None,
-    group_in_k13=False
+    group_in_k13=False,
+    group_in_cg18=True,
+    group_in_kc19=False
 ):
 
     if group_in_k13:
         l = 'K13 P>{}'.format(cutoff_probability)
-    else:
+    elif group_in_cg18:
         l = 'CG18 P>{}'.format(cutoff_probability)
+    elif group_in_kc19:
+        l = 'KC19 P={:d}'.format(cutoff_probability)
+    else:
+        raise NotImplementedError
 
     fig, axs = plt.subplots(2, 3, figsize=(18,12))
 

@@ -49,6 +49,8 @@ def main(overwrite=0):
     otherwise, acquire the K13 members (that were xmatched against Gaia DR2
     in the CDIPS I paper)
 
+    otherwise, acquire the KC19 members
+
     acquire the mean properties of the group, and query the neighborhood
     based on those properties. the number of neighbor stars to randomly
     select is min(5* the number of group members, 5000). (cutoff group
@@ -82,6 +84,7 @@ def main(overwrite=0):
         groupname = str(target_row['name']).split(',')[0]
         targetname = str(target_row['toi_or_ticid'])
         target_id = np.int64(target_row['source_id'])
+        group_id = int(target_row['group_id'])
 
         if groupname == 'IC2602':
             groupname = 'IC_2602'
@@ -90,10 +93,12 @@ def main(overwrite=0):
         if ' ' in groupname:
             groupname = groupname.replace(' ','_')
 
+        group_in_cg18 = False # Cantat-Gaudin+2018
+        group_in_k13 = False # Kharchenko+2013
+        group_in_kc19 = False # Kounkel&Covey2019
+
         if groupname in cg18_clusters:
             group_in_cg18 = True
-        else:
-            group_in_cg18 = False
 
         if groupname not in cg18_clusters:
             # otherwise, acquire the K13 members
@@ -102,11 +107,19 @@ def main(overwrite=0):
 
             if groupname in k13_clusters:
                 group_in_k13 = True
-            else:
-                group_in_k13 = False
 
-        if not group_in_cg18 and not group_in_k13:
-            print('found {} not in K13 or CG18 clusters. skip.'.format(groupname))
+        if not group_in_cg18:
+
+            if group_id != -1:
+                group_in_kc19 = True
+                group_in_k13 = False
+                groupname = 'kc19group{:d}'.format(group_id)
+            else:
+                pass
+
+        if not group_in_cg18 and not group_in_k13 and not group_in_kc19:
+            print('found {} not in K13 or CG18 or KC19 groups. skip.'.
+                  format(groupname))
             continue
 
         outpath = (
@@ -131,9 +144,8 @@ def main(overwrite=0):
             assert len(group_df) < v.ROW_LIMIT
             np.testing.assert_array_equal(group_tab['Source'], group_df['Source'])
 
-            group_source_ids = np.array(group_df['Source']).astype(np.int64)
-
             group_df = group_df[group_df['PMemb'] > cutoff_probability]
+            group_source_ids = np.array(group_df['Source']).astype(np.int64)
 
         elif group_in_k13:
 
@@ -156,7 +168,12 @@ def main(overwrite=0):
 
             group_source_ids = np.array(k13_df['gaia_dr2_match_id']).astype(np.int64)
 
-            group_df = k13_df
+        elif group_in_kc19:
+
+            cutoff_probability = 1
+            kc19_df = pd.read_csv('../data/kc19_string_table1.csv')
+            kc19_df = kc19_df[kc19_df['group_id'] == group_id]
+            group_source_ids = np.array(kc19_df['source_id']).astype(np.int64)
 
 
         ##########################################
@@ -165,6 +182,8 @@ def main(overwrite=0):
             enforce_all_sourceids_viable = True
         elif group_in_k13:
             enforce_all_sourceids_viable = False
+        elif group_in_kc19:
+            enforce_all_sourceids_viable = True
         else:
             enforce_all_sourceids_viable = True
 
@@ -198,8 +217,12 @@ def main(overwrite=0):
             n_std = 4.5
         else:
             n_std = 4
+        if group_in_kc19:
+            n_std = 2
         if targetname == '1000.01':
             n_std = 5
+        if targetname == '1097.01':
+            n_std = 4
         print('bounding by {} stdevns'.format(n_std))
 
         for param in params:
@@ -223,7 +246,7 @@ def main(overwrite=0):
         nbhd_df = query_neighborhood(bounds, groupname, n_max=n_max,
                                      overwrite=overwrite,
                                      is_cg18_group=group_in_cg18,
-                                     is_kc19_group=False,
+                                     is_kc19_group=group_in_kc19,
                                      is_k13_group=group_in_k13)
 
         # ensure no overlap between the group members and the neighborhood sample.
@@ -247,13 +270,17 @@ def main(overwrite=0):
                                 nbhd_df, cutoff_probability, extra_overplot=0,
                                 pmdec_min=pmdec_min, pmdec_max=pmdec_max,
                                 pmra_min=pmra_min, pmra_max=pmra_max,
-                                group_in_k13=group_in_k13)
+                                group_in_k13=group_in_k13,
+                                group_in_cg18=group_in_cg18,
+                                group_in_kc19=group_in_kc19)
 
         plot_group_neighborhood(targetname, groupname, group_df_dr2, target_df,
                                 nbhd_df, cutoff_probability, extra_overplot=1,
                                 pmdec_min=pmdec_min, pmdec_max=pmdec_max,
                                 pmra_min=pmra_min, pmra_max=pmra_max,
-                                group_in_k13=group_in_k13)
+                                group_in_k13=group_in_k13,
+                                group_in_cg18=group_in_cg18,
+                                group_in_kc19=group_in_kc19)
 
 if __name__ == "__main__":
     main()
