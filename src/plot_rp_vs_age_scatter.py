@@ -55,9 +55,14 @@ if __name__=='__main__':
     has_age_errs  = (~ea_tab['st_ageerr1'].mask) & (~ea_tab['st_ageerr2'].mask)
     has_rp_value = ~ea_tab['pl_rade'].mask
     has_rp_errs  = (~ea_tab['pl_radeerr1'].mask) & (~ea_tab['pl_radeerr2'].mask)
-    finite = has_age_value & has_age_errs & has_rp_value & has_rp_errs
 
-    t = ea_tab[finite]
+    transits = (ea_tab['pl_tranflag']==1)
+
+    sel = (
+        has_age_value & has_age_errs & has_rp_value & has_rp_errs & transits
+    )
+
+    t = ea_tab[sel]
 
     #
     # read params
@@ -79,12 +84,12 @@ if __name__=='__main__':
 
     # squares
     label = (
-            'NASA exoarchive (median $\sigma_{{\mathrm{{age}}}}$: {:.1f} Gyr)'.
+            'NASA exoarchive (median $\sigma_{{\mathrm{{age}}}}$ = {:.1f} Gyr)'.
             format(np.median(age_errs))
     )
-    ax.errorbar(age, rp,
-                elinewidth=0, ecolor='k', capsize=0, capthick=0, linewidth=0,
-                fmt='s', ms=1, zorder=1, color='C0', label=label)
+    ax.scatter(age, rp,
+               color='gray', s=2, zorder=1, marker='o', linewidth=0,
+               label=label, alpha=0.6)
 
     # targets
     tdf = pd.read_csv(
@@ -94,14 +99,15 @@ if __name__=='__main__':
     target_rp = np.array(tdf['rplanet'])
     target_rp_unc = np.array(tdf['rplanet_unc'])
 
-    ax.errorbar(target_age, target_rp,
-                elinewidth=0, ecolor='k', capsize=0, capthick=0, linewidth=0,
-                fmt='s', ms=1, zorder=1, color='C1',
-                label='Proposed targets')
+    ax.scatter(
+        target_age, target_rp, color='black', s=20,
+        zorder=3, marker='*', linewidth=0,
+        label='Proposed targets (median $\sigma_{{\mathrm{{age}}}}$ < 0.1 Gyr)'
+    )
 
     ax.errorbar(target_age, target_rp, yerr=target_rp_unc,
                 elinewidth=0.3, ecolor='k', capsize=0, capthick=0, linewidth=0,
-                fmt='s', ms=0, zorder=2, color='C1')
+                fmt='*', ms=0, zorder=2, color='black', alpha=0.5)
 
     ## error bars
     #ax.errorbar(age, rp, yerr=age_errs, xerr=rp_errs,
@@ -112,7 +118,8 @@ if __name__=='__main__':
     #    ax.text(0.03, 0.03, txt, ha='left', va='bottom', fontsize='small',
     #            zorder=3, transform=ax.transAxes, color='C0')
 
-    ax.legend(loc='best', borderpad=0.1, fontsize='small', framealpha=1)
+    ax.legend(loc='best', borderpad=0.1, handletextpad=0.1, fontsize='small',
+              framealpha=1)
 
     ax.set_xlabel('Age [Gyr]')
     ax.set_ylabel('Planet radius [R$_\oplus$]')
