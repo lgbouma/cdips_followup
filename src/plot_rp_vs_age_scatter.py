@@ -95,6 +95,16 @@ if __name__=='__main__':
     tdf = pd.read_csv(
         '/home/luke/Dropbox/proj/cdips_followup/results/20190926_2020A_targets_age_rp.csv'
     )
+
+    badids = [
+    4827527233363019776,
+    2919143383943171200,
+    3340674976430098688,
+    5561614350584396800,
+    5618515825371166464
+    ]
+    tdf = tdf[~tdf['source_id'].isin(badids)]
+
     target_age = 10**(np.array(tdf['age']))/(1e9)
     target_rp = np.array(tdf['rplanet'])
     target_rp_unc = np.array(tdf['rplanet_unc'])
