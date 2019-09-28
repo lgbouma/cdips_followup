@@ -6,3 +6,5 @@ doc/*txt
 results/*png
 results/neighborhoods*
 results/*csv
+*.pyc
+*target_table.tex
