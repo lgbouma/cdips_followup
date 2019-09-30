@@ -88,8 +88,8 @@ if __name__=='__main__':
             format(np.median(age_errs))
     )
     ax.scatter(age, rp,
-               color='gray', s=2, zorder=1, marker='o', linewidth=0,
-               label=label, alpha=0.6)
+               color='gray', s=3, zorder=1, marker='o', linewidth=0,
+               label=label, alpha=1)
 
     # targets
     tdf = pd.read_csv(
@@ -110,7 +110,7 @@ if __name__=='__main__':
     target_rp_unc = np.array(tdf['rplanet_unc'])
 
     ax.scatter(
-        target_age, target_rp, color='black', s=20,
+        target_age, target_rp, color='black', s=25,
         zorder=3, marker='*', linewidth=0,
         label='Proposed targets (median $\sigma_{{\mathrm{{age}}}}$ < 0.1 Gyr)'
     )
