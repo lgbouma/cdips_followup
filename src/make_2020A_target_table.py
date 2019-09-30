@@ -87,18 +87,34 @@ def main():
             print('WARNING: GOT EXPTIME > 30 MIN, {:d}sec, for {}, Gmag {:.1f}'.
                   format(exptime, str(r['toi_or_ticid']), gmag))
 
-        exptime = "\\exptime{{{exptime:d}}}\n".format(
+        _exptime = "\\exptime{{{exptime:d}}}\n".format(
             exptime=exptime
         )
 
         nexposures = 3
-        nexposures = "\\nexposures{{{nexposures:d}}}\n".format(
+        if 3600 > exptime > 1800:
+            nexposures = 6
+            _exptime = "\\exptime{{{exptime:d}}}\n".format(
+                exptime=1800
+            )
+
+        if 6100 > exptime > 3600:
+            # 6100 sec is the faintest 2020A target. mainly a case-study to see
+            # if this works.
+            nexposures = 9
+            _exptime = "\\exptime{{{exptime:d}}}\n".format(
+                exptime=1800
+            )
+
+        _nexposures = "\\nexposures{{{nexposures:d}}}\n".format(
             nexposures=nexposures
         )
 
         if gmag < 10.5:
-            moondays = 0
-        else:
+            moondays = 14
+        elif gmag < 14:
+            moondays = 11
+        elif gmag < 16:
             moondays = 7
         moondays = "\\moondays{{{moondays:d}}}\n".format(
             moondays=moondays
@@ -109,10 +125,14 @@ def main():
         obscomment = "\\obscomment{{{source_id:s}}}".format(
             source_id=str(r['source_id'])
         )
+        if nexposures == 6:
+            obscomment = "\\obscomment{{2 exp per visit (x3)}}"
+        if nexposures == 9:
+            obscomment = "\\obscomment{{3 exp per visit (x3)}}"
 
         txtrow = (
             _objid+_object+ra+dec+epoch+magnitude+_filter+
-            exptime+nexposures+moondays+skycond+seeing+obscomment+'\n%\n'
+            _exptime+_nexposures+moondays+skycond+seeing+obscomment+'\n%\n'
         )
 
         txtrows.append(txtrow)
