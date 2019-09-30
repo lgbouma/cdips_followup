@@ -22,7 +22,10 @@ import os
 import pandas as pd, numpy as np
 from astropy.coordinates import SkyCoord
 from astropy import units as u, constants as c
-from chiron_calculator import get_chiron_reqd_exptime
+from chiron_calculator import (
+    get_chiron_reqd_exptime,
+    get_chiron_snr_given_exptime
+)
 
 def main():
 
@@ -83,28 +86,41 @@ def main():
         # round up to the nearest 10
         exptime = np.int(np.round(exptime+10, decimals=-1))
 
-        if exptime > 1800:
-            print('WARNING: GOT EXPTIME > 30 MIN, {:d}sec, for {}, Gmag {:.1f}'.
-                  format(exptime, str(r['toi_or_ticid']), gmag))
-
         _exptime = "\\exptime{{{exptime:d}}}\n".format(
             exptime=exptime
         )
+        if exptime > 1800:
+
+            print('WARNING: GOT EXPTIME > 30 MIN, {:d}sec, for {}, Gmag {:.1f}'.
+                  format(exptime, str(r['toi_or_ticid']), gmag))
+
+            wouldgetsnr = get_chiron_snr_given_exptime(
+                gmag, mode, exptime, verbose=False)
+
+            willgetsnr = get_chiron_snr_given_exptime(
+                gmag, mode, 1800, verbose=False)
+
+            _exptime = "\\exptime{{{exptime:d}}}\n".format(
+                exptime=1800
+            )
+
+            print('\tWould get SNR = {:.1f}. At 1800sec, will get SNR = {:.1f}'.
+                  format(wouldgetsnr, willgetsnr))
 
         nexposures = 3
-        if 3600 > exptime > 1800:
-            nexposures = 6
-            _exptime = "\\exptime{{{exptime:d}}}\n".format(
-                exptime=1800
-            )
+        #if 3600 > exptime > 1800:
+        #    nexposures = 6
+        #    _exptime = "\\exptime{{{exptime:d}}}\n".format(
+        #        exptime=1800
+        #    )
 
-        if 6100 > exptime > 3600:
-            # 6100 sec is the faintest 2020A target. mainly a case-study to see
-            # if this works.
-            nexposures = 9
-            _exptime = "\\exptime{{{exptime:d}}}\n".format(
-                exptime=1800
-            )
+        #if 6100 > exptime > 3600:
+        #    # 6100 sec is the faintest 2020A target. mainly a case-study to see
+        #    # if this works.
+        #    nexposures = 9
+        #    _exptime = "\\exptime{{{exptime:d}}}\n".format(
+        #        exptime=1800
+        #    )
 
         _nexposures = "\\nexposures{{{nexposures:d}}}\n".format(
             nexposures=nexposures
