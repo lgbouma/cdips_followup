@@ -303,7 +303,8 @@ def plot_group_neighborhood(
     pmra_max=None,
     group_in_k13=False,
     group_in_cg18=True,
-    group_in_kc19=False
+    group_in_kc19=False,
+    plx_ylim=None
 ):
 
     if group_in_k13:
@@ -490,6 +491,10 @@ def plot_group_neighborhood(
                                        labelsize='xx-large')
         ax.get_xaxis().set_tick_params(which='both', direction='in',
                                        labelsize='xx-large')
+
+    if plx_ylim:
+        for ax in [ax0,ax1,ax5]:
+            ax.set_ylim(plx_ylim)
 
     fig.tight_layout()
 
