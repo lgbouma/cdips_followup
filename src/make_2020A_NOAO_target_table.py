@@ -156,7 +156,7 @@ def main():
         objid += 1
 
     outlines = ''.join(txtrows)
-    outpath = '../results/2020A_target_table.tex'
+    outpath = '../results/2020A_NOAO_target_table.tex'
     with open(outpath, 'w') as f:
         f.writelines(outlines)
     print('wrote {}'.format(outpath))
