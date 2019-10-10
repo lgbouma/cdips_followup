@@ -41,7 +41,8 @@ def main():
     5290721997195236480,
     5557593814516968960,
     5579734916388215808,
-    5325454783543157760
+    5325454783543157760,
+    5516140233292943872 # PMS M dwarf (too faint in V)
     ]
 
     sdf = df[~df['source_id'].isin(badids)]
@@ -101,7 +102,7 @@ def main():
         elif gmag < 14:
             moondays = 11
         elif gmag < 16:
-            moondays = 7
+            moondays = 11
         moondays = "\\moondays{{{moondays:d}}}\n".format(
             moondays=moondays
         )
