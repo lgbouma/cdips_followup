@@ -9,3 +9,4 @@ results/*csv
 *.pyc
 *target_table.tex
 doc/20190912_youngstar_xmatch*
+sandbox/*
