@@ -319,15 +319,35 @@ def main():
 
     r = get_all_requests_19B()
 
-    pkl_savpath = '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
+    pkl_savpath = (
+        '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
+    )
+    mult_savpath = (
+        '../results/LCOGT_19B20A_observability/all_requests_summary.csv'
+    )
 
     with open(pkl_savpath, 'wb') as f:
         pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
         print('saved {:s}'.format(pkl_savpath))
 
-    return r
+    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
+
+    names = [_r['toi_or_ticid'] for ix, _r in df.iterrows()]
+    mult = [len(_r) for _r in r]
+    durns = [_r['duration'] for ix, _r in df.iterrows()]
+    durns_sched = [_r['duration']+2 for ix, _r in df.iterrows()]
+    mult_df = pd.DataFrame({
+        'name':names,
+        'n_requests':mult,
+        'duration':durns,
+        'sched_duration':durns_sched,
+        'n*sched':np.array(mult)*np.array(durns_sched)
+    })
+    mult_df.to_csv(mult_savpath, index=False)
+    print('made {}'.format(mult_savpath))
+
+    return r, mult_df
 
 if __name__ == "__main__":
 
-    r = main()
-    import IPython; IPython.embed()
+    r, mult_df = main()
