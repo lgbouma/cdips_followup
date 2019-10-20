@@ -6,8 +6,11 @@ get 1m and 2m imaging follow-up.
 ###########
 # imports #
 ###########
-import requests
+import requests, socket, os, pickle
 import numpy as np, pandas as pd
+
+from get_transit_observability import \
+        get_transit_observability, print_transit_observability
 
 import datetime as dt
 from astropy.time import Time
@@ -20,7 +23,16 @@ from astroplan import (FixedTarget, Observer, EclipsingSystem,
                        LocalTimeConstraint, MoonSeparationConstraint,
                        moon)
 
-with open('/home/luke/.lcogt_api_token', 'r') as f:
+from astroquery.gaia import Gaia
+
+if socket.gethostname() == 'brik':
+    api_file = '/home/luke/.lcogt_api_token'
+elif 'astro' in socket.gethostname():
+    api_file = '/Users/luke/.lcogt_api_token'
+else:
+    raise NotImplementedError('where to get API file?')
+
+with open(api_file, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
 
@@ -28,26 +40,50 @@ token = str(l[0].replace('\n',''))
 # functions #
 #############
 
-def _given_Gmag_get_exptime_defocus(Gmag)
+def _given_Gmag_get_exptime_defocus(Gmag):
+    """
+    this table was reverse-engineered by looking at the exptime and defocuses
+    used by Dan Bayliss in the HATS requests for the same proposal.
+    """
+    df = pd.read_csv('../data/LCOGT_reverse_eng_exptime.csv')
 
-    #FIXME implement using the table
+    if Gmag > df.G.max():
+        raise AssertionError('target too faint')
+    elif Gmag < df.G.min():
+        raise AssertionError('target too bright')
+
+    temp = df.iloc[(df['G']-Gmag).abs().argsort()[0]]
+
+    exptime = temp['exptime']
+    defocus = temp['defocus']
 
     return exptime, defocus
 
-def make_request_group(targetname, ra, dec, Gmag, starttime, endtime,
-                       max_airmass=2.5, min_lunar_distance=20, filtermode="ip",
-                       telescope_class="1m0"):
+def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
+                       endtime, max_airmass=2.5, min_lunar_distance=20,
+                       filtermode="ip", telescope_class="1m0"):
 
-    exptime, defocus = _given_Gmag_get_exptime_defocus(Gmag)
+    try:
+        exptime, defocus = _given_Gmag_get_exptime_defocus(Gmag)
+    except AssertionError as e:
+        print(e)
+        return -1
 
     API_TOKEN = token  # API token obtained from https://observe.lco.global/accounts/profile/
     PROPOSAL_ID = 'NOAO2019B-013'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
 
-    # starttime e.g., '2019-05-02 00:00:00',
+    # starttime e.g., '2019-05-02 00:00:00'
+    _starttime = starttime.iso[0:19]
+    _endtime = endtime.iso[0:19]
+
+    expcount = np.floor(
+        (endtime-starttime).to(u.hr)/(exptime*u.second).to(u.hr)
+    )
+
     obsdate = (
-          str(starttime).split('-')[0]      # year
-        + str(starttime).split('-')[1]      # month
-        + str(starttime).split('-')[2][:2]  # date
+          str(_starttime).split('-')[0]      # year
+        + str(_starttime).split('-')[1]      # month
+        + str(_starttime).split('-')[2][:2]  # date
     )
 
     requestname = (
@@ -63,6 +99,8 @@ def make_request_group(targetname, ra, dec, Gmag, starttime, endtime,
         'type': 'ICRS',
         'ra': float(ra), # decimal deg
         'dec': float(dec),
+        'proper_motion_ra': float(pmra),
+        'proper_motion_dec': float(pmdec),
         'epoch': 2015.5
     }
 
@@ -110,8 +148,8 @@ def make_request_group(targetname, ra, dec, Gmag, starttime, endtime,
     # The time windows during which this request should be considered for observing. In this example
     # we only provide one. These times are in UTC.
     windows = [{
-        'start': starttime # e.g., '2019-05-02 00:00:00',
-        'end': endtime # '2019-05-30 00:00:00'
+        'start': _starttime, # e.g., '2019-05-02 00:00:00',
+        'end': _endtime # '2019-05-30 00:00:00'
     }]
 
     # The telescope class that should be used for this observation
@@ -136,52 +174,160 @@ def make_request_group(targetname, ra, dec, Gmag, starttime, endtime,
     return requestgroup
 
 
-def get_requests_given_ephem(targetname, ra, dec, Gmag,
-                             period, period_unc, epoch, epoch_unc, depth,
-                             depth_unc, duration, duration_unc,
-                             min_search_time=Time(dt.datetime.today().isoformat()),
-                             max_search_time=Time('2020-01-29 23:00:00'),
-                             max_airmass=2.5, min_lunar_distance=20
-                            ):
+def get_requests_given_ephem(
+    targetname, ra, dec, pmra, pmdec, Gmag, period, period_unc, epoch,
+    epoch_unc, depth, depth_unc, duration, duration_unc,
+    min_search_time=Time(dt.datetime.today().isoformat()),
+    max_search_time=Time('2020-01-29 23:00:00'), max_airmass=2.5,
+    min_lunar_distance=20, oot_duration=45*u.minute, get_oibeo=True,
+    get_ibe=False, sites = ['Cerro Tololo', 'Siding Spring Observatory'],
+    schedule_oot_duration=60*u.minute
+):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
-    requests for any available transits at the given site, between
+    requests for any available transits at the given sites, between
     min_search_time and max_search_time.
 
     Allowed sites include Siding Spring Observator and CTIO.
-    """
 
-    # TODO: you need to make a loop here.
-    make_request_group(targetname, ra, dec, Gmag, starttime, endtime,
-                       max_airmass=2.5, min_lunar_distance=20, filtermode="ip",
-                       telescope_class="1m0", max_airmass=max_airmass,
-                       min_lunar_distance=min_lunar_distance)
+    Args:
+
+        get_oibeo: gets the request for which "OIBEO" transits visible (given
+        oot_duration).
+
+        get_ibe: just "IBE" transit required (easier to schedule).
+
+        schedule_oot_duration: used for the LCOGT-side REQUESTS, rather than
+        the astroplan scheduling. Can be longer than oot_duration (used for
+        astroplan scheduling) in order to try and get a bit more data.
+    """
+    if get_oibeo:
+        assert not get_ibe
+    if get_ibe:
+        assert not get_oibeo
+
+    if max_airmass>3:
+        raise NotImplementedError('approx breaks')
+
+    min_altitude = 90 - np.rad2deg(np.arccos(1/max_airmass))
+
+    groups, sel_sites = [], []
+    for site in sites:
+
+        _site = Observer.at_site(site)
+
+        ibe, oibeo, ing_tmid_egr, moon_separation, moon_illumination = (
+            get_transit_observability(
+                _site, ra*u.deg, dec*u.deg, targetname, epoch, period*u.day,
+                duration*u.hour, n_transits=100,
+                obs_start_time=min_search_time,
+                min_altitude=min_altitude*u.deg,
+                oot_duration=oot_duration,
+                minokmoonsep=min_lunar_distance*u.deg
+            )
+        )
+
+        lt_maxtime = ing_tmid_egr < np.array(max_search_time)
+
+        if get_oibeo:
+            sel = oibeo.flatten() & np.all(lt_maxtime, axis=1)
+        elif get_ibe:
+            sel = ibe.flatten() & np.all(lt_maxtime, axis=1)
+
+        sel_times = ing_tmid_egr[sel]
+
+        if len(sel_times)>=1:
+
+            ##############################################
+            # save observability output as text file too #
+            outdir = "../results/LCOGT_19B20A_observability/{}".format(targetname)
+            if not os.path.exists(outdir):
+                os.mkdir(outdir)
+            print_sel = (
+                ( oibeo.flatten() | ibe.flatten() )
+                &
+                np.all(lt_maxtime, axis=1)
+            )
+            print_transit_observability(ibe[:,print_sel],
+                                        oibeo[:,print_sel],
+                                        ing_tmid_egr[print_sel,:], _site,
+                                        ra*u.deg, dec*u.deg, targetname, epoch,
+                                        period*u.day, duration*u.hour,
+                                        min_altitude*u.deg, oot_duration,
+                                        moon_separation[print_sel],
+                                        moon_illumination[print_sel],
+                                        minokmoonsep=min_lunar_distance*u.deg,
+                                        outdir=outdir)
+            ##############################################
+
+            for sel_time in sel_times:
+
+                starttime = sel_time[0] - schedule_oot_duration
+                endtime = sel_time[-1] + schedule_oot_duration
+
+                g = make_request_group(targetname, ra, dec, pmra, pmdec, Gmag,
+                                       starttime, endtime, filtermode="ip",
+                                       telescope_class="1m0",
+                                       max_airmass=max_airmass,
+                                       min_lunar_distance=min_lunar_distance)
+
+                if g == -1:
+                    continue
+                else:
+                    groups.append(g)
+
+    return groups
 
 
 def get_all_requests_19B():
 
     df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
-    #FIXME implement!!
 
-    result = []
+    results = []
 
     for ix, r in df.iterrows():
 
-        #FIXME IMPLEMENT
-        this = get_requests_given_ephem(targetname, ra, dec, Gmag, period,
-                                        period_unc, epoch, epoch_unc, depth,
-                                        depth_unc, duration, duration_unc)
+        jobstr = (
+            "select top 1 g.ra, g.dec, g.pmra, g.pmdec from "
+            "gaiadr2.gaia_source as g where g.source_id = {:d}".
+            format(np.int64(r['source_id']))
+        )
 
-        result.append(this)
+        job = Gaia.launch_job(jobstr)
+        gaia_r = job.get_results()
 
-        import IPython; IPython.embed()
+        if len(gaia_r) != 1:
+            raise AssertionError('gaia match failed')
 
-        assert 0
+        ra = float(gaia_r['ra'])
+        dec = float(gaia_r['dec'])
+        pmra = float(gaia_r['pmra'])
+        pmdec = float(gaia_r['pmdec'])
 
+        this = get_requests_given_ephem(r['toi_or_ticid'], ra, dec, pmra, pmdec,
+                                        r['phot_g_mean_mag'], r['period'],
+                                        r['period_unc'], r['epoch'],
+                                        r['epoch_unc'], r['depth'],
+                                        r['depth_unc'], r['duration'],
+                                        r['duration_unc'])
 
-    return result
+        results.append(this)
 
+    return results
+
+def main():
+
+    r = get_all_requests_19B()
+
+    pkl_savpath = '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
+
+    with open(pkl_savpath, 'wb') as f:
+        pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
+        print('saved {:s}'.format(pkl_savpath))
+
+    return r
 
 if __name__ == "__main__":
 
-    r = get_all_requests_19B()
+    r = main()
+    import IPython; IPython.embed()
