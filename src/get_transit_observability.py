@@ -22,7 +22,7 @@ def get_transit_observability(
     oot_duration = 30*u.minute,
     minokmoonsep = 30*u.deg,
     max_airmass = None,
-    twilight_limit = 'astronomical'):
+    twilight_limit = 'nautical'):
     """
     note: barycentric corrections not yet implemented. (could do this myself!)
     -> 16 minutes of imprecision is baked into this observability calculator!

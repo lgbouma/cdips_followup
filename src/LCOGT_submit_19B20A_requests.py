@@ -20,6 +20,7 @@ else:
 with open(api_file, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
+
 ##########
 
 def validate_single_request(requestgroup, max_duration_error=15):
@@ -58,7 +59,7 @@ def validate_single_request(requestgroup, max_duration_error=15):
         if 'non_field_errors' in requestgroup_dict['errors']:
 
             print(42*'-')
-            print('WTF? GOT ERROR: {}'.
+            print('GOT ERROR: {}'.
                   format(requestgroup_dict['errors']['non_field_errors']))
             print(42*'-')
 
@@ -77,7 +78,6 @@ def validate_single_request(requestgroup, max_duration_error=15):
                         "within{}your request {} hours. Consider{}",
                         errmsg)
 
-            print(sr)
             max_dur = float(sr[1])
             req_dur = float(sr[3])
 
@@ -140,6 +140,10 @@ def validate_single_request(requestgroup, max_duration_error=15):
     end = Time(requestgroup['requests'][0]['windows'][0]['end'])
     window_durn = (end - start).value*24*60*60
 
+    expcount = (
+        requestgroup['requests'][0]['configurations'][0]['instrument_configs'][0]['exposure_count']
+    )
+
     if (window_durn - billed_durn)/60 > max_duration_error:
 
         errmsg = (
@@ -150,15 +154,15 @@ def validate_single_request(requestgroup, max_duration_error=15):
         print(42*'-')
         print(errmsg)
         print(42*'-')
-        import IPython; IPython.embed()
+        #import IPython; IPython.embed()
         #raise AssertionError(errmsg) #FIXME
         return np.nan, np.nan
 
     else:
 
         print(42*'-')
-        print('ACCEPTED! window durn: {:.2f} min, billed {:.2f} min'.
-              format(window_durn/60, billed_durn/60))
+        print('ACCEPTED! window durn: {:.2f} min, billed {:.2f} min. had {:d} exposures'.
+              format(window_durn/60, billed_durn/60, expcount))
         print(42*'-')
         return requestgroup, is_modified
 

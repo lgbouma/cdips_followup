@@ -187,7 +187,8 @@ def get_requests_given_ephem(
     targetname, ra, dec, pmra, pmdec, Gmag, period, period_unc, epoch,
     epoch_unc, depth, depth_unc, duration, duration_unc,
     min_search_time=Time(dt.datetime.today().isoformat()),
-    max_search_time=Time('2020-01-29 23:00:00'), max_airmass=2.5,
+    max_search_time=Time('2020-01-29 23:00:00'), max_airmass_sched=1.8,
+    max_airmass_submit=2.5,
     min_lunar_distance=20, oot_duration=45*u.minute, get_oibeo=True,
     get_ibe=False, sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
     schedule_oot_duration=60*u.minute):
@@ -214,7 +215,7 @@ def get_requests_given_ephem(
     if get_ibe:
         assert not get_oibeo
 
-    if max_airmass>3:
+    if max_airmass_sched>3:
         raise NotImplementedError('approx breaks')
 
     groups, sel_sites = [], []
@@ -229,7 +230,7 @@ def get_requests_given_ephem(
                 obs_start_time=min_search_time,
                 oot_duration=oot_duration,
                 minokmoonsep=min_lunar_distance*u.deg,
-                max_airmass=max_airmass
+                max_airmass=max_airmass_sched
             )
         )
 
@@ -259,7 +260,7 @@ def get_requests_given_ephem(
                                         ing_tmid_egr[print_sel,:], _site,
                                         ra*u.deg, dec*u.deg, targetname, epoch,
                                         period*u.day, duration*u.hour,
-                                        max_airmass, oot_duration,
+                                        max_airmass_sched, oot_duration,
                                         moon_separation[print_sel],
                                         moon_illumination[print_sel],
                                         minokmoonsep=min_lunar_distance*u.deg,
@@ -274,7 +275,7 @@ def get_requests_given_ephem(
                 g = make_request_group(targetname, ra, dec, pmra, pmdec, Gmag,
                                        starttime, endtime, filtermode="ip",
                                        telescope_class="1m0",
-                                       max_airmass=max_airmass,
+                                       max_airmass=max_airmass_submit,
                                        min_lunar_distance=min_lunar_distance)
 
                 if g == -1:
