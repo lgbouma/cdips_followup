@@ -217,8 +217,6 @@ def get_requests_given_ephem(
     if max_airmass>3:
         raise NotImplementedError('approx breaks')
 
-    min_altitude = 90 - np.rad2deg(np.arccos(1/max_airmass))
-
     groups, sel_sites = [], []
     for site in sites:
 
@@ -229,9 +227,9 @@ def get_requests_given_ephem(
                 _site, ra*u.deg, dec*u.deg, targetname, epoch, period*u.day,
                 duration*u.hour, n_transits=100,
                 obs_start_time=min_search_time,
-                min_altitude=min_altitude*u.deg,
                 oot_duration=oot_duration,
-                minokmoonsep=min_lunar_distance*u.deg
+                minokmoonsep=min_lunar_distance*u.deg,
+                max_airmass=max_airmass
             )
         )
 
@@ -261,7 +259,7 @@ def get_requests_given_ephem(
                                         ing_tmid_egr[print_sel,:], _site,
                                         ra*u.deg, dec*u.deg, targetname, epoch,
                                         period*u.day, duration*u.hour,
-                                        min_altitude*u.deg, oot_duration,
+                                        max_airmass, oot_duration,
                                         moon_separation[print_sel],
                                         moon_illumination[print_sel],
                                         minokmoonsep=min_lunar_distance*u.deg,
@@ -350,9 +348,7 @@ def get_all_requests_19B():
     return results
 
 
-def main():
-
-    r = get_all_requests_19B()
+def main(overwrite=1):
 
     pkl_savpath = (
         '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
@@ -361,11 +357,24 @@ def main():
         '../results/LCOGT_19B20A_observability/all_requests_summary.csv'
     )
 
-    with open(pkl_savpath, 'wb') as f:
-        pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
-        print('saved {:s}'.format(pkl_savpath))
+    if not overwrite and os.path.exists(pkl_savpath):
+        with open(pkl_savpath, 'rb') as f:
+            r = pickle.load(f)
+    else:
+        r = get_all_requests_19B()
+        with open(pkl_savpath, 'wb') as f:
+            pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
+            print('saved {:s}'.format(pkl_savpath))
 
     df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
+    sel = (
+        (df['phot_g_mean_mag'] < 15.4)
+        &
+        (df['phot_g_mean_mag'] > 9)
+        &
+        (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
+    )
+    df = df[sel]
 
     names = [_r['toi_or_ticid'] for ix, _r in df.iterrows()]
     mult = [len(_r) for _r in r]
