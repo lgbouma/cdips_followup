@@ -3,6 +3,7 @@ submit requests made in LCOGT_make_19B20A_requests.py
 """
 ##########
 import pickle, requests, socket
+from parse import search
 
 import numpy as np, pandas as pd
 
@@ -33,6 +34,8 @@ def validate_single_request(requestgroup, max_duration_error=15):
     bit of slack on either is fine.
     """
 
+    is_modified = False
+
     response = requests.post(
         'https://observe.lco.global/api/requestgroups/validate/',
         headers={'Authorization': 'Token {}'.format(token)},
@@ -47,6 +50,87 @@ def validate_single_request(requestgroup, max_duration_error=15):
         raise exc
 
     requestgroup_dict = response.json()
+
+    # If you get an error because your incorrectly estimated the number of
+    # exposures, correct it here.
+    if len(requestgroup_dict['errors']) >= 1:
+
+        if 'non_field_errors' in requestgroup_dict['errors']:
+
+            print(42*'-')
+            print('WTF? GOT ERROR: {}'.
+                  format(requestgroup_dict['errors']['non_field_errors']))
+            print(42*'-')
+
+            return np.nan, np.nan
+
+
+        errmsg = (
+            requestgroup_dict['errors']['requests'][0]['non_field_errors'][0]
+        )
+
+        if 'the target is visible for a maximum of' in errmsg:
+
+            # get the strings of durations, and decrement the requested number
+            # of exposures by the right multiple!
+            sr = search("According{}maximum of {} hours "
+                        "within{}your request {} hours. Consider{}",
+                        errmsg)
+
+            print(sr)
+            max_dur = float(sr[1])
+            req_dur = float(sr[3])
+
+            if req_dur == max_dur:
+                # {:.1f} formatted strings. genius ._.
+                req_dur += 0.01
+
+            if not req_dur > max_dur:
+                errmsg = (
+                    'ERR! max dur: {}, req dur: {}'.format(max_dur, req_dur)
+                )
+                raise ValueError(errmsg)
+
+            diff_dur_sec = (req_dur - max_dur)*60*60
+
+            # previously, guessed
+            #
+            # expcount = np.floor(
+            #     (endtime-starttime).to(u.hr)
+            #     /
+            #     (exptime*u.second + read_time_per_exposure).to(u.hr)
+            # )
+            #
+            # that produced the difference above...
+            exptime_sec = (
+                requestgroup['requests'][0]['configurations'][0]['instrument_configs'][0]['exposure_time']
+            )
+
+            expcount = (
+                requestgroup['requests'][0]['configurations'][0]['instrument_configs'][0]['exposure_count']
+            )
+
+            read_time_per_exposure = 30*u.second # from Bayliss' completed runs
+            n_exposures_diff = int(
+                np.ceil(diff_dur_sec/
+                        (exptime_sec + read_time_per_exposure.value)
+                )
+            )
+
+            new_expcount = expcount - n_exposures_diff
+
+            print(42*'-')
+            print('WRN!: max durn: {} hr, req durn: {} hr. had {} exposures, decrement to {}'.
+                  format(max_dur, req_dur, expcount, new_expcount))
+            print(42*'-')
+            requestgroup['requests'][0]['configurations'][0]['instrument_configs'][0]['exposure_count'] = new_expcount
+
+            is_modified = True
+
+            return requestgroup, is_modified
+
+        else:
+            raise NotImplementedError('got new API error: {}'.format(errmsg))
 
     billed_durn = (
         requestgroup_dict['request_durations']['requests'][0]['duration']
@@ -63,11 +147,20 @@ def validate_single_request(requestgroup, max_duration_error=15):
             format(window_durn/60, billed_durn/60)
         )
 
-        raise AssertionError(errmsg)
+        print(42*'-')
+        print(errmsg)
+        print(42*'-')
+        import IPython; IPython.embed()
+        #raise AssertionError(errmsg) #FIXME
+        return np.nan, np.nan
 
     else:
 
-        return 1
+        print(42*'-')
+        print('ACCEPTED! window durn: {:.2f} min, billed {:.2f} min'.
+              format(window_durn/60, billed_durn/60))
+        print(42*'-')
+        return requestgroup, is_modified
 
 
 
@@ -99,7 +192,8 @@ def submit_single_request(requestgroup):
           format(requestgroup_dict['id']))
 
 
-def submit_all_requests(max_N_transit_per_object=2):
+def submit_all_requests(validate_all=1, submit_all=0,
+                        max_N_transit_per_object=2):
 
     pkl_savpath = (
         '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
@@ -135,10 +229,26 @@ def submit_all_requests(max_N_transit_per_object=2):
 
         for requestgroup in _requests_to_submit:
 
-            print(requestgroup)
+            if validate_all:
+                print(requestgroup)
+                requestgroup, is_modified = validate_single_request(requestgroup)
 
-            # FIXME change to submit
-            # submit_single_request(requestgroup)
+                n_iter = 0
+                if is_modified and np.isfinite(is_modified):
+                    while is_modified:
+                        if n_iter >= 10:
+                            raise AssertionError('too many iterations')
+                        requestgroup, is_modified = validate_single_request(requestgroup)
+
+                        if not isinstance(requestgroup, dict):
+                            if not np.isfinite(requestgroup):
+                                break
+
+                        n_iter += 1
+
+            if submit_all:
+                requestgroup = validate_single_request(requestgroup)
+                submit_single_request(requestgroup)
 
 
 
