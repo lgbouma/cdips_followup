@@ -10,7 +10,7 @@ from astroplan import (FixedTarget, Observer, EclipsingSystem,
                        PrimaryEclipseConstraint, is_event_observable,
                        AtNightConstraint, AltitudeConstraint,
                        LocalTimeConstraint, MoonSeparationConstraint,
-                       moon)
+                       AirmassConstraint, moon)
 
 import datetime as dt
 
@@ -18,10 +18,11 @@ import datetime as dt
 def get_transit_observability(
     site, ra, dec, name, t_mid_0, period, duration, n_transits=100,
     obs_start_time=Time(dt.datetime.today().isoformat()),
-    min_altitude=20*u.deg,
+    min_altitude = None,
     oot_duration = 30*u.minute,
-    minokmoonsep = 30*u.deg
-):
+    minokmoonsep = 30*u.deg,
+    max_airmass = None,
+    twilight_limit = 'astronomical'):
     """
     note: barycentric corrections not yet implemented. (could do this myself!)
     -> 16 minutes of imprecision is baked into this observability calculator!
@@ -50,8 +51,13 @@ def get_transit_observability(
         min_altitude (astropy quantity, units deg): 20 degrees is the more
         relevant constraint.
 
+        max_airmass: e.g., 2.5. One of max_airmass or min_altitude is required.
+
         oot_duration (astropy quantity, units time): with which to brack
         transit observations, to get an OOT baseline.
+
+        twilight_limit: 'astronomical', 'nautical', 'civil' for -18, -12, -6
+        deg.
     """
 
 
@@ -66,6 +72,12 @@ def get_transit_observability(
     else:
         raise NotImplementedError
 
+    if (
+        not isinstance(max_airmass, float)
+        or isinstance(min_altitude, u.quantity.Quantity)
+    ):
+        raise NotImplementedError
+
     target = FixedTarget(coord=target_coord, name=name)
 
     primary_eclipse_time = Time(t_mid_0, format='jd')
@@ -78,8 +90,16 @@ def get_transit_observability(
         obs_start_time, n_eclipses=n_transits)
 
     # for the time being, omit any local time constraints.
-    constraints = [AtNightConstraint.twilight_civil(),
+    if twilight_limit == 'astronomical':
+        twilight_constraint = AtNightConstraint.twilight_astronomical()
+    elif twilight_limit == 'nautical':
+        twilight_constraint = AtNightConstraint.twilight_nautical()
+    else:
+        raise NotImplementedError('civil twilight is janky.')
+
+    constraints = [twilight_constraint,
                    AltitudeConstraint(min=min_altitude),
+                   AirmassConstraint(max=max_airmass),
                    MoonSeparationConstraint(min=minokmoonsep)]
 
     # observable just at midtime (bottom)
@@ -129,7 +149,7 @@ def get_transit_observability(
 
 
 def print_transit_observability(ibe, oibeo, ing_tmid_egr, site, ra, dec, name,
-                                t_mid_0, period, duration, min_altitude,
+                                t_mid_0, period, duration, max_airmass,
                                 oot_duration, moon_separation,
                                 moon_illumination, minokmoonsep=30*u.deg,
                                 outdir="../results/"):
@@ -155,7 +175,7 @@ Given:
         duration = {}
 
 Constrain to observe with:
-        altitude > {}
+        airmass < {}
         and
         night-time (nautical twilight)
         and
@@ -173,7 +193,7 @@ epoch     t_ing                 t_mid                 t_egr                 sep 
     site.location.lon, site.location.lat, site.location.height,
     ra, dec,
     t_mid_0, period, duration,
-    min_altitude, minokmoonsep,
+    max_airmass, minokmoonsep,
     oot_duration ))
 
     n_oibeo = len(oibeo[oibeo])
