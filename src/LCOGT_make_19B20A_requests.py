@@ -76,8 +76,12 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
     _starttime = starttime.iso[0:19]
     _endtime = endtime.iso[0:19]
 
+    read_time_per_exposure = 30*u.second # from Bayliss' completed runs
+
     expcount = np.floor(
-        (endtime-starttime).to(u.hr)/(exptime*u.second).to(u.hr)
+        (endtime-starttime).to(u.hr)
+        /
+        (exptime*u.second + read_time_per_exposure).to(u.hr)
     )
 
     obsdate = (
@@ -314,6 +318,7 @@ def get_all_requests_19B():
         results.append(this)
 
     return results
+
 
 def main():
 
