@@ -184,9 +184,8 @@ def get_requests_given_ephem(
     min_search_time=Time(dt.datetime.today().isoformat()),
     max_search_time=Time('2020-01-29 23:00:00'), max_airmass=2.5,
     min_lunar_distance=20, oot_duration=45*u.minute, get_oibeo=True,
-    get_ibe=False, sites = ['Cerro Tololo', 'Siding Spring Observatory'],
-    schedule_oot_duration=60*u.minute
-):
+    get_ibe=False, sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
+    schedule_oot_duration=60*u.minute):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
     requests for any available transits at the given sites, between
