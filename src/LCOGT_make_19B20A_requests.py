@@ -44,6 +44,11 @@ def _given_Gmag_get_exptime_defocus(Gmag):
     """
     this table was reverse-engineered by looking at the exptime and defocuses
     used by Dan Bayliss in the HATS requests for the same proposal.
+
+    it imposes a minimum time 10 second exposures, or a bright limit of Gaia G
+    mag of G=9.
+
+    (any brighter and we might encounter smear issues -- need to test).
     """
     df = pd.read_csv('../data/LCOGT_reverse_eng_exptime.csv')
 
@@ -286,9 +291,22 @@ def get_all_requests_19B():
 
     df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
 
+    sel = (
+        (df['phot_g_mean_mag'] < 15.4)
+        &
+        (df['phot_g_mean_mag'] > 9)
+        &
+        (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
+    )
+
+    print(42*'-')
+    print('WRN: DROPPING THE FOLLOWING TARGETS B/C MAG LIMITS OR SHALLOW')
+    print(df[~sel][['source_id', 'toi_or_ticid']])
+    print(42*'-')
+
     results = []
 
-    for ix, r in df.iterrows():
+    for ix, r in df[sel].iterrows():
 
         jobstr = (
             "select top 1 g.ra, g.dec, g.pmra, g.pmdec from "
