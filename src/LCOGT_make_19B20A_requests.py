@@ -325,6 +325,19 @@ def get_all_requests_19B():
         pmra = float(gaia_r['pmra'])
         pmdec = float(gaia_r['pmdec'])
 
+        #
+        # shift by 42 arcseconds away from the center, in order to avoid CCD
+        # amplifier lines.
+        #
+        c = SkyCoord(ra*u.deg, dec*u.deg, frame='icrs')
+
+        shift_by = 42*u.arcsec # Bayliss shifted by ~30 arcsec. might as well further.
+        shift_dir = 45*u.deg   #  as long as it's some mix of "up" and "left"
+
+        use_coord = c.directional_offset_by(shift_dir, shift_by)
+        ra = use_coord.ra.value
+        dec = use_coord.dec.value
+
         this = get_requests_given_ephem(r['toi_or_ticid'], ra, dec, pmra, pmdec,
                                         r['phot_g_mean_mag'], r['period'],
                                         r['period_unc'], r['epoch'],
