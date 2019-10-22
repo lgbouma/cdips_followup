@@ -8,6 +8,7 @@ get imaging follow-up with the 1m and 2m.
 ###########
 import requests, socket, os, pickle
 import numpy as np, pandas as pd
+from numpy import array as nparr
 
 from get_transit_observability import \
         get_transit_observability, print_transit_observability
@@ -295,22 +296,9 @@ def get_requests_given_ephem(
     return groups
 
 
-def get_all_requests_19B():
+def get_all_requests_19B(savstr):
 
-    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
-
-    sel = (
-        (df['phot_g_mean_mag'] < 15.4)
-        &
-        (df['phot_g_mean_mag'] > 9)
-        &
-        (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
-    )
-
-    print(42*'-')
-    print('WRN: DROPPING THE FOLLOWING TARGETS B/C MAG LIMITS OR SHALLOW')
-    print(df[~sel][['source_id', 'toi_or_ticid']])
-    print(42*'-')
+    df = get_targets(savstr)
 
     results = []
 
@@ -358,33 +346,66 @@ def get_all_requests_19B():
     return results
 
 
-def main(overwrite=1):
+def get_targets(savstr):
+
+    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
+
+    if savstr == 'all_request_19B_easyones':
+        sel = (
+            (df['phot_g_mean_mag'] < 15.4)
+            &
+            (df['phot_g_mean_mag'] > 9)
+            &
+            (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
+        )
+
+    elif savstr == 'request_19B_2m_faint':
+        sourceids = ['TIC29786532.01', 'TIC53682439.01'] # faint
+        sel = (
+            df['toi_or_ticid'].isin(sourceids)
+        )
+
+    else:
+        raise NotImplementedError
+
+    df = df[sel]
+
+    print(42*'-')
+    print('WRN: REQUEST WAS {}'.format(savstr))
+    print('WRN: DROPPING THE FOLLOWING TARGETS B/C OUTSIDE DESIRED REQUEST')
+    print(df[~sel][['source_id', 'toi_or_ticid']])
+    print(42*'-')
+
+    import IPython; IPython.embed() #FIXME
+    return df
+
+
+
+def main(savstr='all_request_19B_easyones', overwrite=1):
+    """
+    savstr:
+        'all_request_19B_easyones': original request, G=9-15.4, depth>500
+
+        'request_19B_2m_faint': two faint boyos on the 2m.
+    """
 
     pkl_savpath = (
-        '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
+        '../results/LCOGT_19B20A_observability/{}.pkl'.format(savstr)
     )
     mult_savpath = (
-        '../results/LCOGT_19B20A_observability/all_requests_summary.csv'
+        '../results/LCOGT_19B20A_observability/{}_summary.csv'.format(savstr)
     )
 
     if not overwrite and os.path.exists(pkl_savpath):
         with open(pkl_savpath, 'rb') as f:
             r = pickle.load(f)
     else:
-        r = get_all_requests_19B()
+        r = get_all_requests_19B(savstr)
         with open(pkl_savpath, 'wb') as f:
             pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
             print('saved {:s}'.format(pkl_savpath))
 
-    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
-    sel = (
-        (df['phot_g_mean_mag'] < 15.4)
-        &
-        (df['phot_g_mean_mag'] > 9)
-        &
-        (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
-    )
-    df = df[sel]
+    df = get_targets(savstr)
 
     names = [_r['toi_or_ticid'] for ix, _r in df.iterrows()]
     mult = [len(_r) for _r in r]
