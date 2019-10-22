@@ -10,8 +10,8 @@ import requests, socket, os, pickle
 import numpy as np, pandas as pd
 from numpy import array as nparr
 
-from get_transit_observability import \
-        get_transit_observability, print_transit_observability
+from get_event_observability import \
+        get_event_observability, print_event_observability
 
 import datetime as dt
 from astropy.time import Time
@@ -233,23 +233,33 @@ def get_requests_given_ephem(
         LCO Semester A is Dec 1 thru May 31.
         LCO Semester B is June 1 thru Nov 30.
     """
-    if get_oibeo:
-        assert not get_ibe
-        eventclass = 'OIBEO'
-    if get_ibe:
-        assert not get_oibeo
-        eventclass = 'IBE'
+    if eventclass not in [
+        'OIBEO', 'OIBE', 'IBEO', 'IBE', 'BEO', 'OIB'
+    ]:
+        raise AssertionError
+
+    outdir = "../results/LCOGT_19B20A_observability/{}".format(savstr)
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    outdir = os.path.join(outdir, '{}'.format(targetname))
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
 
     if max_airmass_sched>3:
         raise NotImplementedError('approx breaks')
 
     groups, sel_sites = [], []
+
     for site in sites:
 
         _site = Observer.at_site(site)
 
-        ibe, oibeo, ing_tmid_egr, moon_separation, moon_illumination = (
-            get_transit_observability(
+        (event_ind, oibeo,
+         ing_tmid_egr, target_window,
+         moon_separation, moon_illumination
+        ) = (
+            get_event_observability(
+                eventclass,
                 _site, ra*u.deg, dec*u.deg, targetname, epoch, period*u.day,
                 duration*u.hour, n_transits=100,
                 obs_start_time=min_search_time,
@@ -261,48 +271,43 @@ def get_requests_given_ephem(
 
         lt_maxtime = ing_tmid_egr < np.array(max_search_time)
 
-        if get_oibeo:
-            sel = oibeo.flatten() & np.all(lt_maxtime, axis=1)
-        elif get_ibe:
-            sel = ibe.flatten() & np.all(lt_maxtime, axis=1)
+        sel = event_ind.flatten() & np.all(lt_maxtime, axis=1)
 
-        sel_times = ing_tmid_egr[sel]
+        sel_times = target_window[sel, :]
 
         if len(sel_times)>=1:
 
             ##############################################
             # save observability output as text file too #
-            outdir = "../results/LCOGT_19B20A_observability/{}".format(targetname)
-            if not os.path.exists(outdir):
-                os.mkdir(outdir)
             print_sel = (
-                ( oibeo.flatten() | ibe.flatten() )
+                event_ind.flatten()
                 &
                 np.all(lt_maxtime, axis=1)
             )
-            print_transit_observability(ibe[:,print_sel],
-                                        oibeo[:,print_sel],
-                                        ing_tmid_egr[print_sel,:], _site,
-                                        ra*u.deg, dec*u.deg, targetname, epoch,
-                                        period*u.day, duration*u.hour,
-                                        max_airmass_sched, oot_duration,
-                                        moon_separation[print_sel],
-                                        moon_illumination[print_sel],
-                                        minokmoonsep=min_lunar_distance*u.deg,
-                                        outdir=outdir)
+            print_event_observability(eventclass,
+                                      event_ind[:,print_sel],
+                                      oibeo[:,print_sel],
+                                      ing_tmid_egr[print_sel,:], _site,
+                                      ra*u.deg, dec*u.deg, targetname, epoch,
+                                      period*u.day, duration*u.hour,
+                                      max_airmass_sched, oot_duration,
+                                      moon_separation[print_sel],
+                                      moon_illumination[print_sel],
+                                      minokmoonsep=min_lunar_distance*u.deg,
+                                      outdir=outdir)
             ##############################################
 
-            if savstr in ['all_requests_19B_easyones',
-                          'request_TIC29786532_19B']:
-                telescope_class = "1m0"
-            elif savstr in ['request_19B_2m_faint',
-                            'request_19B_2m_faint_v2']:
+            if '_2m_' in savstr:
                 telescope_class = "2m0"
+            else:
+                telescope_class = "1m0"
 
             for sel_time in sel_times:
 
-                starttime = sel_time[0] - schedule_oot_duration
-                endtime = sel_time[-1] + schedule_oot_duration
+                assert len(sel_time) == 2
+
+                starttime = sel_time[0]
+                endtime = sel_time[1]
 
                 g = make_request_group(targetname, ra, dec, pmra,
                                        pmdec, Gmag, starttime, endtime,
@@ -363,18 +368,20 @@ def get_all_requests_19B(savstr, eventclass):
         #
         #
         #
-        if savstr in ['request_19B_2m_faint', 'request_19B_2m_faint_v2']:
+        if '_2m_' in savstr:
             sites = ['Siding Spring Observatory', 'Haleakala Observatories']
-        elif savstr in ['all_requests_19B_easyones', 'request_TIC29786532_19B']:
+        else:
+            # assume 1m
             sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
 
-        this = get_requests_given_ephem(savstr, eventclass, r['toi_or_ticid'],
+        this = get_requests_given_ephem(savstr, r['toi_or_ticid'],
                                         ra, dec, pmra, pmdec,
                                         r['phot_g_mean_mag'], r['period'],
                                         r['period_unc'], r['epoch'],
                                         r['epoch_unc'], r['depth'],
                                         r['depth_unc'], r['duration'],
-                                        r['duration_unc'], sites=sites)
+                                        r['duration_unc'], sites=sites,
+                                        eventclass=eventclass)
 
         results.append(this)
 
@@ -436,7 +443,7 @@ def get_targets(savstr, verbose=True):
 
     df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
 
-    if savstr == 'all_requests_19B_easyones':
+    if savstr in ['all_requests_19B_easyones']:
         sel = (
             (df['phot_g_mean_mag'] < 15.4)
             &
@@ -446,25 +453,30 @@ def get_targets(savstr, verbose=True):
         )
 
     elif savstr == 'request_19B_2m_faint':
-        sourceids = ['TIC29786532.01', 'TIC53682439.01'] # faint
-        sel = (
-            df['toi_or_ticid'].isin(sourceids)
-        )
-
+        ids = ['TIC29786532.01', 'TIC53682439.01'] # faint
     elif savstr == 'request_19B_2m_faint_v2':
-        sourceids = ['TIC200516835.01'] # faint
-        sel = (
-            df['toi_or_ticid'].isin(sourceids)
-        )
-
+        ids = ['TIC200516835.01'] # faint
     elif savstr == 'request_TIC29786532_19B':
-        sourceids = ['TIC29786532.01'] # faint
-        sel = (
-            df['toi_or_ticid'].isin(sourceids)
-        )
-
+        ids = ['TIC29786532.01'] # faint
+    elif savstr in ['toppartials_19B_IBEO', 'toppartials_19B_OIBE',
+                    'toppartials_19B_IBE', 'toppartials_19B_BEO',
+                    'toppartials_19B_OIB']:
+        ids = ['TIC238611475.01',
+               'TIC125192758.01',
+               'TIC154671430.01',
+               'TIC110718787.01', # these 4 have no OIBEO transits
+               'TIC308538095.01' # only 1 OIBEO
+              ]
     else:
         raise NotImplementedError
+
+    if savstr in ['request_19B_2m_faint', 'request_19B_2m_faint_v2',
+                  'request_TIC29786532_19B', 'toppartials_19B_IBEO',
+                  'toppartials_19B_OIBE', 'toppartials_19B_IBE',
+                  'toppartials_19B_BEO', 'toppartials_19B_OIB']:
+        sel = (
+            df['toi_or_ticid'].isin(ids)
+        )
 
     newdf = df[sel]
 
@@ -480,9 +492,10 @@ def get_targets(savstr, verbose=True):
 
 
 if __name__ == "__main__":
+    #NOTE : "_2m_" must be in savstr to request 2m settings
 
     eventclass = 'IBEO'
-    savstr = 'easyrequests_19B_{}'.format(eventclass)
+    savstr = 'toppartials_19B_{}'.format(eventclass)
 
     ##########
     # eventclass = 'OIBEO'
