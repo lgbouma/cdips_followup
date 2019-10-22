@@ -65,8 +65,9 @@ def _given_Gmag_get_exptime_defocus(Gmag):
     return exptime, defocus
 
 def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
-                       endtime, max_airmass=2.5, min_lunar_distance=20,
-                       filtermode="ip", telescope_class="1m0"):
+                       endtime, eventclass='OIBEO', max_airmass=2.5,
+                       min_lunar_distance=20, filtermode="ip",
+                       telescope_class="1m0"):
 
     try:
         exptime, defocus = _given_Gmag_get_exptime_defocus(Gmag)
@@ -96,10 +97,10 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
     )
 
     requestname = (
-        '{targetname:s}_{telescope_class:s}_{obsdate:s}_{filtermode:s}_{exptime:d}_{defocus:.1f}'.
-        format(targetname=targetname, telescope_class=telescope_class,
-               obsdate=obsdate, filtermode=filtermode, exptime=exptime,
-               defocus=defocus)
+        '{targetname:s}_{eventclass:s}_{telescope_class:s}_{obsdate:s}_{filtermode:s}_{exptime:d}_{defocus:.1f}'.
+        format(targetname=targetname, eventclass=eventclass,
+               telescope_class=telescope_class, obsdate=obsdate,
+               filtermode=filtermode, exptime=exptime, defocus=defocus)
     )
 
     # The target of the observation
@@ -217,8 +218,10 @@ def get_requests_given_ephem(
     """
     if get_oibeo:
         assert not get_ibe
+        eventclass = 'OIBEO'
     if get_ibe:
         assert not get_oibeo
+        eventclass = 'IBE'
 
     if max_airmass_sched>3:
         raise NotImplementedError('approx breaks')
@@ -278,7 +281,8 @@ def get_requests_given_ephem(
                 endtime = sel_time[-1] + schedule_oot_duration
 
                 g = make_request_group(targetname, ra, dec, pmra, pmdec, Gmag,
-                                       starttime, endtime, filtermode="ip",
+                                       starttime, endtime,
+                                       eventclass=eventclass, filtermode="ip",
                                        telescope_class="1m0",
                                        max_airmass=max_airmass_submit,
                                        min_lunar_distance=min_lunar_distance)

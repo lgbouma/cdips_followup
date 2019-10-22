@@ -1,5 +1,5 @@
 """
-submit requests made in LCOGT_make_19B20A_requests.py
+Validate and submit requests made in LCOGT_make_19B20A_requests.py
 """
 ##########
 import pickle, requests, socket
@@ -22,6 +22,7 @@ with open(api_file, 'r') as f:
 token = str(l[0].replace('\n',''))
 
 ##########
+
 
 def validate_single_request(requestgroup, max_duration_error=15):
     """
@@ -167,17 +168,13 @@ def validate_single_request(requestgroup, max_duration_error=15):
         return requestgroup, is_modified
 
 
-
 def submit_single_request(requestgroup):
-
-    if validate_single_request(requestgroup):
-        pass
 
     # Submit the fully formed RequestGroup
     response = requests.post(
         'https://observe.lco.global/api/requestgroups/',
         headers={'Authorization': 'Token {}'.format(token)},
-        json=requestgroup  # Make sure you use json!
+        json=requestgroup
     )
 
     # Make sure the API call was successful
@@ -196,8 +193,11 @@ def submit_single_request(requestgroup):
           format(requestgroup_dict['id']))
 
 
-def submit_all_requests(validate_all=1, submit_all=0,
-                        max_N_transit_per_object=2):
+def submit_all_requests(validate_all=1, submit_all=1,
+                        max_N_transit_per_object=3):
+
+    if submit_all:
+        assert validate_all
 
     pkl_savpath = (
         '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
@@ -208,6 +208,19 @@ def submit_all_requests(validate_all=1, submit_all=0,
     df = pd.read_csv(
         '../results/LCOGT_19B20A_observability/all_requests_summary.csv'
     )
+    if submit_all:
+        print('ATTEMPTING TO SUBMIT THE FOLLOWING')
+
+        df['submit_durn'] = (
+            df['sched_duration'] *
+            np.minimum(df['n_requests'], max_N_transit_per_object)
+        )
+
+        print(df)
+
+        print(42*'=')
+        print('\nTotal time: {:.1f} hr\n'.format(np.sum(df['submit_durn'])))
+        print(42*'=')
 
     #
     # sort all the available transit windows for each target by time. submit
@@ -225,6 +238,10 @@ def submit_all_requests(validate_all=1, submit_all=0,
             np.argsort(start)
         )
 
+    #
+    # iterate over available requests for each target that met the magnitude
+    # and depth cuts 
+    #
     for _r, ind in zip(r, time_sort_inds):
 
         _requests_sorted = np.array(_r)[ind]
@@ -234,7 +251,8 @@ def submit_all_requests(validate_all=1, submit_all=0,
         for requestgroup in _requests_to_submit:
 
             if validate_all:
-                print(requestgroup)
+                if not submit_all:
+                    print(requestgroup)
                 requestgroup, is_modified = validate_single_request(requestgroup)
 
                 n_iter = 0
@@ -251,11 +269,12 @@ def submit_all_requests(validate_all=1, submit_all=0,
                         n_iter += 1
 
             if submit_all:
-                requestgroup = validate_single_request(requestgroup)
-                submit_single_request(requestgroup)
-
-
-
+                if isinstance(requestgroup, dict):
+                    print('SUBMITTING...')
+                    print(requestgroup)
+                    submit_single_request(requestgroup)
+                else:
+                    print('DID NOT SUBMIT B/C FAILED TO VALIDATE')
 
 if __name__=="__main__":
     submit_all_requests()
