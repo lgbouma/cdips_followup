@@ -1,6 +1,6 @@
 # `cdips_followup`
 
-great, we have planet candidates. but we want planets.
+we have planet candidates. let's turn them into planets.
 
 nb. most development happens in `/cdips/` repo. (including e.g., visualization
 tool development). this repo is just for individual analyses of objects of
