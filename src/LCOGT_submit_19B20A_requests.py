@@ -193,7 +193,7 @@ def submit_single_request(requestgroup):
 
 
 def submit_all_requests(savstr, validate_all=1, submit_all=0,
-                        max_N_transit_per_object=3):
+                        max_N_transit_per_object=3, max_duration_error=15):
 
     if submit_all:
         assert validate_all
@@ -254,14 +254,23 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
             if validate_all:
                 if not submit_all:
                     print(requestgroup)
-                requestgroup, is_modified = validate_single_request(requestgroup)
+                requestgroup, is_modified = (
+                    validate_single_request(
+                        requestgroup, max_duration_error=max_duration_error
+                    )
+                )
 
                 n_iter = 0
                 if is_modified and np.isfinite(is_modified):
                     while is_modified:
                         if n_iter >= 10:
                             raise AssertionError('too many iterations')
-                        requestgroup, is_modified = validate_single_request(requestgroup)
+                        requestgroup, is_modified = (
+                            validate_single_request(
+                                requestgroup,
+                                max_duration_error=max_duration_error
+                            )
+                        )
 
                         if not isinstance(requestgroup, dict):
                             if not np.isfinite(requestgroup):
@@ -280,26 +289,28 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
 
 if __name__=="__main__":
 
-    savstr = 'request_TIC29786532_19B'
     validate_all = 1
     submit_all = 1
     max_N_transit_per_object = 2
+    max_duration_error = 20
+
+    eventclass = 'IBEO'
+    savstr = 'toppartials_19B_{}'.format(eventclass)
+
+    # max_duration_error = 15
+    # savstr = 'request_TIC29786532_19B'
+    # max_N_transit_per_object = 2
 
     # savstr = 'request_19B_2m_faint_v2'
-    # validate_all = 1
-    # submit_all = 1
     # max_N_transit_per_object = 2
 
     # savstr = 'request_19B_2m_faint'
-    # validate_all = 1
-    # submit_all = 1
     # max_N_transit_per_object = 4 # actually 3, b/c one fails
 
     # savstr = 'all_requests_19B_easyones'
-    # validate_all=1
-    # submit_all=1
-    # max_N_transit_per_object=3
+    # max_N_transit_per_object = 3
 
     submit_all_requests(savstr, validate_all=validate_all,
                         submit_all=submit_all,
-                        max_N_transit_per_object=max_N_transit_per_object)
+                        max_N_transit_per_object=max_N_transit_per_object,
+                        max_duration_error=max_duration_error)
