@@ -66,7 +66,6 @@ def validate_single_request(requestgroup, max_duration_error=15):
 
             return np.nan, np.nan
 
-
         errmsg = (
             requestgroup_dict['errors']['requests'][0]['non_field_errors'][0]
         )
@@ -193,21 +192,23 @@ def submit_single_request(requestgroup):
           format(requestgroup_dict['id']))
 
 
-def submit_all_requests(validate_all=1, submit_all=1,
+def submit_all_requests(savstr, validate_all=1, submit_all=0,
                         max_N_transit_per_object=3):
 
     if submit_all:
         assert validate_all
 
     pkl_savpath = (
-        '../results/LCOGT_19B20A_observability/all_requests_19B.pkl'
+        '../results/LCOGT_19B20A_observability/{}.pkl'.format(savstr)
     )
+    mult_savpath = (
+        '../results/LCOGT_19B20A_observability/{}_summary.csv'.format(savstr)
+    )
+
     with open(pkl_savpath, 'rb') as f:
         r = pickle.load(f)
 
-    df = pd.read_csv(
-        '../results/LCOGT_19B20A_observability/all_requests_summary.csv'
-    )
+    df = pd.read_csv(mult_savpath)
     if submit_all:
         print('ATTEMPTING TO SUBMIT THE FOLLOWING')
 
@@ -276,5 +277,29 @@ def submit_all_requests(validate_all=1, submit_all=1,
                 else:
                     print('DID NOT SUBMIT B/C FAILED TO VALIDATE')
 
+
 if __name__=="__main__":
-    submit_all_requests()
+
+    savstr = 'request_TIC29786532_19B'
+    validate_all = 1
+    submit_all = 1
+    max_N_transit_per_object = 2
+
+    # savstr = 'request_19B_2m_faint_v2'
+    # validate_all = 1
+    # submit_all = 1
+    # max_N_transit_per_object = 2
+
+    # savstr = 'request_19B_2m_faint'
+    # validate_all = 1
+    # submit_all = 1
+    # max_N_transit_per_object = 4 # actually 3, b/c one fails
+
+    # savstr = 'all_requests_19B_easyones'
+    # validate_all=1
+    # submit_all=1
+    # max_N_transit_per_object=3
+
+    submit_all_requests(savstr, validate_all=validate_all,
+                        submit_all=submit_all,
+                        max_N_transit_per_object=max_N_transit_per_object)

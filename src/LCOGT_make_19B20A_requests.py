@@ -41,7 +41,7 @@ token = str(l[0].replace('\n',''))
 # functions #
 #############
 
-def _given_Gmag_get_exptime_defocus(Gmag):
+def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
     """
     this table was reverse-engineered by looking at the exptime and defocuses
     used by Dan Bayliss in the HATS requests for the same proposal.
@@ -51,7 +51,10 @@ def _given_Gmag_get_exptime_defocus(Gmag):
 
     (any brighter and we might encounter smear issues -- need to test).
     """
-    df = pd.read_csv('../data/LCOGT_reverse_eng_exptime.csv')
+    if telescope_class == '1m0':
+        df = pd.read_csv('../data/LCOGT_reverse_eng_exptime.csv')
+    elif telescope_class == '2m0':
+        df = pd.read_csv('../data/LCOGT_2m_guess_exptime.csv')
 
     if Gmag > df.G.max():
         raise AssertionError('target too faint')
@@ -65,13 +68,16 @@ def _given_Gmag_get_exptime_defocus(Gmag):
 
     return exptime, defocus
 
+
 def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
                        endtime, eventclass='OIBEO', max_airmass=2.5,
                        min_lunar_distance=20, filtermode="ip",
                        telescope_class="1m0"):
 
     try:
-        exptime, defocus = _given_Gmag_get_exptime_defocus(Gmag)
+        exptime, defocus = _given_Gmag_get_exptime_defocus(
+            Gmag, telescope_class
+        )
     except AssertionError as e:
         print(e)
         return -1
@@ -125,10 +131,19 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
     # different filters and exposure times. The fields acquisition_config and guiding_config 
     # are required fields in a configuration that are ultimately filled in with defaults 
     # if the submitted values are empty.
+    if telescope_class == '1m0':
+        instrument_type = '1M0-SCICAM-SINISTRO'
+        mode = 'full_frame'
+        bin_x, bin_y = 1, 1
+    elif telescope_class == '2m0':
+        instrument_type = '2M0-SCICAM-SPECTRAL'
+        mode = 'default'
+        bin_x, bin_y = 2, 2
+
     configurations = [
         {
             'type': 'EXPOSE',
-            'instrument_type': '1M0-SCICAM-SINISTRO',
+            'instrument_type': instrument_type,
             'target': target,
             'constraints': constraints,
             "instrument_configs": [
@@ -136,11 +151,11 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
                     "optical_elements": {
                         "filter": filtermode
                     },
-                    "mode": "full_frame",
+                    "mode": mode,
                     "exposure_time": int(exptime),
                     "exposure_count": int(expcount),
-                    "bin_x": 1,
-                    "bin_y": 1,
+                    "bin_x": bin_x,
+                    "bin_y": bin_y,
                     "rotator_mode": "",
                     "extra_params": {
                         "defocus": float(defocus)
@@ -186,14 +201,15 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
 
 
 def get_requests_given_ephem(
-    targetname, ra, dec, pmra, pmdec, Gmag, period, period_unc, epoch,
+    savstr, targetname, ra, dec, pmra, pmdec, Gmag, period, period_unc, epoch,
     epoch_unc, depth, depth_unc, duration, duration_unc,
     min_search_time=Time(dt.datetime.today().isoformat()),
     max_search_time=Time('2019-11-30 23:59:00'),
     max_airmass_sched=1.8,
     max_airmass_submit=2.5,
-    min_lunar_distance=20, oot_duration=45*u.minute, get_oibeo=True,
-    get_ibe=False, sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
+    min_lunar_distance=20, oot_duration=45*u.minute,
+    eventclass='OIBEO',
+    sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
     schedule_oot_duration=60*u.minute):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
@@ -276,15 +292,22 @@ def get_requests_given_ephem(
                                         outdir=outdir)
             ##############################################
 
+            if savstr in ['all_requests_19B_easyones',
+                          'request_TIC29786532_19B']:
+                telescope_class = "1m0"
+            elif savstr in ['request_19B_2m_faint',
+                            'request_19B_2m_faint_v2']:
+                telescope_class = "2m0"
+
             for sel_time in sel_times:
 
                 starttime = sel_time[0] - schedule_oot_duration
                 endtime = sel_time[-1] + schedule_oot_duration
 
-                g = make_request_group(targetname, ra, dec, pmra, pmdec, Gmag,
-                                       starttime, endtime,
+                g = make_request_group(targetname, ra, dec, pmra,
+                                       pmdec, Gmag, starttime, endtime,
                                        eventclass=eventclass, filtermode="ip",
-                                       telescope_class="1m0",
+                                       telescope_class=telescope_class,
                                        max_airmass=max_airmass_submit,
                                        min_lunar_distance=min_lunar_distance)
 
@@ -296,14 +319,17 @@ def get_requests_given_ephem(
     return groups
 
 
-def get_all_requests_19B(savstr):
+def get_all_requests_19B(savstr, eventclass):
 
-    df = get_targets(savstr)
+    df = get_targets(savstr, verbose=False)
 
     results = []
 
-    for ix, r in df[sel].iterrows():
+    for ix, r in df.iterrows():
 
+        #
+        # get gaia positions and PMs (the coordinates read in are slightly off)
+        #
         jobstr = (
             "select top 1 g.ra, g.dec, g.pmra, g.pmdec from "
             "gaiadr2.gaia_source as g where g.source_id = {:d}".
@@ -334,60 +360,42 @@ def get_all_requests_19B(savstr):
         ra = use_coord.ra.value
         dec = use_coord.dec.value
 
-        this = get_requests_given_ephem(r['toi_or_ticid'], ra, dec, pmra, pmdec,
+        #
+        #
+        #
+        if savstr in ['request_19B_2m_faint', 'request_19B_2m_faint_v2']:
+            sites = ['Siding Spring Observatory', 'Haleakala Observatories']
+        elif savstr in ['all_requests_19B_easyones', 'request_TIC29786532_19B']:
+            sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
+
+        this = get_requests_given_ephem(savstr, eventclass, r['toi_or_ticid'],
+                                        ra, dec, pmra, pmdec,
                                         r['phot_g_mean_mag'], r['period'],
                                         r['period_unc'], r['epoch'],
                                         r['epoch_unc'], r['depth'],
                                         r['depth_unc'], r['duration'],
-                                        r['duration_unc'])
+                                        r['duration_unc'], sites=sites)
 
         results.append(this)
 
     return results
 
 
-def get_targets(savstr):
-
-    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
-
-    if savstr == 'all_request_19B_easyones':
-        sel = (
-            (df['phot_g_mean_mag'] < 15.4)
-            &
-            (df['phot_g_mean_mag'] > 9)
-            &
-            (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
-        )
-
-    elif savstr == 'request_19B_2m_faint':
-        sourceids = ['TIC29786532.01', 'TIC53682439.01'] # faint
-        sel = (
-            df['toi_or_ticid'].isin(sourceids)
-        )
-
-    else:
-        raise NotImplementedError
-
-    df = df[sel]
-
-    print(42*'-')
-    print('WRN: REQUEST WAS {}'.format(savstr))
-    print('WRN: DROPPING THE FOLLOWING TARGETS B/C OUTSIDE DESIRED REQUEST')
-    print(df[~sel][['source_id', 'toi_or_ticid']])
-    print(42*'-')
-
-    import IPython; IPython.embed() #FIXME
-    return df
-
-
-
-def main(savstr='all_request_19B_easyones', overwrite=1):
+def main(savstr=None, overwrite=None, eventclass=None):
     """
     savstr:
-        'all_request_19B_easyones': original request, G=9-15.4, depth>500
 
-        'request_19B_2m_faint': two faint boyos on the 2m.
+        'all_requests_19B_easyones': original request, G=9-15.4, depth>500
+        'request_19B_2m_faint': two faint boyos for the 2m. (one didnt work)
+        'request_19B_2m_faint_v2': getting the third faint (PMS) one
+        'request_TIC29786532_19B': on the 1m, schedule the one that didnt work
+
+    eventclass:
+        any of "OIBEO", "IBEO", "BEO", etc.
     """
+
+    assert isinstance(savstr, str)
+    assert isinstance(overwrite, int)
 
     pkl_savpath = (
         '../results/LCOGT_19B20A_observability/{}.pkl'.format(savstr)
@@ -400,12 +408,12 @@ def main(savstr='all_request_19B_easyones', overwrite=1):
         with open(pkl_savpath, 'rb') as f:
             r = pickle.load(f)
     else:
-        r = get_all_requests_19B(savstr)
+        r = get_all_requests_19B(savstr, eventclass)
         with open(pkl_savpath, 'wb') as f:
             pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
             print('saved {:s}'.format(pkl_savpath))
 
-    df = get_targets(savstr)
+    df = get_targets(savstr, verbose=True)
 
     names = [_r['toi_or_ticid'] for ix, _r in df.iterrows()]
     mult = [len(_r) for _r in r]
@@ -423,6 +431,67 @@ def main(savstr='all_request_19B_easyones', overwrite=1):
 
     return r, mult_df
 
+
+def get_targets(savstr, verbose=True):
+
+    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
+
+    if savstr == 'all_requests_19B_easyones':
+        sel = (
+            (df['phot_g_mean_mag'] < 15.4)
+            &
+            (df['phot_g_mean_mag'] > 9)
+            &
+            (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
+        )
+
+    elif savstr == 'request_19B_2m_faint':
+        sourceids = ['TIC29786532.01', 'TIC53682439.01'] # faint
+        sel = (
+            df['toi_or_ticid'].isin(sourceids)
+        )
+
+    elif savstr == 'request_19B_2m_faint_v2':
+        sourceids = ['TIC200516835.01'] # faint
+        sel = (
+            df['toi_or_ticid'].isin(sourceids)
+        )
+
+    elif savstr == 'request_TIC29786532_19B':
+        sourceids = ['TIC29786532.01'] # faint
+        sel = (
+            df['toi_or_ticid'].isin(sourceids)
+        )
+
+    else:
+        raise NotImplementedError
+
+    newdf = df[sel]
+
+    if verbose:
+        print(42*'-')
+        print('WRN: REQUEST WAS {}'.format(savstr))
+        print('WRN: DROPPING THE FOLLOWING TARGETS B/C OUTSIDE DESIRED REQUEST')
+        print(df[~sel][['source_id', 'toi_or_ticid']])
+        print(42*'-')
+
+    return newdf
+
+
+
 if __name__ == "__main__":
 
-    r, mult_df = main()
+    eventclass = 'IBEO'
+    savstr = 'easyrequests_19B_{}'.format(eventclass)
+
+    ##########
+    # eventclass = 'OIBEO'
+    # savstr = 'request_TIC29786532_19B'
+    # savstr = 'request_19B_2m_faint_v2'
+    # savstr = 'request_19B_2m_faint'
+    # savstr = 'all_requests_19B_easyones'
+    ##########
+
+    overwrite = 1
+
+    r, mult_df = main(savstr=savstr, overwrite=overwrite, eventclass=eventclass)
