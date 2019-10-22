@@ -451,32 +451,48 @@ def get_targets(savstr, verbose=True):
             &
             (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
         )
-
-    elif savstr == 'request_19B_2m_faint':
-        ids = ['TIC29786532.01', 'TIC53682439.01'] # faint
-    elif savstr == 'request_19B_2m_faint_v2':
-        ids = ['TIC200516835.01'] # faint
+    elif 'request_19B_2m_faint' in savstr:
+        ids = ['TIC29786532.01', 'TIC53682439.01', 'TIC200516835.01'] # faint
     elif savstr == 'request_TIC29786532_19B':
         ids = ['TIC29786532.01'] # faint
-    elif savstr in ['toppartials_19B_IBEO', 'toppartials_19B_OIBE',
-                    'toppartials_19B_IBE', 'toppartials_19B_BEO',
-                    'toppartials_19B_OIB']:
+    elif 'request_19B_59859387' in savstr:
+        ids = ['TIC59859387.01']
+    elif 'toppartials_19B' in savstr:
+        # * CDIPS targets with zero or one totals (no TOIs)
         ids = ['TIC238611475.01',
                'TIC125192758.01',
                'TIC154671430.01',
                'TIC110718787.01', # these 4 have no OIBEO transits
                'TIC308538095.01' # only 1 OIBEO
               ]
+    elif 'midpartials_19B' in savstr:
+        # * CDIPS targets with only two OIBEO total (and no extras)
+        # * and TOIs with <=1
+        ids = ['TIC349118653.01',
+               'TIC134528212.01',
+               '1034.01',
+               '520.01',
+               '837.01',
+               '581.01',
+               '451.01' # only TOI with a total
+              ]
+    elif 'bright_shallow_19B' in savstr:
+        ids = ['580.01',
+               '861.01',
+               '1097.01'
+              ]
     else:
         raise NotImplementedError
 
-    if savstr in ['request_19B_2m_faint', 'request_19B_2m_faint_v2',
-                  'request_TIC29786532_19B', 'toppartials_19B_IBEO',
-                  'toppartials_19B_OIBE', 'toppartials_19B_IBE',
-                  'toppartials_19B_BEO', 'toppartials_19B_OIB']:
-        sel = (
-            df['toi_or_ticid'].isin(ids)
-        )
+    if (savstr in
+        ['request_19B_2m_faint_v2', 'request_TIC29786532_19B']
+        or 'request_19B_59859387' in savstr
+        or 'request_19B_2m_faint' in savstr
+        or 'toppartials_19B' in savstr
+        or 'midpartials_19B' in savstr
+        or 'bright_shallow_19B' in savstr
+    ):
+        sel = df['toi_or_ticid'].isin(ids)
 
     newdf = df[sel]
 
@@ -494,8 +510,20 @@ def get_targets(savstr, verbose=True):
 if __name__ == "__main__":
     #NOTE : "_2m_" must be in savstr to request 2m settings
 
-    eventclass = 'IBEO'
-    savstr = 'toppartials_19B_{}'.format(eventclass)
+    eventclass = 'OIBEO'
+    savstr = 'request_19B_59859387_{}'.format(eventclass)
+
+    # eventclass = 'OIB'
+    # savstr = 'request_19B_2m_faint_{}'.format(eventclass)
+
+    # eventclass = 'BEO'
+    # savstr = 'bright_shallow_19B_{}'.format(eventclass)
+
+    # eventclass = 'OIB' # did OIBE and IBEO
+    # savstr = 'midpartials_19B_{}'.format(eventclass)
+
+    # eventclass = 'OIB' # did OIBE and IBEO
+    # savstr = 'toppartials_19B_{}'.format(eventclass)
 
     ##########
     # eventclass = 'OIBEO'

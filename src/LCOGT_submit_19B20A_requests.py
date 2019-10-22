@@ -251,6 +251,12 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
 
         for requestgroup in _requests_to_submit:
 
+            if '451.01' in requestgroup['name']: #FIXME FIXME
+                continue
+            if 'TIC53682439.01' in requestgroup['name']: #FIXME FIXME
+                continue
+
+
             if validate_all:
                 if not submit_all:
                     print(requestgroup)
@@ -294,8 +300,20 @@ if __name__=="__main__":
     max_N_transit_per_object = 2
     max_duration_error = 20
 
-    eventclass = 'IBEO'
-    savstr = 'toppartials_19B_{}'.format(eventclass)
+    eventclass = 'OIBEO'
+    savstr = 'request_19B_59859387_{}'.format(eventclass)
+
+    # eventclass = 'OIB'
+    # savstr = 'request_19B_2m_faint_{}'.format(eventclass)
+
+    # eventclass = 'OIBE'
+    # savstr = 'bright_shallow_19B_{}'.format(eventclass)
+
+    # eventclass = 'OIB'
+    # savstr = 'midpartials_19B_{}'.format(eventclass)
+
+    # eventclass = 'OIB'
+    # savstr = 'toppartials_19B_{}'.format(eventclass)
 
     # max_duration_error = 15
     # savstr = 'request_TIC29786532_19B'
