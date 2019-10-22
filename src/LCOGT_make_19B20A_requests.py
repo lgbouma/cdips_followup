@@ -1,6 +1,6 @@
 """
-Given targets, their ephemerides, and positions, submit requests to LCOGT to
-get 1m and 2m imaging follow-up.
+Given targets, their ephemerides, and positions, create requests to LCOGT to
+get imaging follow-up with the 1m and 2m.
 """
 
 ###########
@@ -187,7 +187,8 @@ def get_requests_given_ephem(
     targetname, ra, dec, pmra, pmdec, Gmag, period, period_unc, epoch,
     epoch_unc, depth, depth_unc, duration, duration_unc,
     min_search_time=Time(dt.datetime.today().isoformat()),
-    max_search_time=Time('2020-01-29 23:00:00'), max_airmass_sched=1.8,
+    max_search_time=Time('2019-11-30 23:59:00'),
+    max_airmass_sched=1.8,
     max_airmass_submit=2.5,
     min_lunar_distance=20, oot_duration=45*u.minute, get_oibeo=True,
     get_ibe=False, sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
@@ -209,6 +210,10 @@ def get_requests_given_ephem(
         schedule_oot_duration: used for the LCOGT-side REQUESTS, rather than
         the astroplan scheduling. Can be longer than oot_duration (used for
         astroplan scheduling) in order to try and get a bit more data.
+
+    Note:
+        LCO Semester A is Dec 1 thru May 31.
+        LCO Semester B is June 1 thru Nov 30.
     """
     if get_oibeo:
         assert not get_ibe
@@ -331,7 +336,7 @@ def get_all_requests_19B():
         c = SkyCoord(ra*u.deg, dec*u.deg, frame='icrs')
 
         shift_by = 42*u.arcsec # Bayliss shifted by ~30 arcsec. might as well further.
-        shift_dir = 45*u.deg   #  as long as it's some mix of "up" and "left"
+        shift_dir = 45*u.deg   # as long as it's some mix of "up" and "left"
 
         use_coord = c.directional_offset_by(shift_dir, shift_by)
         ra = use_coord.ra.value
