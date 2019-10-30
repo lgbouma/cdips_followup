@@ -380,7 +380,7 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
             # assume 1m
             sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
 
-        is not isinstance(ephem_dict, dict):
+        if not isinstance(ephem_dict, dict):
             period, epoch, duration = r['period'], r['epoch'], r['duration']
         else:
             period, epoch, duration = (ephem_dict['period'],
@@ -449,6 +449,9 @@ def get_targets(savstr, verbose=True):
             &
             (df['phot_g_mean_mag'] > 0)
         )
+
+        sel &= df['toi_or_ticid'].str.contains(savstr.split('_')[0])
+
     else:
         raise NotImplementedError
 
@@ -475,34 +478,48 @@ def get_targets(savstr, verbose=True):
 
 
 
-def main(savstr=None, overwrite=None, eventclass=None):
+def make_all_request_files(savstr=None, overwrite=None, eventclass=None,
+                           ephem_dict=None):
     """
     savstr:
+        "_2m_" should be in it, if it's a request on the 2m. Else, by default
+        assumes it's on the sinistro 1m.
+        "ephemupdate" should be in it, if you're making the request files for
+        an ephemeris update.
 
-        'all_requests_19B_easyones': original request, G=9-15.4, depth>500
-        'request_19B_2m_faint': two faint boyos for the 2m. (one didnt work)
-        'request_19B_2m_faint_v2': getting the third faint (PMS) one
-        'request_TIC29786532_19B': on the 1m, schedule the one that didnt work
+        For example:
+            'all_requests_19B_easyones': original request, G=9-15.4, depth>500
+            'request_19B_2m_faint': two faint boyos for the 2m. (one didnt work)
+            'request_19B_2m_faint_v2': getting the third faint (PMS) one
+            'request_TIC29786532_19B': on the 1m, schedule the one that didnt work
 
     eventclass:
         any of "OIBEO", "IBEO", "BEO", etc.
+
+    ephem_dict:
+        only given if you're updating the ephemeris. (see get_all_requests_19B)
     """
 
     assert isinstance(savstr, str)
     assert isinstance(overwrite, int)
 
+    if not 'ephemupdate' in savstr:
+        resultsdir = '../results/LCOGT_19B20A_observability/'
+    else:
+        resultsdir = '../results/LCOGT_19B20A_updated_requests/'
+
     pkl_savpath = (
-        '../results/LCOGT_19B20A_observability/{}.pkl'.format(savstr)
+        os.path.join(resultsdir, '{}.pkl'.format(savstr))
     )
     mult_savpath = (
-        '../results/LCOGT_19B20A_observability/{}_summary.csv'.format(savstr)
+        os.path.join(resultsdir, '{}_summary.csv'.format(savstr))
     )
 
     if not overwrite and os.path.exists(pkl_savpath):
         with open(pkl_savpath, 'rb') as f:
             r = pickle.load(f)
     else:
-        r = get_all_requests_19B(savstr, eventclass)
+        r = get_all_requests_19B(savstr, eventclass, ephem_dict=ephem_dict)
         with open(pkl_savpath, 'wb') as f:
             pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
             print('saved {:s}'.format(pkl_savpath))
@@ -554,4 +571,6 @@ if __name__ == "__main__":
 
     overwrite = 1
 
-    r, mult_df = main(savstr=savstr, overwrite=overwrite, eventclass=eventclass)
+    r, mult_df = make_all_request_files(savstr=savstr,
+                                        overwrite=overwrite,
+                                        eventclass=eventclass)
