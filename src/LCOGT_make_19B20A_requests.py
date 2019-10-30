@@ -401,57 +401,6 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
     return results
 
 
-def main(savstr=None, overwrite=None, eventclass=None):
-    """
-    savstr:
-
-        'all_requests_19B_easyones': original request, G=9-15.4, depth>500
-        'request_19B_2m_faint': two faint boyos for the 2m. (one didnt work)
-        'request_19B_2m_faint_v2': getting the third faint (PMS) one
-        'request_TIC29786532_19B': on the 1m, schedule the one that didnt work
-
-    eventclass:
-        any of "OIBEO", "IBEO", "BEO", etc.
-    """
-
-    assert isinstance(savstr, str)
-    assert isinstance(overwrite, int)
-
-    pkl_savpath = (
-        '../results/LCOGT_19B20A_observability/{}.pkl'.format(savstr)
-    )
-    mult_savpath = (
-        '../results/LCOGT_19B20A_observability/{}_summary.csv'.format(savstr)
-    )
-
-    if not overwrite and os.path.exists(pkl_savpath):
-        with open(pkl_savpath, 'rb') as f:
-            r = pickle.load(f)
-    else:
-        r = get_all_requests_19B(savstr, eventclass)
-        with open(pkl_savpath, 'wb') as f:
-            pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
-            print('saved {:s}'.format(pkl_savpath))
-
-    df = get_targets(savstr, verbose=True)
-
-    names = [_r['toi_or_ticid'] for ix, _r in df.iterrows()]
-    mult = [len(_r) for _r in r]
-    durns = [_r['duration'] for ix, _r in df.iterrows()]
-    durns_sched = [_r['duration']+2 for ix, _r in df.iterrows()]
-    mult_df = pd.DataFrame({
-        'name':names,
-        'n_requests':mult,
-        'duration':durns,
-        'sched_duration':durns_sched,
-        'n*sched':np.array(mult)*np.array(durns_sched)
-    })
-    mult_df.to_csv(mult_savpath, index=False)
-    print('made {}'.format(mult_savpath))
-
-    return r, mult_df
-
-
 def get_targets(savstr, verbose=True):
 
     df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
@@ -524,6 +473,57 @@ def get_targets(savstr, verbose=True):
 
     return newdf
 
+
+
+def main(savstr=None, overwrite=None, eventclass=None):
+    """
+    savstr:
+
+        'all_requests_19B_easyones': original request, G=9-15.4, depth>500
+        'request_19B_2m_faint': two faint boyos for the 2m. (one didnt work)
+        'request_19B_2m_faint_v2': getting the third faint (PMS) one
+        'request_TIC29786532_19B': on the 1m, schedule the one that didnt work
+
+    eventclass:
+        any of "OIBEO", "IBEO", "BEO", etc.
+    """
+
+    assert isinstance(savstr, str)
+    assert isinstance(overwrite, int)
+
+    pkl_savpath = (
+        '../results/LCOGT_19B20A_observability/{}.pkl'.format(savstr)
+    )
+    mult_savpath = (
+        '../results/LCOGT_19B20A_observability/{}_summary.csv'.format(savstr)
+    )
+
+    if not overwrite and os.path.exists(pkl_savpath):
+        with open(pkl_savpath, 'rb') as f:
+            r = pickle.load(f)
+    else:
+        r = get_all_requests_19B(savstr, eventclass)
+        with open(pkl_savpath, 'wb') as f:
+            pickle.dump(r, f, pickle.HIGHEST_PROTOCOL)
+            print('saved {:s}'.format(pkl_savpath))
+
+    df = get_targets(savstr, verbose=True)
+
+    names = [_r['toi_or_ticid'] for ix, _r in df.iterrows()]
+    mult = [len(_r) for _r in r]
+    durns = [_r['duration'] for ix, _r in df.iterrows()]
+    durns_sched = [_r['duration']+2 for ix, _r in df.iterrows()]
+    mult_df = pd.DataFrame({
+        'name':names,
+        'n_requests':mult,
+        'duration':durns,
+        'sched_duration':durns_sched,
+        'n*sched':np.array(mult)*np.array(durns_sched)
+    })
+    mult_df.to_csv(mult_savpath, index=False)
+    print('made {}'.format(mult_savpath))
+
+    return r, mult_df
 
 
 if __name__ == "__main__":
