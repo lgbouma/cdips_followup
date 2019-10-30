@@ -1,9 +1,14 @@
 """
 Validate and submit requests made in LCOGT_make_19B20A_requests.py
 """
-##########
+
+###########
+# imports #
+###########
 import pickle, requests, socket
 from parse import search
+import os
+from glob import glob
 
 import numpy as np, pandas as pd
 
@@ -21,8 +26,9 @@ with open(api_file, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
 
-##########
-
+#############
+# functions #
+#############
 
 def validate_single_request(requestgroup, max_duration_error=15):
     """
@@ -194,15 +200,33 @@ def submit_single_request(requestgroup):
 
 def submit_all_requests(savstr, validate_all=1, submit_all=0,
                         max_N_transit_per_object=3, max_duration_error=15):
+    """
+    savstr: used for directory management
+
+    validate_all: if true, first validates observation requests to ensure that
+    they can be submitted
+
+    submit_all: actually submits them
+
+    max_N_transit_per_object:
+
+    max_duration_error: in minutes, maximum acceptable difference between
+    _desired_ observation window, and the window that the LCOGT system accepts.
+    """
 
     if submit_all:
         assert validate_all
 
+    if not 'ephemupdate' in savstr:
+        resultsdir = '../results/LCOGT_19B20A_observability/'
+    else:
+        resultsdir = '../results/LCOGT_19B20A_updated_requests/'
+
     pkl_savpath = (
-        '../results/LCOGT_19B20A_observability/{}.pkl'.format(savstr)
+        os.path.join(resultsdir, '{}.pkl'.format(savstr))
     )
     mult_savpath = (
-        '../results/LCOGT_19B20A_observability/{}_summary.csv'.format(savstr)
+        os.path.join(resultsdir, '{}_summary.csv'.format(savstr))
     )
 
     with open(pkl_savpath, 'rb') as f:
@@ -252,8 +276,10 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
         for requestgroup in _requests_to_submit:
 
             if '451.01' in requestgroup['name']: #FIXME FIXME
+                print('WRN! SKIPPING 451.01 BECAUSE ITS A WEIRDO')
                 continue
             if 'TIC53682439.01' in requestgroup['name']: #FIXME FIXME
+                print('WRN! SKIPPING 5368* BECAUSE ITS A WEIRDO')
                 continue
 
 
@@ -290,7 +316,9 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
                     print(requestgroup)
                     submit_single_request(requestgroup)
                 else:
-                    print('DID NOT SUBMIT B/C FAILED TO VALIDATE')
+                    print('vvv DID NOT SUBMIT B/C FAILED TO VALIDATE vvv')
+                    print(requestgroup)
+                    print('^^^ DID NOT SUBMIT B/C FAILED TO VALIDATE ^^^')
 
 
 if __name__=="__main__":
