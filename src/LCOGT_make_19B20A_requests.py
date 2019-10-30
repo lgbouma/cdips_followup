@@ -238,7 +238,10 @@ def get_requests_given_ephem(
     ]:
         raise AssertionError
 
-    outdir = "../results/LCOGT_19B20A_observability/{}".format(savstr)
+    if 'ephemupdate' in savstr:
+        outdir = "../results/LCOGT_19B20A_updated_requests/{}".format(savstr)
+    else:
+        outdir = "../results/LCOGT_19B20A_observability/{}".format(savstr)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     outdir = os.path.join(outdir, '{}'.format(targetname))
@@ -324,7 +327,12 @@ def get_requests_given_ephem(
     return groups
 
 
-def get_all_requests_19B(savstr, eventclass):
+def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
+    """
+    If `ephem_dict` is not passed, look in the .csv file for ephemerides.
+    If it is passed (e.g., from LCOGT_update_requests), it should have keys for
+    period, epoch, and duration.
+    """
 
     df = get_targets(savstr, verbose=False)
 
@@ -347,10 +355,8 @@ def get_all_requests_19B(savstr, eventclass):
         if len(gaia_r) != 1:
             raise AssertionError('gaia match failed')
 
-        ra = float(gaia_r['ra'])
-        dec = float(gaia_r['dec'])
-        pmra = float(gaia_r['pmra'])
-        pmdec = float(gaia_r['pmdec'])
+        ra, dec = float(gaia_r['ra']), float(gaia_r['dec'])
+        pmra, pmdec = float(gaia_r['pmra']), float(gaia_r['pmdec'])
 
         #
         # shift by 42 arcseconds away from the center, in order to avoid CCD
@@ -374,12 +380,19 @@ def get_all_requests_19B(savstr, eventclass):
             # assume 1m
             sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
 
+        is not isinstance(ephem_dict, dict):
+            period, epoch, duration = r['period'], r['epoch'], r['duration']
+        else:
+            period, epoch, duration = (ephem_dict['period'],
+                                       ephem_dict['epoch'],
+                                       ephem_dict['duration'])
+
         this = get_requests_given_ephem(savstr, r['toi_or_ticid'],
                                         ra, dec, pmra, pmdec,
-                                        r['phot_g_mean_mag'], r['period'],
-                                        r['period_unc'], r['epoch'],
+                                        r['phot_g_mean_mag'], period,
+                                        r['period_unc'], epoch,
                                         r['epoch_unc'], r['depth'],
-                                        r['depth_unc'], r['duration'],
+                                        r['depth_unc'], duration,
                                         r['duration_unc'], sites=sites,
                                         eventclass=eventclass)
 
@@ -481,6 +494,12 @@ def get_targets(savstr, verbose=True):
                '861.01',
                '1097.01'
               ]
+    elif 'ephemupdate' in savstr:
+        sel = (
+            (df['phot_g_mean_mag'] < 99)
+            &
+            (df['phot_g_mean_mag'] > 0)
+        )
     else:
         raise NotImplementedError
 
