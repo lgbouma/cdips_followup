@@ -133,7 +133,7 @@ def get_requestids_given_targetid(requestdict, targetid):
 def prepare_for_ephem_update(targets_to_update):
     # cancel pending requests. make all potential request dictionaries.
 
-    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
+    df = pd.read_csv('../data/ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
 
     make_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
 

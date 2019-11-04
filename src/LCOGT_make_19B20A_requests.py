@@ -420,7 +420,7 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
 
 def get_targets(savstr, verbose=True):
 
-    df = pd.read_csv('../data/20190912_19B20A_LCOGT_1m_2m.csv')
+    df = pd.read_csv('../data/ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
 
     if savstr in ['all_requests_19B_easyones']:
         sel = (
