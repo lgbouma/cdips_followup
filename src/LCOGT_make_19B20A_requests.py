@@ -26,6 +26,10 @@ from astroplan import (FixedTarget, Observer, EclipsingSystem,
 
 from astroquery.gaia import Gaia
 
+##########
+# config #
+##########
+
 if socket.gethostname() == 'brik':
     api_file = '/home/luke/.lcogt_api_token'
 elif 'astro' in socket.gethostname():
@@ -36,6 +40,14 @@ else:
 with open(api_file, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
+
+ACCEPTABILITY_DICT = {
+    'OIBEO':60,
+    'IBEO':70,
+    'OIBE':70,
+    'OIB':80,
+    'BEO':80
+}
 
 #############
 # functions #
@@ -72,7 +84,7 @@ def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
 def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
                        endtime, eventclass='OIBEO', max_airmass=2.5,
                        min_lunar_distance=20, filtermode="ip",
-                       telescope_class="1m0"):
+                       telescope_class="1m0", acceptability_threshold=90):
 
     try:
         exptime, defocus = _given_Gmag_get_exptime_defocus(
@@ -194,6 +206,7 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
             'configurations': configurations,
             'windows': windows,
             'location': location,
+            'acceptability_threshold': acceptability_threshold
         }]
     }
 
@@ -312,12 +325,16 @@ def get_requests_given_ephem(
                 starttime = sel_time[0]
                 endtime = sel_time[1]
 
-                g = make_request_group(targetname, ra, dec, pmra,
-                                       pmdec, Gmag, starttime, endtime,
-                                       eventclass=eventclass, filtermode="ip",
-                                       telescope_class=telescope_class,
-                                       max_airmass=max_airmass_submit,
-                                       min_lunar_distance=min_lunar_distance)
+                acceptability_threshold = ACCEPTABILITY_DICT[eventclass]
+
+                g = make_request_group(
+                    targetname, ra, dec, pmra, pmdec, Gmag, starttime, endtime,
+                    eventclass=eventclass, filtermode="ip",
+                    telescope_class=telescope_class,
+                    max_airmass=max_airmass_submit,
+                    min_lunar_distance=min_lunar_distance,
+                    acceptability_threshold=acceptability_threshold
+                )
 
                 if g == -1:
                     continue
