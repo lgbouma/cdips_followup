@@ -63,7 +63,7 @@ def get_event_observability(
         deg.
     """
     if eventclass not in [
-        'OIBEO', 'OIBE', 'IBEO', 'IBE', 'BEO', 'OIB'
+        'OIBEO', 'OIBE', 'IBEO', 'IBE', 'BEO', 'OIB', 'OI', 'EO'
     ]:
         raise AssertionError
 
@@ -134,10 +134,18 @@ def get_event_observability(
          np.array(ing_egr[:,1] + oot_duration)[:,None]),
         axis=1)
     ibe_window = ing_egr
+    oi_window = np.concatenate(
+        (np.array(ing_egr[:,0] - oot_duration)[:,None],
+        np.array(ing_egr[:,0])[:,None]),
+        axis=1)
+    eo_window = np.concatenate(
+        (np.array(ing_egr[:,1])[:,None],
+        np.array(ing_egr[:,1] + oot_duration)[:,None]),
+        axis=1)
 
-    keys = ['oibeo','oibe','ibeo','oib','beo','ibe']
+    keys = ['oibeo','oibe','ibeo','oib','beo','ibe','oi','eo']
     windows = [oibeo_window, oibe_window, ibeo_window,
-               oib_window, beo_window, ibe_window]
+               oib_window, beo_window, ibe_window, oi_window, eo_window]
     is_obs_dict = {}
     for key, window in zip(keys, windows):
         is_obs_dict[key] = np.array(
@@ -162,6 +170,16 @@ def get_event_observability(
             & ~is_obs_df['oibeo']
             & ~is_obs_df['oibe']
             & ~is_obs_df['ibeo']
+        )[None,:]
+    elif eventclass in ['OI', 'EO']:
+        event_ind = np.array(
+            is_obs_df[eventclass.lower()]
+            & ~is_obs_df['oibeo']
+            & ~is_obs_df['oibe']
+            & ~is_obs_df['ibeo']
+            & ~is_obs_df['oib']
+            & ~is_obs_df['ibe']
+            & ~is_obs_df['beo']
         )[None,:]
 
     # get moon separation over each transit. take minimum moon sep at

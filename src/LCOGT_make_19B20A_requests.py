@@ -26,6 +26,8 @@ from astroplan import (FixedTarget, Observer, EclipsingSystem,
 
 from astroquery.gaia import Gaia
 
+from astrobase.services.convert_identifiers import gaiadrtwo2tic
+
 ##########
 # config #
 ##########
@@ -46,7 +48,9 @@ ACCEPTABILITY_DICT = {
     'IBEO':70,
     'OIBE':70,
     'OIB':80,
-    'BEO':80
+    'BEO':80,
+    'OI':90,
+    'EO':90
 }
 
 #############
@@ -247,7 +251,7 @@ def get_requests_given_ephem(
         LCO Semester B is June 1 thru Nov 30.
     """
     if eventclass not in [
-        'OIBEO', 'OIBE', 'IBEO', 'IBE', 'BEO', 'OIB'
+        'OIBEO', 'OIBE', 'IBEO', 'IBE', 'BEO', 'OIB', 'OI', 'EO'
     ]:
         raise AssertionError
 
@@ -355,67 +359,100 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
 
     results = []
 
-    for ix, r in df.iterrows():
+    for _, r in df.iterrows():
 
-        #
-        # get gaia positions and PMs (the coordinates read in are slightly off)
-        #
-        jobstr = (
-            "select top 1 g.ra, g.dec, g.pmra, g.pmdec from "
-            "gaiadr2.gaia_source as g where g.source_id = {:d}".
-            format(np.int64(r['source_id']))
-        )
-
-        job = Gaia.launch_job(jobstr)
-        gaia_r = job.get_results()
-
-        if len(gaia_r) != 1:
-            raise AssertionError('gaia match failed')
-
-        ra, dec = float(gaia_r['ra']), float(gaia_r['dec'])
-        pmra, pmdec = float(gaia_r['pmra']), float(gaia_r['pmdec'])
-
-        #
-        # shift by 42 arcseconds away from the center, in order to avoid CCD
-        # amplifier lines.
-        #
-        c = SkyCoord(ra*u.deg, dec*u.deg, frame='icrs')
-
-        shift_by = 42*u.arcsec # Bayliss shifted by ~30 arcsec. might as well further.
-        shift_dir = 45*u.deg   # as long as it's some mix of "up" and "left"
-
-        use_coord = c.directional_offset_by(shift_dir, shift_by)
-        ra = use_coord.ra.value
-        dec = use_coord.dec.value
-
-        #
-        #
-        #
-        if '_2m_' in savstr:
-            sites = ['Siding Spring Observatory', 'Haleakala Observatories']
-        else:
-            # assume 1m
-            sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
-
-        if not isinstance(ephem_dict, dict):
-            period, epoch, duration = r['period'], r['epoch'], r['duration']
-        else:
-            period, epoch, duration = (ephem_dict['period'],
-                                       ephem_dict['epoch'],
-                                       ephem_dict['duration'])
-
-        this = get_requests_given_ephem(savstr, r['toi_or_ticid'],
-                                        ra, dec, pmra, pmdec,
-                                        r['phot_g_mean_mag'], period,
-                                        r['period_unc'], epoch,
-                                        r['epoch_unc'], r['depth'],
-                                        r['depth_unc'], duration,
-                                        r['duration_unc'], sites=sites,
-                                        eventclass=eventclass)
-
-        results.append(this)
+        results.append(make_single_request_from_row(r, savstr, eventclass,
+                                                    ephem_dict=ephem_dict))
 
     return results
+
+
+def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None):
+    #
+    # require the passed dataframe row has the right format.
+    #
+    required_cols = ['source_id', 'period', 'epoch', 'duration']
+    for _r in required_cols:
+        if _r not in r:
+            raise AssertionError(
+                'need column {} in make_single_request_from_row'.format(_r)
+            )
+    suggested_cols = ['period_unc', 'epoch_unc', 'duration_unc',
+                      'depth', 'depth_unc']
+    for _s in suggested_cols:
+        if _s not in r:
+            r[_s] = None
+
+    #
+    # get identifier string
+    #
+    source_id = np.int64(r['source_id'])
+
+    if 'toi_or_ticid' in r:
+        identifier_str = r['toi_or_ticid']
+    else:
+        identifier_str = 'TIC'+gaiadrtwo2tic(str(source_id))+'.01'
+
+    #
+    # get gaia positions and PMs (the coordinates read in are slightly off)
+    #
+    jobstr = (
+        "select top 1 g.ra, g.dec, g.pmra, g.pmdec, g.phot_g_mean_mag from "
+        "gaiadr2.gaia_source as g where g.source_id = {:d}".
+        format(source_id)
+    )
+
+    job = Gaia.launch_job(jobstr)
+    gaia_r = job.get_results()
+
+    if len(gaia_r) != 1:
+        raise AssertionError('gaia match failed')
+
+    ra, dec = float(gaia_r['ra']), float(gaia_r['dec'])
+    pmra, pmdec = float(gaia_r['pmra']), float(gaia_r['pmdec'])
+    phot_g_mean_mag = float(gaia_r['phot_g_mean_mag'])
+
+    #
+    # shift by 42 arcseconds away from the center, in order to avoid CCD
+    # amplifier lines.
+    #
+    c = SkyCoord(ra*u.deg, dec*u.deg, frame='icrs')
+
+    shift_by = 42*u.arcsec # Bayliss shifted by ~30 arcsec. might as well further.
+    shift_dir = 45*u.deg   # as long as it's some mix of "up" and "left"
+
+    use_coord = c.directional_offset_by(shift_dir, shift_by)
+    ra = use_coord.ra.value
+    dec = use_coord.dec.value
+
+    #
+    #
+    #
+    if '_2m_' in savstr:
+        sites = ['Siding Spring Observatory', 'Haleakala Observatories']
+    else:
+        # assume 1m
+        sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
+
+    if not isinstance(ephem_dict, dict):
+        period, epoch, duration = r['period'], r['epoch'], r['duration']
+    else:
+        period, epoch, duration = (ephem_dict['period'],
+                                   ephem_dict['epoch'],
+                                   ephem_dict['duration'])
+
+    this = get_requests_given_ephem(savstr, identifier_str,
+                                    ra, dec, pmra, pmdec,
+                                    phot_g_mean_mag, period,
+                                    r['period_unc'], epoch,
+                                    r['epoch_unc'], r['depth'],
+                                    r['depth_unc'], duration,
+                                    r['duration_unc'], sites=sites,
+                                    eventclass=eventclass)
+
+    return this
+
+
 
 
 def get_targets(savstr, verbose=True):
