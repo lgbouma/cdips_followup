@@ -207,19 +207,24 @@ def main():
 
     prepare = 0
     validate = 1
-    submit = 0
+    submit = 1
 
-    # 20191030
+    # # 20191030
+    # targets_to_prepare = [
+    #     "TIC308538095",
+    #     "TIC59859387",
+    #     "TIC349118653"
+    # ]
+
+    # 20191108
     targets_to_prepare = [
-        "TIC308538095",
-        "TIC59859387",
-        "TIC349118653"
+        "TIC238611475"
     ]
 
     targets_to_submit = [
-        "TIC308538095"
-        #"TIC349118653"
+        "TIC238611475"
     ]
+
     submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
     max_N_transit_per_object = 2
 
