@@ -130,7 +130,7 @@ def get_requestids_given_targetid(requestdict, targetid):
     return requestids
 
 
-def prepare_for_ephem_update(targets_to_update):
+def prepare_for_ephem_update(targets_to_update, target_is_faint=False):
     # cancel pending requests. make all potential request dictionaries.
 
     df = pd.read_csv('../data/ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
@@ -138,7 +138,6 @@ def prepare_for_ephem_update(targets_to_update):
     make_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
 
     rd = get_requests()
-
 
     for targetid in targets_to_update:
 
@@ -169,6 +168,12 @@ def prepare_for_ephem_update(targets_to_update):
                 '{}_ephemupdate_{}_on{}_19B'.
                 format(targetid, eventclass, today_YYYYMMDD())
             )
+            if target_is_faint:
+                savstr = (
+                    '{}_ephemupdate_2m_{}_on{}_19B'.
+                    format(targetid, eventclass, today_YYYYMMDD())
+                )
+
             outdir = (
                 '../results/LCOGT_19B20A_updated_requests/{}'.
                 format(savstr)
@@ -185,7 +190,8 @@ def prepare_for_ephem_update(targets_to_update):
 
 
 def submit_ephem_update(targetid, validate_all=None, submit_all=None,
-                        eventclass=None, max_N_transit_per_object=2):
+                        eventclass=None, max_N_transit_per_object=2,
+                        target_is_faint=False):
 
     max_duration_error = 20
 
@@ -194,12 +200,19 @@ def submit_ephem_update(targetid, validate_all=None, submit_all=None,
         format(targetid, eventclass, today_YYYYMMDD())
     )
 
+    if target_is_faint:
+        savstr = (
+            '{}_ephemupdate_2m_{}_on{}_19B'.
+            format(targetid, eventclass, today_YYYYMMDD())
+        )
+
     submit_all_requests(
         savstr,
         validate_all=validate_all,
         submit_all=submit_all,
         max_N_transit_per_object=max_N_transit_per_object,
-        max_duration_error=max_duration_error
+        max_duration_error=max_duration_error,
+        target_is_faint=target_is_faint
     )
 
 
@@ -208,6 +221,26 @@ def main():
     prepare = 0
     validate = 1
     submit = 1
+    target_is_faint = 0 # set to 1 if you want to do LCOGT/2m requests
+
+    submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
+    max_N_transit_per_object = 2
+
+    # 20191116
+    targets_to_prepare = [
+        "TIC53682439"
+        "TIC59859387"
+    ]
+    targets_to_submit = [
+        "TIC53682439"
+        "TIC59859387"
+    ]
+
+    ##########################################
+    # # 20191108
+    # targets_to_prepare = [
+    #     "TIC238611475"
+    # ]
 
     # # 20191030
     # targets_to_prepare = [
@@ -215,23 +248,11 @@ def main():
     #     "TIC59859387",
     #     "TIC349118653"
     # ]
-
-    # 20191108
-    targets_to_prepare = [
-        "TIC238611475"
-    ]
-
-    targets_to_submit = [
-        "TIC238611475"
-    ]
-
-    submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
-    max_N_transit_per_object = 2
-
     ##########################################
 
     if prepare:
-        prepare_for_ephem_update(targets_to_prepare)
+        prepare_for_ephem_update(targets_to_prepare,
+                                 target_is_faint=target_is_faint)
 
     if validate or submit:
 
@@ -244,7 +265,8 @@ def main():
                     validate_all=validate,
                     submit_all=submit,
                     eventclass=eventclass,
-                    max_N_transit_per_object=max_N_transit_per_object
+                    max_N_transit_per_object=max_N_transit_per_object,
+                    target_is_faint=target_is_faint
                 )
 
 
