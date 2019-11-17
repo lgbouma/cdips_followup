@@ -27,10 +27,13 @@ from astroplan import (FixedTarget, Observer, EclipsingSystem,
 from astroquery.gaia import Gaia
 
 from astrobase.services.convert_identifiers import gaiadrtwo2tic
+from astrobase.services.gaia import objectid_search as gaia_objectid_search
 
 ##########
 # config #
 ##########
+
+DEBUG = True
 
 if socket.gethostname() == 'brik':
     api_file = '/home/luke/.lcogt_api_token'
@@ -203,7 +206,7 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
     requestgroup = {
         'name': requestname,  # The title
         'proposal': PROPOSAL_ID,
-        'ipp_value': 1.05,
+        'ipp_value': 1.0,
         'operator': 'SINGLE',
         'observation_type': 'NORMAL',
         'requests': [{
@@ -331,9 +334,11 @@ def get_requests_given_ephem(
 
                 acceptability_threshold = ACCEPTABILITY_DICT[eventclass]
 
+                filtermode = "ip"
+
                 g = make_request_group(
                     targetname, ra, dec, pmra, pmdec, Gmag, starttime, endtime,
-                    eventclass=eventclass, filtermode="ip",
+                    eventclass=eventclass, filtermode=filtermode,
                     telescope_class=telescope_class,
                     max_airmass=max_airmass_submit,
                     min_lunar_distance=min_lunar_distance,
@@ -401,16 +406,31 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None):
         "gaiadr2.gaia_source as g where g.source_id = {:d}".
         format(source_id)
     )
+    if DEBUG:
+        print('Launching...\n{}'.format(jobstr))
 
-    job = Gaia.launch_job(jobstr)
-    gaia_r = job.get_results()
+    try:
 
-    if len(gaia_r) != 1:
-        raise AssertionError('gaia match failed')
+        job = Gaia.launch_job(jobstr)
+        gaia_r = job.get_results()
 
-    ra, dec = float(gaia_r['ra']), float(gaia_r['dec'])
-    pmra, pmdec = float(gaia_r['pmra']), float(gaia_r['pmdec'])
-    phot_g_mean_mag = float(gaia_r['phot_g_mean_mag'])
+        if len(gaia_r) != 1:
+            raise AssertionError('gaia match failed')
+
+        ra, dec = float(gaia_r['ra']), float(gaia_r['dec'])
+        pmra, pmdec = float(gaia_r['pmra']), float(gaia_r['pmdec'])
+        phot_g_mean_mag = float(gaia_r['phot_g_mean_mag'])
+
+    except AttributeError as e:
+
+        print('Got AttributeError due to Gaia mirror timeout: {}'.
+              format(repr(e)))
+
+        gaia_r = gaia_objectid_search(source_id)
+        df = pd.read_csv(gaia_r['result'])
+        ra, dec = float(df['ra'].iloc[0]), float(df['dec'].iloc[0])
+        pmra, pmdec = float(df['pmra'].iloc[0]), float(df['pmdec'].iloc[0])
+        phot_g_mean_mag = float(df['phot_g_mean_mag'].iloc[0])
 
     #
     # shift by 42 arcseconds away from the center, in order to avoid CCD
