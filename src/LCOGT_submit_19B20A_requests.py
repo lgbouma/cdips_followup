@@ -72,6 +72,15 @@ def validate_single_request(requestgroup, max_duration_error=15):
 
             return np.nan, np.nan
 
+        if 'requests' in requestgroup_dict['errors']:
+
+            print(42*'-')
+            print('GOT ERROR: {}'.
+                  format(requestgroup_dict['errors']['requests']))
+            print(42*'-')
+
+            return np.nan, np.nan
+
         errmsg = (
             requestgroup_dict['errors']['requests'][0]['non_field_errors'][0]
         )
@@ -274,14 +283,6 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
         _requests_to_submit = _requests_sorted[:max_N_transit_per_object]
 
         for requestgroup in _requests_to_submit:
-
-            if '451.01' in requestgroup['name']: #FIXME FIXME
-                print('WRN! SKIPPING 451.01 BECAUSE ITS A WEIRDO')
-                continue
-            if 'TIC53682439.01' in requestgroup['name']: #FIXME FIXME
-                print('WRN! SKIPPING 5368* BECAUSE ITS A WEIRDO')
-                continue
-
 
             if validate_all:
                 if not submit_all:
