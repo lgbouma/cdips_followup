@@ -5,6 +5,7 @@ from astropy.io import fits
 from astrobase import lcmath
 from astrobase.periodbase import kbls
 from astrobase.checkplot.png import _make_phased_magseries_plot
+from astrobase.lcmath import phase_bin_magseries
 from copy import deepcopy
 
 from cdips.plotting import vetting_pdf as vp
@@ -260,12 +261,89 @@ def do_phasefolds(data):
             print('made {}'.format(savpath))
 
 
+def make_riverplot(data):
+
+    data_dict = get_light_detrended_data(data)
+
+    period = 2.029202
+    sampling_rate = 30/(60*24)
+
+    #epoch = 2458562.47131
+    time = data_dict['sector7']['time']
+    offset = -period/2
+    epoch = np.min(time) + offset
+
+    # t_offset = 2458543
+
+    f, axs = plt.subplots(nrows=2, ncols=1, figsize=(7,8))
+
+    for _ix, ax in enumerate(axs):
+
+        k = 'sector7' if _ix == 0 else 'sector9'
+
+        time = data_dict[k]['time']
+        flux = data_dict[k]['fluxes']['IRM1']
+
+        transit_number = np.floor((time - epoch)/period)
+
+        N_transits = int(np.max(transit_number) - np.min(transit_number))
+        N_points_per_period = int(np.floor(period/sampling_rate))
+
+        flux_arr = np.ones((N_transits, N_points_per_period))
+
+        t_starts = [
+            ix*period + epoch for ix in
+            range(int(np.min(transit_number)), int(np.max(transit_number)))
+        ]
+
+        transit_index = [
+            ix for ix in
+            range(int(np.min(transit_number)), int(np.max(transit_number)))
+        ]
+
+        for ix, t_start in enumerate(t_starts):
+
+            ind = (time > t_start) & (time < t_start + period)
+
+            flux_to_insert = flux[ind]
+
+            flux_arr[ix, :len(flux_to_insert)] = flux_to_insert
+
+        im = ax.pcolor(np.array(range(N_points_per_period))/N_points_per_period,
+                       transit_index,
+                       flux_arr,
+                       cmap='Blues_r')
+                       #cmap='Greys_r') #looks alright too
+
+    axs[0].set_xticks([])
+    axs[1].set_xlabel('phase')
+    axs[0].set_ylabel('transit number')
+    axs[1].set_ylabel('transit number')
+
+    f.tight_layout()
+
+    outpath = '../results/tc_special_proc/riverplot.png'
+    f.savefig(outpath, bbox_inches='tight', dpi=400)
+    print('saved {}'.format(outpath))
+
+
 def main():
 
+    do_mag_lcs = 0
+    do_flux_lcs = 0
+    do_pf = 0
+    do_riverplot = 1
+
     data = get_data()
-    explore_mag_lightcurves(data)
-    explore_flux_lightcurves(data)
-    do_phasefolds(data)
+
+    if do_mag_lcs:
+        explore_mag_lightcurves(data)
+    if do_flux_lcs:
+        explore_flux_lightcurves(data)
+    if do_pf:
+        do_phasefolds(data)
+    if do_riverplot:
+        make_riverplot(data)
 
 if __name__ == "__main__":
     main()
