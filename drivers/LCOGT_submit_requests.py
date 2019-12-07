@@ -1,5 +1,5 @@
 """
-Validate and submit requests made in LCOGT_make_19B20A_requests.py
+Validate and submit requests made in LCOGT_make_requests.py
 """
 
 ###########
@@ -208,7 +208,8 @@ def submit_single_request(requestgroup):
 
 
 def submit_all_requests(savstr, validate_all=1, submit_all=0,
-                        max_N_transit_per_object=3, max_duration_error=15):
+                        max_N_transit_per_object=3, max_duration_error=15,
+                        semesterstr='20A'):
     """
     savstr: used for directory management
 
@@ -227,9 +228,13 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
         assert validate_all
 
     if not 'ephemupdate' in savstr:
-        resultsdir = '../results/LCOGT_19B20A_observability/'
+        resultsdir = (
+            '../results/LCOGT_{}_observability/'.format(semesterstr)
+        )
     else:
-        resultsdir = '../results/LCOGT_19B20A_updated_requests/'
+        resultsdir = (
+            '../results/LCOGT_{}_updated_requests/'.format(semesterstr)
+        )
 
     pkl_savpath = (
         os.path.join(resultsdir, '{}.pkl'.format(savstr))

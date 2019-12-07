@@ -1,16 +1,16 @@
-from LCOGT_make_19B20A_requests import make_single_request_from_row
+from LCOGT_make_requests import make_single_request_from_row
 import pandas as pd, numpy as np
 import pickle, os
 from copy import deepcopy
 
-from LCOGT_submit_19B20A_requests import (
+from LCOGT_submit_requests import (
     validate_single_request, submit_single_request
 )
 
 from cdips_followup.manage_ephemerides import query_ephemeris
 
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
-                          eventclasses, overwrite=0):
+                          eventclasses, overwrite=0, semesterstr='20A'):
     #
     # savstr: e.g., request_2m_tc_secondary. "ephemupdate" if it is one...
     #
@@ -24,9 +24,13 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
     _savstr = deepcopy(savstr)
 
     if not 'ephemupdate' in init_savstr:
-        resultsdir = '../results/LCOGT_20A_observability/'
+        resultsdir = (
+            '../results/LCOGT_{}_observability/'.format(semesterstr)
+        )
     else:
-        resultsdir = '../results/LCOGT_20A_updated_requests/'
+        resultsdir = (
+            '../results/LCOGT_{}_updated_requests/'.format(semesterstr)
+        )
 
     pkl_savpath = (
         os.path.join(resultsdir, '{}.pkl'.format(init_savstr))

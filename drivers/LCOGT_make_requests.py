@@ -231,7 +231,8 @@ def get_requests_given_ephem(
     min_lunar_distance=20, oot_duration=45*u.minute,
     eventclass='OIBEO',
     sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
-    schedule_oot_duration=60*u.minute):
+    schedule_oot_duration=60*u.minute,
+    semesterstr='20A'):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
     requests for any available transits at the given sites, between
@@ -260,9 +261,15 @@ def get_requests_given_ephem(
         raise AssertionError
 
     if 'ephemupdate' in savstr:
-        outdir = "../results/LCOGT_20A_updated_requests/{}".format(savstr)
+        outdir = (
+            "../results/LCOGT_{}_updated_requests/{}".
+            format(semesterstr, savstr)
+        )
     else:
-        outdir = "../results/LCOGT_20A_observability/{}".format(savstr)
+        outdir = (
+            "../results/LCOGT_{}_observability/{}".
+            format(semesterstr, savstr)
+        )
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     outdir = os.path.join(outdir, '{}'.format(targetname))
@@ -556,7 +563,7 @@ def get_targets(savstr, verbose=True):
 
 
 def make_all_request_files(savstr=None, overwrite=None, eventclass=None,
-                           ephem_dict=None):
+                           ephem_dict=None, semesterstr='20A'):
     """
     savstr:
         "_2m_" should be in it, if it's a request on the 2m. Else, by default
@@ -580,10 +587,14 @@ def make_all_request_files(savstr=None, overwrite=None, eventclass=None,
     assert isinstance(savstr, str)
     assert isinstance(overwrite, int)
 
-    if not 'ephemupdate' in savstr:
-        resultsdir = '../results/LCOGT_20A_observability/'
+    if not 'ephemupdate' in init_savstr:
+        resultsdir = (
+            '../results/LCOGT_{}_observability/'.format(semesterstr)
+        )
     else:
-        resultsdir = '../results/LCOGT_20A_updated_requests/'
+        resultsdir = (
+            '../results/LCOGT_{}_updated_requests/'.format(semesterstr)
+        )
 
     pkl_savpath = (
         os.path.join(resultsdir, '{}.pkl'.format(savstr))
