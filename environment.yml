@@ -1,4 +1,4 @@
-name: cdips
+name: cdips_followup
 channels:
   - anaconda
   - astropy
