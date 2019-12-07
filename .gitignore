@@ -14,3 +14,6 @@ results/LCOGT_19B20A_*
 SECRET*
 results/tc_special_proc*
 results/TOI_837*
+build*
+*.egg*
+dist*
