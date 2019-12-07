@@ -140,10 +140,11 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
     save_ephemerides_csv_file(new_ephem_df)
 
 
-def get_ephemeris(source_id=None, ticid=None):
+def query_ephemeris(source_id=None, ticid=None):
     """
     Query ephemerides.csv for the ephemeris entry. Use either Gaia DR2
-    source_id or otherwise ticid.
+    source_id or otherwise ticid. The NEWEST ephemeris is used (i.e., presumes
+    that any new entries supersede old ones, for the same target).
     """
 
     assert isinstance(source_id, str) or isinstance(ticid, str)
@@ -154,7 +155,16 @@ def get_ephemeris(source_id=None, ticid=None):
     if isinstance(ticid, str):
         assert not isinstance(source_id, str)
 
-    pass
+    df = pd.read_csv(EPHEM_PATH)
+
+    # Get the newest entry for this source.
+    if isinstance(source_id, str):
+        seldf = df[df.source_id == source_id].iloc[-1]
+
+    if isinstance(ticid, str):
+        seldf = df[df.ticid == ticid].iloc[-1]
+
+    return dict(seldf)
 
 
 def save_ephemerides_csv_file(ephem_df):
