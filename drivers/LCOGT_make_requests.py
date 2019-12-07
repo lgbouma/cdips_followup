@@ -14,6 +14,8 @@ from get_event_observability import (
         get_event_observability, print_event_observability
 )
 
+from cdips_followup.utils import ticid_to_toiid
+
 import datetime as dt
 from astropy.time import Time
 from astropy.coordinates import get_body, get_sun, get_moon, SkyCoord
@@ -55,6 +57,17 @@ ACCEPTABILITY_DICT = {
     'BEO':80,
     'OI':90,
     'EO':90
+}
+
+MAXTIMEDICT = {
+    '19A': Time('2019-05-30 23:59:00'),
+    '19B': Time('2019-11-30 23:59:00'),
+    '20A': Time('2020-03-01 23:59:00'), # really May, but end of Feb for updates Time('2020-05-30 23:59:00'),
+    '20B': Time('2020-11-30 23:59:00'),
+    '21A': Time('2021-05-30 23:59:00'),
+    '21B': Time('2021-11-30 23:59:00'),
+    '22A': Time('2021-05-30 23:59:00'),
+    '22B': Time('2021-11-30 23:59:00')
 }
 
 #############
@@ -103,7 +116,7 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
         return -1
 
     API_TOKEN = token  # API token obtained from https://observe.lco.global/accounts/profile/
-    PROPOSAL_ID = 'NOAO2019B-013'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
+    PROPOSAL_ID = 'NOAO2020A-005'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
 
     # starttime e.g., '2019-05-02 00:00:00'
     _starttime = starttime.iso[0:19]
@@ -225,7 +238,7 @@ def get_requests_given_ephem(
     savstr, targetname, ra, dec, pmra, pmdec, Gmag, period, period_unc, epoch,
     epoch_unc, depth, depth_unc, duration, duration_unc,
     min_search_time=Time(dt.datetime.today().isoformat()),
-    max_search_time=Time('2019-11-30 23:59:00'),
+    max_search_time=None,
     max_airmass_sched=1.8,
     max_airmass_submit=2.5,
     min_lunar_distance=20, oot_duration=45*u.minute,
@@ -255,6 +268,9 @@ def get_requests_given_ephem(
         LCO Semester A is Dec 1 thru May 31.
         LCO Semester B is June 1 thru Nov 30.
     """
+
+    max_search_time = MAXTIMEDICT[semesterstr]
+
     if eventclass not in [
         'OIBEO', 'OIBE', 'IBEO', 'IBE', 'BEO', 'OIB', 'OI', 'EO'
     ]:
@@ -397,14 +413,21 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None):
             r[_s] = None
 
     #
-    # get identifier string
+    # get identifier string. this is the TOI ID if it's available, otherwise
+    # the TIC ID.
     #
     source_id = np.int64(r['source_id'])
 
     if 'toi_or_ticid' in r:
         identifier_str = r['toi_or_ticid']
     else:
-        identifier_str = 'TIC'+gaiadr2_to_tic(str(source_id))+'.01'
+        ticid = gaiadr2_to_tic(str(source_id))
+        toiid = ticid_to_toiid(ticid)
+
+        if isinstance(toiid, str):
+            identifier_str = toiid
+        else:
+            identifier_str = 'TIC{}.01'.format(ticid)
 
     #
     # get gaia positions and PMs (the coordinates read in are slightly off)

@@ -65,16 +65,6 @@ def given_dedicated_requests_validate_submit(requests, validate=1, submit=0,
             for _r in r:
                 requestgroups.append(_r)
 
-    # ##########################################
-    # NOTE temporary, for the TC
-    raise AssertionError('generalize the code below here!')
-    overwrite_acceptability = 70
-    overwrite_ipp = 1
-    overwrite_eventclass = "_BEO_"
-    requestgroups = [r for r in requestgroups if overwrite_eventclass in r['name']]
-    # NOTE temporary, for the TC
-    # ##########################################
-
     for requestgroup in requestgroups:
 
         if isinstance(overwrite_acceptability, int):
@@ -123,7 +113,7 @@ def given_dedicated_requests_validate_submit(requests, validate=1, submit=0,
 if __name__ == "__main__":
 
     ####################
-    overwrite = 1
+    overwrite = 0
     validate = 1
     submit = 0
     max_duration_error = 20
