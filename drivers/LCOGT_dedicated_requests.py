@@ -7,6 +7,8 @@ from LCOGT_submit_19B20A_requests import (
     validate_single_request, submit_single_request
 )
 
+from cdips_followup.manage_ephemerides import query_ephemeris
+
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
                           eventclasses, overwrite=0):
     #
@@ -22,9 +24,9 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
     _savstr = deepcopy(savstr)
 
     if not 'ephemupdate' in init_savstr:
-        resultsdir = '../results/LCOGT_19B20A_observability/'
+        resultsdir = '../results/LCOGT_20A_observability/'
     else:
-        resultsdir = '../results/LCOGT_19B20A_updated_requests/'
+        resultsdir = '../results/LCOGT_20A_updated_requests/'
 
     pkl_savpath = (
         os.path.join(resultsdir, '{}.pkl'.format(init_savstr))
@@ -115,18 +117,27 @@ def given_dedicated_requests_validate_submit(requests, validate=1, submit=0,
 
 
 if __name__ == "__main__":
+
+    ####################
     overwrite = 1
-    validate = 0
+    validate = 1
     submit = 0
     max_duration_error = 20
+    manual_ephemeris = False
+    savstr = '20191207_TOI837_request_1m' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one.
+    source_id = '5251470948229949568'
+    ####################
 
-    savstr = 'TOI1098_Octans'
-    source_id = '5765748511163751936'
-    period = 1.184903
-    epoch = 2458660.459229
-    duration = 2.643326
+    if manual_ephemeris:
+        period = 42
+        epoch = 2458660.00000
+        duration = 2.00000
+    else:
+        # get ephemeris from ephermides.csv
+        d = query_ephemeris(source_id=source_id)
+        period, epoch, duration = d['period'], d['epoch'], d['duration']
 
-    eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO', 'IBE']
+    eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
 
     requests = get_dedicated_request(savstr, source_id, period, epoch,
                                      duration, eventclasses,

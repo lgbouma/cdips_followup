@@ -10,8 +10,9 @@ import requests, socket, os, pickle
 import numpy as np, pandas as pd
 from numpy import array as nparr
 
-from get_event_observability import \
+from get_event_observability import (
         get_event_observability, print_event_observability
+)
 
 import datetime as dt
 from astropy.time import Time
@@ -26,7 +27,7 @@ from astroplan import (FixedTarget, Observer, EclipsingSystem,
 
 from astroquery.gaia import Gaia
 
-from astrobase.services.convert_identifiers import gaiadrtwo2tic
+from astrobase.services.identifiers import gaiadr2_to_tic
 from astrobase.services.gaia import objectid_search as gaia_objectid_search
 
 ##########
@@ -259,9 +260,9 @@ def get_requests_given_ephem(
         raise AssertionError
 
     if 'ephemupdate' in savstr:
-        outdir = "../results/LCOGT_19B20A_updated_requests/{}".format(savstr)
+        outdir = "../results/LCOGT_20A_updated_requests/{}".format(savstr)
     else:
-        outdir = "../results/LCOGT_19B20A_observability/{}".format(savstr)
+        outdir = "../results/LCOGT_20A_observability/{}".format(savstr)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     outdir = os.path.join(outdir, '{}'.format(targetname))
@@ -396,7 +397,7 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None):
     if 'toi_or_ticid' in r:
         identifier_str = r['toi_or_ticid']
     else:
-        identifier_str = 'TIC'+gaiadrtwo2tic(str(source_id))+'.01'
+        identifier_str = 'TIC'+gaiadr2_to_tic(str(source_id))+'.01'
 
     #
     # get gaia positions and PMs (the coordinates read in are slightly off)
@@ -476,6 +477,8 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None):
 
 
 def get_targets(savstr, verbose=True):
+
+    raise AssertionError('deprecated!!')
 
     df = pd.read_csv('../data/ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
 
@@ -578,9 +581,9 @@ def make_all_request_files(savstr=None, overwrite=None, eventclass=None,
     assert isinstance(overwrite, int)
 
     if not 'ephemupdate' in savstr:
-        resultsdir = '../results/LCOGT_19B20A_observability/'
+        resultsdir = '../results/LCOGT_20A_observability/'
     else:
-        resultsdir = '../results/LCOGT_19B20A_updated_requests/'
+        resultsdir = '../results/LCOGT_20A_updated_requests/'
 
     pkl_savpath = (
         os.path.join(resultsdir, '{}.pkl'.format(savstr))
