@@ -17,3 +17,5 @@ results/TOI_837*
 build*
 *.egg*
 dist*
+results/LCOGT_19B_observability*
+results/LCOGT_19B_updated_requests*
