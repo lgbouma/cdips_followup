@@ -79,11 +79,13 @@ def validate_single_request(requestgroup, max_duration_error=15):
                   format(requestgroup_dict['errors']['requests']))
             print(42*'-')
 
-            return np.nan, np.nan
+            try:
+                errmsg = (
+                    requestgroup_dict['errors']['requests'][0]['non_field_errors'][0]
+                )
+            except:
+                return np.nan, np.nan
 
-        errmsg = (
-            requestgroup_dict['errors']['requests'][0]['non_field_errors'][0]
-        )
 
         if 'the target is visible for a maximum of' in errmsg:
 

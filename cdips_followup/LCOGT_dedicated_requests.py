@@ -12,7 +12,8 @@ from cdips_followup.LCOGT_submit_requests import (
 from cdips_followup.manage_ephemerides import query_ephemeris
 
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
-                          eventclasses, overwrite=0, semesterstr='20A'):
+                          eventclasses, overwrite=0, semesterstr='20A',
+                          max_search_time=None):
     #
     # savstr: e.g., request_2m_tc_secondary. "ephemupdate" if it is one...
     #
@@ -47,7 +48,9 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
             savstr = '{}_{}'.format(_savstr, eventclass)
             df = pd.DataFrame(r, index=[0])
             for _, row in df.iterrows():
-                req = make_single_request_from_row(row, savstr, eventclass)
+                req = make_single_request_from_row(
+                    row, savstr, eventclass, max_search_time=max_search_time
+                )
             requests.append(req)
 
         with open(pkl_savpath, 'wb') as f:

@@ -269,7 +269,8 @@ def get_requests_given_ephem(
         LCO Semester B is June 1 thru Nov 30.
     """
 
-    max_search_time = MAXTIMEDICT[semesterstr]
+    if max_search_time is None:
+        max_search_time = MAXTIMEDICT[semesterstr]
 
     if eventclass not in [
         'OIBEO', 'OIBE', 'IBEO', 'IBE', 'BEO', 'OIB', 'OI', 'EO'
@@ -396,7 +397,8 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
     return results
 
 
-def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None):
+def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
+                                 max_search_time=None):
     #
     # require the passed dataframe row has the right format.
     #
@@ -499,6 +501,7 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None):
                                     r['epoch_unc'], r['depth'],
                                     r['depth_unc'], duration,
                                     r['duration_unc'], sites=sites,
+                                    max_search_time=max_search_time,
                                     eventclass=eventclass)
 
     return this
