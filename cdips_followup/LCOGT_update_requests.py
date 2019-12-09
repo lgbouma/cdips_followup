@@ -19,8 +19,9 @@ from astropy.time import Time
 import astropy.units as u
 
 from cdips.utils import today_YYYYMMDD
-from LCOGT_make_19B20A_requests import make_all_request_files
-from LCOGT_submit_19B20A_requests import submit_all_requests
+
+from cdips_followup.LCOGT_make_19B20A_requests import make_all_request_files
+from cdips_followup.LCOGT_submit_19B20A_requests import submit_all_requests
 
 if socket.gethostname() == 'brik':
     api_file = '/home/luke/.lcogt_api_token'
