@@ -1,10 +1,12 @@
-from LCOGT_make_requests import make_single_request_from_row
 import pandas as pd, numpy as np
 import pickle, os
 from copy import deepcopy
 
-from LCOGT_submit_requests import (
-    validate_single_request, submit_single_request
+from cdips_followup.LCOGT_make_requests import make_single_request_from_row
+
+from cdips_followup.LCOGT_submit_requests import (
+    validate_single_request,
+    submit_single_request
 )
 
 from cdips_followup.manage_ephemerides import query_ephemeris
