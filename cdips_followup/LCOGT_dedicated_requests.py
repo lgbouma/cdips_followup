@@ -13,7 +13,7 @@ from cdips_followup.manage_ephemerides import query_ephemeris
 
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
                           eventclasses, overwrite=0, semesterstr='20A',
-                          max_search_time=None):
+                          max_search_time=None, filtermode='ip'):
     #
     # savstr: e.g., request_2m_tc_secondary. "ephemupdate" if it is one...
     #
@@ -49,7 +49,8 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
             df = pd.DataFrame(r, index=[0])
             for _, row in df.iterrows():
                 req = make_single_request_from_row(
-                    row, savstr, eventclass, max_search_time=max_search_time
+                    row, savstr, eventclass, max_search_time=max_search_time,
+                    filtermode=filtermode
                 )
             requests.append(req)
 
@@ -59,16 +60,29 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
 
     return requests
 
-def given_dedicated_requests_validate_submit(requests, validate=1, submit=0,
+def given_dedicated_requests_validate_submit(requests,
+                                             submit_eventclasses=None,
+                                             validate=1, submit=0,
                                              max_duration_error=15,
                                              overwrite_acceptability=None,
                                              overwrite_ipp=None):
+    """
+    Choose desired events to submit, then validate and submit them.
+
+    submit_eventclasses : list
+        example: ['OIBEO', 'BEO', 'IBEO']
+
+    Assumes name pattern following "TIC308538095.01_OIBEO_1m0_20200220_ip_90_2.0"
+    """
 
     requestgroups = []
     for r in requests:
         if len(r) > 0:
             for _r in r:
-                requestgroups.append(_r)
+                this_name = _r['name']
+                this_eventclass = this_name.split('_')[1]
+                if this_eventclass in submit_eventclasses:
+                    requestgroups.append(_r)
 
     for requestgroup in requestgroups:
 

@@ -245,7 +245,8 @@ def get_requests_given_ephem(
     eventclass='OIBEO',
     sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
     schedule_oot_duration=60*u.minute,
-    semesterstr='20A'):
+    semesterstr='20A',
+    filtermode='ip'):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
     requests for any available transits at the given sites, between
@@ -359,15 +360,13 @@ def get_requests_given_ephem(
 
                 acceptability_threshold = ACCEPTABILITY_DICT[eventclass]
 
-                filtermode = "ip"
-
                 g = make_request_group(
                     targetname, ra, dec, pmra, pmdec, Gmag, starttime, endtime,
                     eventclass=eventclass, filtermode=filtermode,
                     telescope_class=telescope_class,
                     max_airmass=max_airmass_submit,
                     min_lunar_distance=min_lunar_distance,
-                    acceptability_threshold=acceptability_threshold
+                    acceptability_threshold=acceptability_threshold,
                 )
 
                 if g == -1:
@@ -398,7 +397,7 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
 
 
 def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
-                                 max_search_time=None):
+                                 max_search_time=None, filtermode='ip'):
     #
     # require the passed dataframe row has the right format.
     #
@@ -502,7 +501,8 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
                                     r['depth_unc'], duration,
                                     r['duration_unc'], sites=sites,
                                     max_search_time=max_search_time,
-                                    eventclass=eventclass)
+                                    eventclass=eventclass,
+                                    filtermode=filtermode)
 
     return this
 
