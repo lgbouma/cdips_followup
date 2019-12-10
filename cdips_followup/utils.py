@@ -6,6 +6,10 @@ def ticid_to_toiid(tic_id):
 
     assert isinstance(tic_id, str)
 
+    if tic_id == '772008799':
+        # exofop-tess has wrong ticid for TOI 1014.
+        return '1014.01'
+
     toidf = get_exofop_toi_catalog()
 
     sel = toidf['TIC ID'].astype(str) == tic_id
