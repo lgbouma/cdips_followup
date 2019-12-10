@@ -246,7 +246,8 @@ def get_requests_given_ephem(
     sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
     schedule_oot_duration=60*u.minute,
     semesterstr='20A',
-    filtermode='ip'):
+    filtermode='ip',
+    telescope_class='1m0'):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
     requests for any available transits at the given sites, between
@@ -346,11 +347,6 @@ def get_requests_given_ephem(
                                       outdir=outdir)
             ##############################################
 
-            if '_2m_' in savstr:
-                telescope_class = "2m0"
-            else:
-                telescope_class = "1m0"
-
             for sel_time in sel_times:
 
                 assert len(sel_time) == 2
@@ -397,7 +393,8 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
 
 
 def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
-                                 max_search_time=None, filtermode='ip'):
+                                 max_search_time=None, filtermode='ip',
+                                 telescope_class=None):
     #
     # require the passed dataframe row has the right format.
     #
@@ -480,11 +477,12 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
     #
     #
     #
-    if '_2m_' in savstr:
+    if telescope_class == '2m0':
         sites = ['Siding Spring Observatory', 'Haleakala Observatories']
-    else:
-        # assume 1m
+    elif telescope_class == '1m0':
         sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
+    else:
+        raise ValueError
 
     if not isinstance(ephem_dict, dict):
         period, epoch, duration = r['period'], r['epoch'], r['duration']
@@ -502,7 +500,8 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
                                     r['duration_unc'], sites=sites,
                                     max_search_time=max_search_time,
                                     eventclass=eventclass,
-                                    filtermode=filtermode)
+                                    filtermode=filtermode,
+                                    telescope_class=telescope_class)
 
     return this
 

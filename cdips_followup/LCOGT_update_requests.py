@@ -20,8 +20,8 @@ import astropy.units as u
 
 from cdips.utils import today_YYYYMMDD
 
-from cdips_followup.LCOGT_make_19B20A_requests import make_all_request_files
-from cdips_followup.LCOGT_submit_19B20A_requests import submit_all_requests
+from cdips_followup.LCOGT_make_requests import make_all_request_files
+from cdips_followup.LCOGT_submit_requests import submit_all_requests
 
 if socket.gethostname() == 'brik':
     api_file = '/home/luke/.lcogt_api_token'
@@ -131,10 +131,27 @@ def get_requestids_given_targetid(requestdict, targetid):
     return requestids
 
 
+def cancel_pending_requests(targetid):
+    # cancel pending requests for a single target, e.g., "TIC53682439.01"
+
+    rd = get_requests()
+
+    to_cancel_ids = get_requestids_given_targetid(rd, targetid)
+
+    #
+    # cancel all pending requests for the targets to update
+    #
+    if len(to_cancel_ids)>0:
+        print('CANCELLING ALL PENDING REQUESTS FOR {}'.format(targetid))
+        for to_cancel_id in to_cancel_ids:
+            cancel_single_request(to_cancel_id)
+
+    else:
+        print('Did not find pending requests for {}'.format(targetid))
+
+
 def prepare_for_ephem_update(targets_to_update, target_is_faint=False):
     # cancel pending requests. make all potential request dictionaries.
-
-    df = pd.read_csv('../data/ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
 
     make_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
 

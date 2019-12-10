@@ -13,7 +13,8 @@ from cdips_followup.manage_ephemerides import query_ephemeris
 
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
                           eventclasses, overwrite=0, semesterstr='20A',
-                          max_search_time=None, filtermode='ip'):
+                          max_search_time=None, filtermode='ip',
+                          telescope_class='1m0'):
     #
     # savstr: e.g., request_2m_tc_secondary. "ephemupdate" if it is one...
     #
@@ -50,7 +51,7 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
             for _, row in df.iterrows():
                 req = make_single_request_from_row(
                     row, savstr, eventclass, max_search_time=max_search_time,
-                    filtermode=filtermode
+                    filtermode=filtermode, telescope_class=telescope_class
                 )
             requests.append(req)
 
