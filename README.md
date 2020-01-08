@@ -1,10 +1,15 @@
 # `cdips_followup`
 
-we have planet candidates. let's turn them into planets.
+Given planet candidates, turn them into planets.
 
-nb. most development happens in `/cdips/` repo. (including e.g., visualization
-tool development). this repo is just for individual analyses of objects of
-interest.
+Related development also happens in the `/cdips/` repo.
+
+This repo is for:
+
+* analyses of individual objects of interest.
+* ephemeris tracking, via `ephemerides.csv`
+* candidate tracking, via `candidates.csv`
+* LCOGT followup requests
 
 __install__
 
