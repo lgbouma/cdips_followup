@@ -76,7 +76,8 @@ setup(
     author_email='luke@astro.princeton.edu',
     license='MIT',
     packages=[
-        'cdips_followup'
+        'cdips_followup',
+        'cdips_followup.exposure_calculators'
     ],
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,

@@ -1,4 +1,4 @@
-from chiron_calculator import get_chiron_reqd_exptime
+from cdips_followup.exposure_calculators.chiron_calculator import get_chiron_reqd_exptime
 
 Gmag = 7.5
 mode='slicer_mode'
