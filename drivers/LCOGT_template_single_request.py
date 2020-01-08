@@ -1,3 +1,7 @@
+"""
+Given a source_id, make LCOGT photometry followup requests, and optionally
+submit them to the LCOGT API.
+"""
 from astropy.time import Time
 from cdips_followup.manage_ephemerides import query_ephemeris
 from cdips_followup.LCOGT_dedicated_requests import (
@@ -5,7 +9,7 @@ from cdips_followup.LCOGT_dedicated_requests import (
     given_dedicated_requests_validate_submit
 )
 
-if __name__ == "__main__":
+def main():
 
     ####################
     overwrite = 1
@@ -51,3 +55,6 @@ if __name__ == "__main__":
     given_dedicated_requests_validate_submit(
         requests, submit_eventclasses, validate=validate, submit=submit,
         max_duration_error=max_duration_error)
+
+if __name__ == "__main__":
+    main()
