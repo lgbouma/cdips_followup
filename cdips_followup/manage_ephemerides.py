@@ -29,6 +29,8 @@ from astrobase.services.identifiers import tic_to_gaiadr2
 from cdips.utils import today_YYYYMMDD
 from cdips.utils.catalogs import get_exofop_toi_catalog
 
+from cdips_followup.manage_candidates import validate_source_id_ticid
+
 if socket.gethostname() == 'ast1607-astro':
     EPHEM_PATH = '/Users/luke/Dropbox/proj/cdips_followup/data/ephemerides/ephemerides.csv'
 elif socket.gethostname() == 'brik':
@@ -147,13 +149,7 @@ def query_ephemeris(source_id=None, ticid=None):
     that any new entries supersede old ones, for the same target).
     """
 
-    assert isinstance(source_id, str) or isinstance(ticid, str)
-
-    if isinstance(source_id, str):
-        assert not isinstance(ticid, str)
-
-    if isinstance(ticid, str):
-        assert not isinstance(source_id, str)
+    validate_source_id_ticid(source_id, ticid)
 
     df = pd.read_csv(EPHEM_PATH)
 
