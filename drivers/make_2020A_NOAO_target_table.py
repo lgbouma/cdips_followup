@@ -22,7 +22,7 @@ import os
 import pandas as pd, numpy as np
 from astropy.coordinates import SkyCoord
 from astropy import units as u, constants as c
-from chiron_calculator import (
+from cdips_followup.exposure_calculators.chiron_calculator import (
     get_chiron_reqd_exptime,
     get_chiron_snr_given_exptime
 )

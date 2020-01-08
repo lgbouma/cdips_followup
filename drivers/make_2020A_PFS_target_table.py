@@ -22,7 +22,7 @@ import os
 import pandas as pd, numpy as np
 from astropy.coordinates import SkyCoord
 from astropy import units as u, constants as c
-from pfs_calculator import given_Vmag_get_PFS_exptime_minutes
+from cdips_followup.exposure_calculators.pfs_calculator import given_Vmag_get_PFS_exptime_minutes
 
 def main():
 
