@@ -23,7 +23,7 @@ Use cases:
 Libreoffice Calc, or in Google Spreadsheets. The latter has viewing benefits,
 but cannot be used for updates. (While Libreoffice calc can).
 
-Columns are:
+`candidates.csv` has columns:
 
     source_id, ticid, toi, targetid, reference, name, nbhd_rating,
     init_priority, current_priority, pending_spectroscopic_observations,
@@ -78,23 +78,22 @@ if not os.path.exists(CAND_PATH):
 #############################
 
 def insert_candidate(
-    source_id=None, ticid=None,
-    manual_dict=None
+    source_id=None, ticid=None, manual_dict=None
     ):
     """
     Insert a candidate to the candidates.csv database by passing either Gaia
     DR2 source_id or otherwise ticid (string).
 
-    manual_dict (optional):
+    manual_dict (optional): with keys:
 
-        Keys should be:
-
-        nbhd_rating (0/1/2),
-        init_priority (0/1/2),
+        nbhd_rating (0-2, or null),
+        init_priority (0-2),
+        current_priority (0-2),
         pending_spectroscopic_observation (str, '' if null),
         pending_photometry_observations (str, '' if null),
         comment (str, '' if null)
         candidate_provenance (str, '' if null)
+        isretired (0 or 1)
     """
 
     #
@@ -189,15 +188,15 @@ def insert_candidate(
 
     else:
         plproperties_r = pd.DataFrame({
-            'Planet Radius (R_Earth)': np.nan
-            'Period (days)': np.nan
+            'Planet Radius (R_Earth)': np.nan,
+            'Period (days)': np.nan,
             'Depth (mmag)': np.nan
         }, index=[0])
 
     #
     # Get: nbhd_rating, init_priority, current_priority,
     # pending_spectroscopic_observations, pending_photometry_observations,
-    # comment, candidate_provenance.
+    # comment, candidate_provenance, isretired.
     #
 
     if isinstance(manual_dict, dict):
@@ -208,10 +207,12 @@ def insert_candidate(
         d = manual_dict
         nbhd_rating = d['nbhd_rating']
         init_priority = d['init_priority']
+        current_priority = d['current_priority']
         pending_spectroscopic_observations = d['pending_spectroscopic_observations']
         pending_photometry_observations = d['pending_photometry_observations']
         comment = d['comment']
         candidate_provenance = d['candidate_provenance']
+        isretired = d['isretired']
 
     else:
 
@@ -219,17 +220,18 @@ def insert_candidate(
 
         init_priority = 1
         nbhd_rating = init_priority
+        current_priority = init_priority
         pending_spectroscopic_observations = ''
         pending_photometry_observations = ''
         comment = ''
         candidate_provenance = 'insert_candidate (w/out manual entries)'
+        isretired = 0
 
         print(
             'WRN! For {}, did not get manual entries for PRIORITY, or COMMENT'.
             format(source_id)
         )
 
-    current_priority = init_priority
 
     #
     # Construct and insert the new row.
@@ -272,7 +274,7 @@ def insert_candidate(
         'candidate_provenance': candidate_provenance,
         'insert_time': pd.Timestamp.now(),
         'last_update_time': pd.Timestamp.now(),
-        'isretired': False
+        'isretired': isretired
     }, index=[0])
 
     cand_df = pd.read_csv(CAND_PATH)
