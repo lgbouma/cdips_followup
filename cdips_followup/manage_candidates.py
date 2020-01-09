@@ -12,12 +12,17 @@ Contents:
 
 Use cases:
 
-* Add candidates given source_id or ticid.
-* Update columns given new information:
+* Add candidates given source_id or ticid: use `insert_candidate`.
+
+* Update arbitrary columns given new information: use Libreoffice Calc
+  (separated by "|", with "format quoted field as text"). Saving matches the
+  pandas read/write formatting. The following columns are changed the most:
+
     current_priority
     pending_spectroscopic_observations
     pending_photometry_observations
     comment
+
 * View spreadsheet to select viable candidates. Viewing is done in Libreoffice
 Calc (separated by "|", with "format quoted field as text"), or else in Google
 Spreadsheets. Google Sheets has nice auto-coloring logic, but cannot be used
