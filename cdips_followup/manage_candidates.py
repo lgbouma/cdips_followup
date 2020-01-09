@@ -82,22 +82,33 @@ if not os.path.exists(CAND_PATH):
 #############################
 
 def insert_candidate(
-    source_id=None, ticid=None, manual_dict=None
+    source_id=None, ticid=None, manual_dict=None,
+    raise_error_if_duplicate=True
     ):
     """
     Insert a candidate to the candidates.csv database by passing either Gaia
     DR2 source_id or otherwise ticid (string).
 
-    manual_dict (optional): with keys:
+    Optional Arguments:
+    ----------
 
-        nbhd_rating (0-2, or null),
+    manual_dict: dict
+
+        With keys:
+        nbhd_rating (0-2, or -1 for null),
         init_priority (0-2),
         current_priority (0-2),
-        pending_spectroscopic_observations (str, '' if null),
-        pending_photometry_observations (str, '' if null),
-        comment (str, '' if null)
-        candidate_provenance (str, '' if null)
+        pending_spectroscopic_observations (str, '--' if null),
+        pending_photometry_observations (str, '--' if null),
+        comment (str, '--' if null)
+        candidate_provenance (str)
         isretired (0 or 1)
+
+    raise_error_if_duplicate: boolean
+
+        If attempting an insert on a source_id that already exists, an error
+        will be raised, and the insert will not be performed. If false, a
+        warning is raised, and the insert will not be performed.
     """
 
     #
@@ -296,6 +307,18 @@ def insert_candidate(
     }, index=[0])
 
     cand_df = pd.read_csv(CAND_PATH, sep='|')
+
+    if np.any(cand_df.source_id.astype(str).str.contains(str(source_id))):
+        msg = (
+            'Found existing candidates.csv entry for {}'.
+            format(source_id)
+        )
+        if raise_error_if_duplicate:
+            raise AssertionError('ERR! : '+msg)
+        else:
+            print('WRN! : '+msg)
+            print('WRN! Not doing the insert.')
+            return None
 
     new_cand_df = pd.concat((cand_df, new_row), sort=False)
 

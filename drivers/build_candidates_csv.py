@@ -38,8 +38,8 @@ for ix, r in df.iterrows():
     insert_candidate(source_id=r.source_id, manual_dict=d)
 
 #
-# import the s8-s11 candidates. for priorities, use the average from the
-# classification files
+# import the s8-s11 candidates (as of 20200109 all live). for priorities, use
+# the average from the classification files
 #
 df = pd.read_csv(
     '../data/candidate_database/'
@@ -81,7 +81,33 @@ for ix, r in mdf.iterrows():
         'isretired': 0
     }
 
-    #FIXME FIXME: YOU NEED TO DO SOMETHING WHEN YOU HAVE MATCHING SOURCE_IDS.
-    # LIKE RAISE AN ERROR (BY DEFAULT)
+    insert_candidate(source_id=r.source_id, manual_dict=d,
+                     raise_error_if_duplicate=False)
 
-    insert_candidate(source_id=r.source_id, manual_dict=d)
+#
+# import the (very deprecated) s6-s7 candidates, to have a record of things
+# that I ruled out
+#
+
+df = pd.read_csv(
+    '../data/candidate_database/'
+    'CDIPS_followup_tracker_20190721_import_s6-s7.csv'
+)
+df.source_id = df.source_id.astype(str)
+
+for ix, r in df.iterrows():
+
+    d = {
+        'nbhd_rating': r.nbhd_rating,
+        'init_priority': r.init_priority,
+        'current_priority': r.current_priority,
+        'pending_spectroscopic_observations': r.pending_spectroscopic_observations,
+        'pending_photometry_observations': r.pending_photometry_observations,
+        'comment': r.comment,
+        'candidate_provenance': 'CDIPS_followup_tracker_20190721_import_s6-s7_very_deprecated',
+        'isretired': int(r.current_priority > 1)
+    }
+
+    insert_candidate(source_id=r.source_id, manual_dict=d,
+                     raise_error_if_duplicate=False)
+
