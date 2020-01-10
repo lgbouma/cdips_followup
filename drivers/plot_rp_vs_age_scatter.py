@@ -109,6 +109,7 @@ def plot_rp_vs_age_scatter(active_targets=0):
 
     target_age = np.array(sdf.age)
     target_rp = np.array(sdf.rp)
+    target_rp_unc = np.array(sdf.rp_unc)
 
     temp_ages = []
     for a in target_age:
