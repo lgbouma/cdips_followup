@@ -325,6 +325,12 @@ def insert_candidate(
 
     new_cand_df = pd.concat((cand_df, new_row), sort=False)
 
+    new_cand_df = format_candidates_file(new_cand_df)
+    save_candidates_csv_file(new_cand_df)
+
+
+def format_candidates_file(candidates_df):
+
     #
     # convert default non-string columns to strings. ditto for float and
     # integer columns.
@@ -334,29 +340,28 @@ def insert_candidate(
                'pending_photometry_observations', 'comment',
                'candidate_provenance', 'insert_time', 'last_update_time']
     for strcol in strcols:
-        new_cand_df[strcol] = new_cand_df[strcol].astype(str)
+        candidates_df[strcol] = candidates_df[strcol].astype(str)
 
     floatcols = ['rp', 'rp_unc', 'period', 'gaia_ra', 'gaia_dec', 'gaia_plx',
                  'gaia_Gmag', 'gaia_Bmag', 'gaia_Rmag', 'tic_Bmag', 'tic_Vmag',
                  'tic_Jmag', 'tic_Hmag', 'tic_Kmag', 'tic_Tmag', 'tic_logg',
                  'tic_rstar', 'tic_mstar']
     for fcol in floatcols:
-        new_cand_df[fcol] = new_cand_df[fcol].astype(float)
-
+        candidates_df[fcol] = candidates_df[fcol].astype(float)
 
     intcols = ['iscdipstarget', 'tic_teff']
     for icol in intcols:
-        new_cand_df[icol] = new_cand_df[icol].astype(int)
+        candidates_df[icol] = candidates_df[icol].astype(int)
 
     #
     # replace empty and "nan" strings with "--" string, which LibreOffice calc
     # can handle.
     #
-    new_cand_df = new_cand_df.replace(r'^\s*$', "--", regex=True)
-    new_cand_df = new_cand_df.replace('nan', "--", regex=True)
-    new_cand_df = new_cand_df.replace('None', "--", regex=True)
+    candidates_df = candidates_df.replace(r'^\s*$', "--", regex=True)
+    candidates_df = candidates_df.replace('nan', "--", regex=True)
+    candidates_df = candidates_df.replace('None', "--", regex=True)
 
-    save_candidates_csv_file(new_cand_df)
+    return candidates_df
 
 
 def validate_source_id_ticid(source_id, ticid):
