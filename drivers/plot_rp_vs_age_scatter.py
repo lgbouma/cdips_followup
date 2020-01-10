@@ -30,7 +30,7 @@ from astroquery.nasa_exoplanet_archive import NasaExoplanetArchive
 def arr(x):
     return np.array(x)
 
-def plot_rp_vs_age_scatter(active_targets=0):
+def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0):
 
     #
     # columns described at
@@ -169,15 +169,20 @@ def plot_rp_vs_age_scatter(active_targets=0):
 
         istoi = ~(sdf.toi == '--')
 
-        ax.scatter(
-            target_age[istoi], target_rp[istoi], color='black', s=10, zorder=3,
-            marker='s', linewidth=0
-        )
-        ax.scatter(
-            target_age[~istoi], target_rp[~istoi], color='black', s=25,
-            zorder=3, marker='*', linewidth=0, label=label
-        )
-
+        if split_toi_ctoi:
+            ax.scatter(
+                target_age[istoi], target_rp[istoi], color='black', s=10, zorder=3,
+                marker='s', linewidth=0
+            )
+            ax.scatter(
+                target_age[~istoi], target_rp[~istoi], color='black', s=25,
+                zorder=3, marker='*', linewidth=0, label=label
+            )
+        else:
+            ax.scatter(
+                target_age, target_rp, color='black', s=25,
+                zorder=3, marker='*', linewidth=0, label=label
+            )
 
         target_rp_rel_unc = target_rp_unc / target_rp
 
@@ -211,6 +216,8 @@ def plot_rp_vs_age_scatter(active_targets=0):
 
     f.tight_layout()
     savstr = '_no_overplot' if not active_targets else '_active_targets'
+    if split_toi_ctoi:
+        savstr += '_split_ctoi'
 
     outpath = '../results/rp_vs_age_scatter{}.png'.format(savstr)
     f.savefig(outpath, bbox_inches='tight', dpi=450)
@@ -220,4 +227,5 @@ def plot_rp_vs_age_scatter(active_targets=0):
 if __name__=='__main__':
 
     plot_rp_vs_age_scatter(active_targets=0)
-    plot_rp_vs_age_scatter(active_targets=1)
+    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0)
+    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=1)
