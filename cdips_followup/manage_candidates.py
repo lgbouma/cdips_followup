@@ -199,6 +199,7 @@ def insert_candidate(
     plproperties_r = get_exofop_toi_catalog_entry(ticid)
     plkeyd = {
         'rp': 'Planet Radius (R_Earth)',
+        'rp_unc': 'Planet Radius (R_Earth) err',
         'period': 'Period (days)',
         'depth': 'Depth (mmag)'
     }
@@ -206,6 +207,7 @@ def insert_candidate(
         plproperties_r = get_exofop_ctoi_catalog_entry(ticid)
         plkeyd = {
             'rp': 'Radius (R_Earth)',
+            'rp_unc': 'Radius (R_Earth) Error',
             'period': 'Period (days)',
             'depth': 'Depth mmag'
         }
@@ -282,6 +284,7 @@ def insert_candidate(
         'pending_photometry_observations': pending_photometry_observations,
         'comment': comment,
         'rp': plproperties_r[plkeyd['rp']],
+        'rp_unc': plproperties_r[plkeyd['rp_unc']],
         'period': plproperties_r[plkeyd['period']],
         'depth': plproperties_r[plkeyd['depth']],
         'gaia_ra': cdips_r.ra,
@@ -333,7 +336,7 @@ def insert_candidate(
     for strcol in strcols:
         new_cand_df[strcol] = new_cand_df[strcol].astype(str)
 
-    floatcols = ['rp', 'period', 'gaia_ra', 'gaia_dec', 'gaia_plx',
+    floatcols = ['rp', 'rp_unc', 'period', 'gaia_ra', 'gaia_dec', 'gaia_plx',
                  'gaia_Gmag', 'gaia_Bmag', 'gaia_Rmag', 'tic_Bmag', 'tic_Vmag',
                  'tic_Jmag', 'tic_Hmag', 'tic_Kmag', 'tic_Tmag', 'tic_logg',
                  'tic_rstar', 'tic_mstar']
@@ -406,7 +409,7 @@ def save_candidates_csv_file(cand_df):
         'source_id', 'ticid', 'toi', 'targetid', 'iscdipstarget', 'reference',
         'name', 'age', 'nbhd_rating', 'init_priority', 'current_priority',
         'pending_spectroscopic_observations',
-        'pending_photometry_observations', 'comment', 'rp', 'period',
+        'pending_photometry_observations', 'comment', 'rp', 'rp_unc', 'period',
         'gaia_ra', 'gaia_dec', 'gaia_plx', 'gaia_Gmag', 'gaia_Bmag',
         'gaia_Rmag', 'tic_Bmag', 'tic_Vmag', 'tic_Jmag', 'tic_Hmag',
         'tic_Kmag', 'tic_Tmag', 'tic_teff', 'tic_logg', 'tic_rstar',

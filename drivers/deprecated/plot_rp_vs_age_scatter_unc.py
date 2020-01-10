@@ -1,9 +1,13 @@
 '''
 DESCRIPTION
 ----------
-Make scatter plot of Rp vs age using exoplanet archive and candidates.csv.
-(Note: no uncertainties, because the Rp uncertainties aren't in the
-candidates.csv database).
+Download exoplanet archive and make scatter plot of Rp vs age.
+
+* R_p vs age, density vs age
+    -> are hot jupiters typically around younger stars?
+    -> can we see photoevaporation in time? [less dense planets lose
+       atmospheres, get smaller and more dense]
+    -> do we see the radius gap move in time?
 
 USAGE
 ----------
@@ -32,17 +36,13 @@ def arr(x):
 
 def plot_rp_vs_age_scatter(active_targets=0):
 
-    #
     # columns described at
     # https://exoplanetarchive.ipac.caltech.edu/docs/API_exoplanet_columns.html
-    #
     ea_tab = NasaExoplanetArchive.get_confirmed_planets_table(
         all_columns=True, show_progress=True
     )
 
-    #
     # get systems with finite ages (has a value, and +/- error bar)
-    #
     has_age_value = ~ea_tab['st_age'].mask
     has_age_errs  = (~ea_tab['st_ageerr1'].mask) & (~ea_tab['st_ageerr2'].mask)
     has_rp_value = ~ea_tab['pl_rade'].mask
@@ -69,12 +69,11 @@ def plot_rp_vs_age_scatter(active_targets=0):
     rp_merr = t['pl_radeerr2']
     rp_errs = np.array([rp_perr, rp_merr]).reshape(2, len(age))
 
-    #
-    # plot age vs rp. (age is on y axis b/c it has the error bars, and I at
-    # least skimmed the footnotes of Hogg 2010)
-    #
+    # plot age vs all "good cols". (age is on y axis b/c it has the error bars, and
+    # I at least skimmed the footnotes of Hogg 2010)
     f,ax = plt.subplots(figsize=(4,3))
 
+    # squares
     label = (
         'NASA Exoplanet Archive, '+
         r"$\langle \sigma_{{\mathrm{{age}}}} \rangle$ = "+
@@ -84,90 +83,13 @@ def plot_rp_vs_age_scatter(active_targets=0):
                color='gray', s=3, zorder=1, marker='o', linewidth=0,
                label=label, alpha=1)
 
-    #
     # targets
-    #
-    cdf = pd.read_csv(
+    tdf = pd.read_csv(
         os.path.join(
             os.path.expanduser("~"),
-            'Dropbox/proj/cdips_followup/data/candidate_database/candidates.csv'
-        ),
-        sep='|'
-    )
-
-    sel = (
-        ~cdf.isretired
-        &
-        (cdf.current_priority <= 1)
-        &
-        ~pd.isnull(cdf.rp)
-        &
-        cdf.iscdipstarget
-    )
-
-    sdf = cdf[sel]
-
-    target_age = np.array(sdf.age)
-    target_rp = np.array(sdf.rp)
-
-    temp_ages = []
-    for a in target_age:
-
-        if a == '--':
-            temp_ages.append('--')
-            continue
-
-        temp_ages.append(
-            np.mean(np.array(a.split(',')).astype(float))
+            'Dropbox/proj/cdips_followup/results/20190926_2020A_targets_age_rp.csv'
         )
-
-    target_age = np.array(temp_ages)
-
-    #
-    # fix non-assigned ages.
-    # 1) "PMS" star with no age -> 500 Myr upper bound.
-    # 2) Vela OB2 subgroups get ages according to Cantat-Gaudin2019, Figure 6.
-    #    (Use the "name" column and match the "cg19velaOB2_pop[N]" pattern).
-    #
-    is_pms = (sdf.reference == 'Zari_2018_PMS') & (sdf.age == '--')
-    target_age[is_pms] = np.log10(5e8)
-
-    vela_ob2_age_dict = {
-        '1': np.log10(5e7),
-        '2': np.log10(4e7),
-        '3': np.log10(4e7),
-        '4': np.log10(3e7),
-        '5': np.log10(3e7),
-        '6': np.log10(2.5e7),
-        '7': np.log10(1.5e7)
-    }
-
-    popn_inds = np.array(
-        sdf.name.str.extract(pat='cg19velaOB2_pop(\d)')
-    ).flatten()
-
-    cg19_ages = []
-    for k in popn_inds:
-        if pd.isnull(k):
-            cg19_ages.append(np.nan)
-        else:
-            cg19_ages.append(vela_ob2_age_dict[k[0]])
-
-    target_age[~pd.isnull(cg19_ages)] = np.array(cg19_ages)[~pd.isnull(cg19_ages)]
-
-    target_age = target_age.astype(float)
-
-    #
-    # fix non-assigned planet radii.
-    #
-
-    #TODO TODO: the TOI radii. where are they.
-    #TODO TODO: you need uncertainties here. the "35 Re candidates" are a major
-    # facepalm.
-
-
-    import IPython; IPython.embed()
-    assert 0
+    )
 
     badids = [
     4827527233363019776,
