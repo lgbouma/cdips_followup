@@ -156,5 +156,6 @@ def plot_rp_vs_age_scatter(active_targets=0):
     print('made {}'.format(outpath))
 
 if __name__=='__main__':
+
     plot_rp_vs_age_scatter(active_targets=0)
     plot_rp_vs_age_scatter(active_targets=1)
