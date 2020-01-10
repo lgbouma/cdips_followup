@@ -1,6 +1,8 @@
 import pandas as pd, numpy as np
 import os
-from cdips_followup.manage_candidates import save_candidates_csv_file
+from cdips_followup.manage_candidates import (
+    save_candidates_csv_file, format_candidates_file
+)
 
 from cdips.utils.catalogs import (
     get_toi_catalog,
@@ -49,4 +51,7 @@ df['rp_unc'] = rp_unc_to_db
 
 np.testing.assert_array_equal(df.rp == -1, df.rp_unc==-1)
 
+new_cand_df = format_candidates_file(df)
+
 save_candidates_csv_file(df)
+
