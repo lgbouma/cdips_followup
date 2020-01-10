@@ -158,37 +158,26 @@ def plot_rp_vs_age_scatter(active_targets=0):
 
     target_age = target_age.astype(float)
 
-    #
-    # fix non-assigned planet radii.
-    #
-
-    #TODO TODO: the TOI radii. where are they.
-    #TODO TODO: you need uncertainties here. the "35 Re candidates" are a major
-    # facepalm.
-
-
-    import IPython; IPython.embed()
-    assert 0
-
-    badids = [
-    4827527233363019776,
-    2919143383943171200,
-    3340674976430098688,
-    5561614350584396800,
-    5618515825371166464
-    ]
-    tdf = tdf[~tdf['source_id'].isin(badids)]
-
-    target_age = 10**(np.array(tdf['age']))/(1e9)
-    target_rp = np.array(tdf['rplanet'])
-    target_rp_unc = np.array(tdf['rplanet_unc'])
+    target_age = 10**(np.array(target_age))/(1e9)
 
     if active_targets:
-        ax.scatter(
-            target_age, target_rp, color='black', s=25,
-            zorder=3, marker='*', linewidth=0,
-            label=r'Active targets, $\langle \sigma_{{\mathrm{{age}}}} \rangle$ < 0.1 Gyr'
+
+        label = (
+            r'Active targets, $\langle \sigma_{{\mathrm{{age}}}} \rangle$'
+            '< 0.1 Gyr'
         )
+
+        istoi = ~(sdf.toi == '--')
+
+        ax.scatter(
+            target_age[istoi], target_rp[istoi], color='black', s=10, zorder=3,
+            marker='s', linewidth=0
+        )
+        ax.scatter(
+            target_age[~istoi], target_rp[~istoi], color='black', s=25,
+            zorder=3, marker='*', linewidth=0, label=label
+        )
+
 
         target_rp_rel_unc = target_rp_unc / target_rp
 
@@ -199,14 +188,9 @@ def plot_rp_vs_age_scatter(active_targets=0):
         target_rp_unc[sel] = target_rp[sel] * 0.3
         ##########
 
-        ax.errorbar(target_age, target_rp, yerr=target_rp_unc,
-                    elinewidth=0.3, ecolor='k', capsize=0, capthick=0, linewidth=0,
-                    fmt='*', ms=0, zorder=2, color='black', alpha=0.5)
-
-    ## error bars
-    #ax.errorbar(age, rp, yerr=age_errs, xerr=rp_errs,
-    #            elinewidth=0.3, ecolor='k', capsize=0, capthick=0, linewidth=0,
-    #            fmt='s', ms=0, zorder=2, alpha=0.05)
+        ax.errorbar(target_age, target_rp, yerr=target_rp_unc, elinewidth=0.3,
+                    ecolor='k', capsize=0, capthick=0, linewidth=0, fmt='*',
+                    ms=0, zorder=2, color='black', alpha=0.5)
 
     # flip default legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -224,7 +208,6 @@ def plot_rp_vs_age_scatter(active_targets=0):
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.tick_params(top=True, bottom=True, left=True, right=True, which='both')
-
 
     f.tight_layout()
     savstr = '_no_overplot' if not active_targets else '_active_targets'
