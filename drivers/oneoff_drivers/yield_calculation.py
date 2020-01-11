@@ -245,7 +245,7 @@ def compute_dilution_fraction(
         sdf = df[df.sep_px < ap_radius]
 
         numerator = 10**(-0.4 * target_Tmag)
-        denominator = np.sum( 10**(-0.4 * nparr(sdf.Tmag_pred) ) )
+        denominator = np.sum( 10**(-0.4 * nparr(sdf[~pd.isnull(sdf.Tmag_pred)].Tmag_pred) ) )
         dilution = numerator/denominator
 
         dilutions.append(dilution)
@@ -264,15 +264,80 @@ def compute_dilution_fraction(
     print('made {}'.format(outpath))
 
 
+def merge_dilution_fractions(
+    cg18_df, source_ids, aperture_radii=[0.75,1.,1.25,1.5,1.75,2.,2.25,2.5]
+    ):
+    """
+    add columns of
+       dilution_apX.XX
+    and
+       nstar_apX.XX
+    for whatever apertures were used.
+    """
+
+    outpath = '../../data/cg18_cdips_table1_subset_with_dilution.csv'
+
+    if not os.path.exists(outpath):
+
+        dilutiond = {}
+        nstard = {}
+
+        for ap in aperture_radii:
+            dilutiond['dilution_ap{:.2f}'.format(ap)] = []
+            nstard['nstar_ap{:.2f}'.format(ap)] = []
+
+        for ix, source_id in enumerate(source_ids):
+            print('{}/{}'.format(ix, len(source_ids)))
+
+            inpath = (
+                '../../data/dilution_fractions/dilutionvalues/{}.csv'.
+                format(source_id)
+            )
+
+            dil_df = pd.read_csv(inpath)
+
+            for ap in aperture_radii:
+                dilutiond['dilution_ap{:.2f}'.format(ap)] = (
+                    float(dil_df[dil_df.ap_radius==ap].dilution)
+                )
+
+                nstard['nstar_ap{:.2f}'.format(ap)] = (
+                    float(dil_df[dil_df.ap_radius==ap].nstars)
+                )
+
+        for ap in aperture_radii:
+            dilkey = 'dilution_ap{:.2f}'.format(ap)
+            starkey = 'nstar_ap{:.2f}'.format(ap)
+
+            cg18_df[dilkey] = dilutiond[dilkey]
+            cg18_df[starkey] = nstard[starkey]
+
+        cg18_df.to_csv(outpath, index=False)
+
+    return pd.read_csv(outpath)
+
 if __name__ == "__main__":
 
-    run = 1
     test = 0
+
+    run = 1
+    calc_dilution = 0
+    merge_dilution = 1
 
     if test:
         compute_dilution_fraction('5525188767305211904')
 
     if run:
+
         cg18_df = get_cg18_stars_above_cutoff_T_mag()
 
-        compute_dilution_fractions(nparr(cg18_df.source_id.astype(str)))
+        if calc_dilution:
+            compute_dilution_fractions(
+                nparr(cg18_df.source_id.astype(str))
+            )
+
+        if merge_dilution:
+            cg18_df = merge_dilution_fractions(
+                cg18_df, nparr(cg18_df.source_id.astype(str))
+            )
+
