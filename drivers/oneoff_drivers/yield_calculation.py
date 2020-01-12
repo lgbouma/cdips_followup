@@ -12,7 +12,14 @@ import astropy.units as u, astropy.constants as const
 
 from numpy import array as nparr
 
-from cdips.utils.catalogs import get_cdips_pub_catalog
+from astrobase.services.identifiers import (
+    tic_to_gaiadr2, gaiadr2_to_tic
+)
+
+from cdips.utils.catalogs import (
+    get_cdips_pub_catalog,
+    get_tic_star_information
+)
 
 def get_cg18_df():
 
@@ -264,7 +271,7 @@ def compute_dilution_fraction(
     print('made {}'.format(outpath))
 
 
-def merge_dilution_fractions(
+def get_merge_dilution_fractions(
     cg18_df, source_ids, aperture_radii=[0.75,1.,1.25,1.5,1.75,2.,2.25,2.5]
     ):
     """
@@ -316,28 +323,72 @@ def merge_dilution_fractions(
 
     return pd.read_csv(outpath)
 
+
+def _get_tic_star_information(ticid, source_id):
+
+    ticcols = ['ID', 'GAIA', 'Vmag', 'Tmag', 'Teff', 'logg', 'rad', 'e_rad',
+               'mass', 'ebv', 'e_ebv']
+    tic_r = get_tic_star_information(ticid, desiredcols=ticcols)
+
+    if isinstance(tic_r, pd.DataFrame):
+        assert len(tic_r) == 1
+        tic_r = tic_r.iloc[0]
+
+        if not tic_r.GAIA == source_id:
+            errmsg = (
+                'expected tic GAIA ID ({}) to match my GAIA ID ({})'.
+                format(tic_r.GAIA, source_id)
+            )
+            raise AssertionError(errmsg)
+
+        for col in ticcols:
+            if pd.isnull(tic_r[col]):
+                tic_r[col] = -1
+
+    else:
+        tic_r = pd.Series({
+            'source_id': source_id
+        })
+
+        for col in ticcols:
+            tic_r[col] = -1
+
+    return tic_r
+
+def get_star_info(cg18_df):
+
+    tic_rows = []
+    for ix, source_id in enumerate(nparr(cg18_df.source_id.astype(str))):
+
+        print('{}/{}'.format(ix, len(cg18_df)))
+
+        ticid = gaiadr2_to_tic(source_id)
+        tic_r = _get_tic_star_information(ticid, source_id)
+
+        tic_rows.append(tic_r)
+
+    outdf = pd.concat(tic_rows, axis=1).T
+    outdf.GAIA = outdf.GAIA.astype(str)
+    outdf.to_csv('../../data/dilution_fractions/cg18_tic_info.csv', index=False)
+
+
 if __name__ == "__main__":
 
-    test = 0
-
-    run = 1
     calc_dilution = 0
-    merge_dilution = 1
+    get_merge_dilution = 1
+    merge_tic = 1
 
-    if test:
-        compute_dilution_fraction('5525188767305211904')
+    cg18_df = get_cg18_stars_above_cutoff_T_mag()
 
-    if run:
+    if calc_dilution:
+        compute_dilution_fractions(
+            nparr(cg18_df.source_id.astype(str))
+        )
 
-        cg18_df = get_cg18_stars_above_cutoff_T_mag()
+    if get_merge_dilution:
+        cg18_df = get_merge_dilution_fractions(
+            cg18_df, nparr(cg18_df.source_id.astype(str))
+        )
 
-        if calc_dilution:
-            compute_dilution_fractions(
-                nparr(cg18_df.source_id.astype(str))
-            )
-
-        if merge_dilution:
-            cg18_df = merge_dilution_fractions(
-                cg18_df, nparr(cg18_df.source_id.astype(str))
-            )
-
+    if merge_tic:
+        df = get_star_info(cg18_df)
