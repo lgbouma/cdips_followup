@@ -365,18 +365,18 @@ def get_merge_dilution_fractions(
             print('{}/{}'.format(ix, len(source_ids)))
 
             inpath = (
-                '../../data/dilution_fractions/dilutionvalues/{}.csv'.
+                '/home/luke/local/cdips_followup/dilution_fractions/dilutionvalues/{}.csv'.
                 format(source_id)
             )
 
             dil_df = pd.read_csv(inpath)
 
             for ap in aperture_radii:
-                dilutiond['dilution_ap{:.2f}'.format(ap)] = (
+                dilutiond['dilution_ap{:.2f}'.format(ap)].append(
                     float(dil_df[dil_df.ap_radius==ap].dilution)
                 )
 
-                nstard['nstar_ap{:.2f}'.format(ap)] = (
+                nstard['nstar_ap{:.2f}'.format(ap)].append(
                     float(dil_df[dil_df.ap_radius==ap].nstars)
                 )
 
@@ -456,7 +456,7 @@ if __name__ == "__main__":
 
     calc_dilution = 0
     get_merge_dilution = 1
-    merge_tic = 1
+    merge_tic = 0
 
     cg18_df = get_cg18_stars_above_cutoff_T_mag()
 
