@@ -435,28 +435,62 @@ def get_star_info(cg18_df):
 
     for ticchunk in ticpaths:
 
-        # set low_memory=False to not chunk the file. force correct data types.
-        tic_df = pd.read_csv(ticchunk, names=TICCOLS, low_memory=False,
-                             dtype=TICDTYPE)
-
-        tic_df = tic_df[tic_df.Tmag < 16.5]
-
-        mdf = cg18_df.merge(tic_df, how='inner', left_on='source_id',
-                            right_on='GAIA')
-
-        outdf = mdf[selcols]
-
         outstr = os.path.basename(ticchunk).replace('.csv.gz','_xmatch.csv')
         outpath = '../../data/cg18_ticv8_xmatch/{}'.format(outstr)
-        outdf.to_csv(outpath, index=False)
-        print('made {}'.format(outpath))
+
+        if not os.path.exists(outpath):
+            # set low_memory=False to not chunk the file. force correct data
+            # types.
+            tic_df = pd.read_csv(ticchunk, names=TICCOLS, low_memory=False,
+                                 dtype=TICDTYPE)
+
+            tic_df = tic_df[tic_df.Tmag < 16.5]
+
+            mdf = cg18_df.merge(tic_df, how='inner', left_on='source_id',
+                                right_on='GAIA')
+
+            outdf = mdf[selcols]
+
+            outdf.to_csv(outpath, index=False)
+            print('made {}'.format(outpath))
+
+        else:
+            print('found {}'.format(outpath))
+
+
+def _merge_tic8_xmatch():
+
+    xmatch_files = glob('/home/lbouma/proj/cdips_followup/data/cg18_ticv8_xmatch/tic*csv')
+    dfs = [pd.read_csv(f) for f in xmatch_files]
+    mdf = pd.concat(dfs)
+
+    print('{} stars with finite radii!'.format(len(mdf[~pd.isnull(mdf.rad)])))
+
+    df = pd.read_csv('../../data/cg18_cdips_table1_subset_with_dilution.csv')
+
+    outpath = '../../data/cg18_cdips_table1_subset_with_dilution_tic8.csv'
+
+    bigdf = mdf.merge(df, on='source_id', how='left')
+    bigdf.to_csv(outpath, index=False)
+
+
+def calc_yield():
+
+    inpath = '../../data/cg18_cdips_table1_subset_with_dilution_tic8.csv'
+    df = pd.read_csv(inpath)
+
+    import IPython; IPython.embed()
+
+
 
 
 if __name__ == "__main__":
 
     calc_dilution = 0
-    get_merge_dilution = 1
+    get_merge_dilution = 0
     merge_tic = 0
+    merge_xmatch = 0
+    do_yield_calc = 1
 
     cg18_df = get_cg18_stars_above_cutoff_T_mag()
 
@@ -472,3 +506,9 @@ if __name__ == "__main__":
 
     if merge_tic:
         df = get_star_info(cg18_df)
+
+    if merge_xmatch:
+        _merge_tic8_xmatch()
+
+    if do_yield_calc:
+        calc_yield()
