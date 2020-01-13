@@ -227,7 +227,7 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0):
     if split_toi_ctoi:
         savstr += '_split_ctoi'
 
-    outpath = '../results/rp_vs_age_scatter{}.png'.format(savstr)
+    outpath = '../results/rp_vs_age_scatter/rp_vs_age_scatter{}.png'.format(savstr)
     f.savefig(outpath, bbox_inches='tight', dpi=450)
     f.savefig(outpath.replace('.png','.pdf'), bbox_inches='tight')
     print('made {}'.format(outpath))

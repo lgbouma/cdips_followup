@@ -18,8 +18,6 @@ def plot_dilution_histogram(ap=None):
     dil_n_px = np.array(df['dilution_ap{:.2f}'.format(ap)]) # y
     dil_n_px[dil_n_px > 0.999 ] = 0.999
 
-    import IPython; IPython.embed()
-
     plt.close('all')
     fig, ax = plt.subplots(figsize=(4,4))
 
