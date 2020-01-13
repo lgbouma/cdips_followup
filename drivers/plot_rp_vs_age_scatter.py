@@ -184,6 +184,14 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0):
                 zorder=3, marker='*', linewidth=0, label=label
             )
 
+        sel = (~pd.isnull(target_age)) & (~pd.isnull(target_rp))
+        print('{} targets w/ finite ages and radii'.
+              format(len(target_age[sel])))
+        print('{} targets w/ finite ages and radii that are TOIs'.
+              format(len(target_age[sel & istoi])))
+        print('{} targets w/ finite ages and radii that are not TOIs'.
+              format(len(target_age[sel & ~istoi])))
+
         target_rp_rel_unc = target_rp_unc / target_rp
 
         ##########
