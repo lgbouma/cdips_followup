@@ -27,7 +27,10 @@ from parse import search
 from astrobase.services.identifiers import tic_to_gaiadr2
 
 from cdips.utils import today_YYYYMMDD
-from cdips.utils.catalogs import get_exofop_toi_catalog
+from cdips.utils.catalogs import (
+    get_exofop_toi_catalog,
+    get_exofop_ctoi_catalog
+)
 
 from cdips_followup.manage_candidates import validate_source_id_ticid
 
@@ -48,7 +51,7 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
     """
     ephemeris_type: type of ephemeris source file. These could be Hartman's
     text files, cdips-pipeline, ExoFOP-TESS CSV files, or MIT QLP toi-plus
-    catalog:  ['cdipspipeline', 'exofoptess', 'hartmanupdate', 'toiplus']
+    catalog:  ['cdipspipeline', 'exofoptess_toi', 'hartmanupdate', 'toiplus']
 
     targetid: if type is MITQLP toi-plus, then e.g., 'TIC308538095.01' or
     '451.01'.
@@ -57,8 +60,8 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
     containing the ephemeris information.
     """
 
-    valid_types = ['cdipspipeline', 'exofoptess', 'hartmanupdate',
-                   'toiplus']
+    valid_types = ['cdipspipeline', 'exofoptess_toi',
+                   'exofoptess_ctoi','hartmanupdate', 'toiplus']
 
     if ephemeris_type not in valid_types:
         errmsg = (
@@ -77,13 +80,21 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
     if ephemeris_type == 'hartmanupdate':
         ephem_dict = read_hartman_updateephem_file(ephemsourcefile)
 
-    elif ephemeris_type == 'exofoptess':
+    elif ephemeris_type == 'exofoptess_toi':
         wrnmsg = (
-            'WRN! GETTING EPHEMERIS FROM EXOFOPTESS CATALOG. ENSURE LATEST '
+            'WRN! EPHEMERIS FROM EXOFOPTESS TOI CATALOG. ENSURE LATEST '
             'VERSION HAS BEEN DOWNLOADED'
         )
         print(wrnmsg)
-        ephem_dict = read_exofoptess_ephem(targetid)
+        ephem_dict = read_exofoptess_toi_ephem(targetid)
+
+    elif ephemeris_type == 'exofoptess_ctoi':
+        wrnmsg = (
+            'WRN! EPHEMERIS FROM EXOFOPTESS CTOI CATALOG. ENSURE LATEST '
+            'VERSION HAS BEEN DOWNLOADED'
+        )
+        print(wrnmsg)
+        ephem_dict = read_exofoptess_ctoi_ephem(targetid)
 
     else:
         raise NotImplementedError
@@ -105,7 +116,7 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
         targetid = 'TIC{}.01'.format(ticid)
         ephemeris_origin = os.path.abspath(ephemsourcefile)
 
-    elif ephemeris_type == 'exofoptess':
+    elif ephemeris_type == 'exofoptess_toi':
 
         toidf = get_exofop_toi_catalog()
         sel = toidf['TOI'].astype(str) == targetid
@@ -115,6 +126,17 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
         source_id = tic_to_gaiadr2(ticid)
         targetid = targetid
         ephemeris_origin = get_exofop_toi_catalog(returnpath=True)
+
+    elif ephemeris_type == 'exofoptess_ctoi':
+
+        ctoidf = get_exofop_ctoi_catalog()
+        sel = ctoidf['CTOI'].astype(str) == targetid.replace('TIC','')
+        targetrow = ctoidf[sel]
+
+        ticid = str(targetrow['TIC ID'].iloc[0])
+        source_id = tic_to_gaiadr2(ticid)
+        targetid = targetid
+        ephemeris_origin = get_exofop_ctoi_catalog(returnpath=True)
 
     else:
         raise NotImplementedError
@@ -181,7 +203,7 @@ def save_ephemerides_csv_file(ephem_df):
                 'duration', 'duration_unc', 'ephemeris_origin']
 
     ephem_df['insert_time'] = pd.to_datetime(ephem_df.insert_time)
-    out_df = ephem_df[colorder].sort_values(by='insert_time')
+    out_df = ephem_df[colorder].sort_values(by=['insert_time', 'source_id'])
 
     if not os.path.exists(EPHEM_DAY_PATH):
         out_df.to_csv(
@@ -250,7 +272,8 @@ def read_hartman_updateephem_file(updateephempath, verbose=0):
     return ephem_dict
 
 
-def read_exofoptess_ephem(targetid):
+def read_exofoptess_toi_ephem(targetid):
+    # Get TOI ephemerides
 
     toidf = get_exofop_toi_catalog()
 
@@ -284,6 +307,49 @@ def read_exofoptess_ephem(targetid):
         ephem_dict[k] = result
 
     return ephem_dict
+
+
+def read_exofoptess_ctoi_ephem(targetid):
+    # Get TOI ephemerides
+
+    ctoidf = get_exofop_ctoi_catalog()
+
+    if not targetid.startswith('TIC'):
+        raise NotImplementedError
+
+    else:
+
+        ticid = targetid.replace('TIC','')
+
+        # stripped targetid is CTOI ID
+        sel = ctoidf['CTOI'].astype(str) == ticid
+        targetrow = ctoidf[sel]
+
+        if not len(targetrow) == 1:
+            raise AssertionError(
+                'failed to get ID match for {}'.format(targetid)
+            )
+
+    keymatchdict = {
+        'period_val': 'Period (days)',
+        'epoch_val': 'Midpoint (BJD)',
+        'duration_val': 'Duration (hrs)',
+        'period_unc': 'Period (days) Error',
+        'epoch_unc': 'Midpoint err',
+        'duration_unc': 'Duration (hrs) Error',
+        'depth_val': 'Depth ppm',
+        'depth_unc': 'Depth ppm Error'
+    }
+
+    ephem_dict  = {}
+    for k,v in keymatchdict.items():
+        result = np.float64(targetrow[v])
+        ephem_dict[k] = result
+
+    return ephem_dict
+
+
+
 
 
 def read_mitqlp_ephem(targetid):
