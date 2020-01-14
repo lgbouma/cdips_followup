@@ -11,6 +11,7 @@ import os, subprocess, shlex
 import multiprocessing as mp
 import numpy as np, pandas as pd
 from glob import glob
+from itertools import product
 
 from astropy.coordinates import SkyCoord
 import astropy.units as u, astropy.constants as const
@@ -21,9 +22,14 @@ from astrobase.services.identifiers import (
     tic_to_gaiadr2, gaiadr2_to_tic
 )
 
+from cdips.utils import tess_noise_model as tnm
 from cdips.utils.catalogs import (
     get_cdips_pub_catalog,
     get_tic_star_information
+)
+from cdips.utils.mamajek import (
+    get_interp_mass_from_rstar,
+    get_interp_rstar_from_teff
 )
 
 ##########
@@ -474,14 +480,241 @@ def _merge_tic8_xmatch():
     bigdf.to_csv(outpath, index=False)
 
 
-def calc_yield():
+def calc_yield(southern_only=True, extended_mission=False):
 
     inpath = '../../data/cg18_cdips_table1_subset_with_dilution_tic8.csv'
     df = pd.read_csv(inpath)
 
-    import IPython; IPython.embed()
+    print('{} in CG18'.format(len(df)))
+    df = df[df.Tmag < 16]
+    print('{} in CG18 w/ T<16'.format(len(df)))
+    radii_gt_0 = df.rad > 0
+    mass_gt_0 = df.mass > 0
+    sensible_stars = radii_gt_0 & mass_gt_0
+    df = df[sensible_stars]
+    print('{} in CG18 w/ T<16 and finite Rstar, Mstar TIC8 match'.format(len(df)))
+
+    if southern_only:
+        c = SkyCoord(ra = np.array(df['ra'])*u.deg,
+                     dec = np.array(df['dec'])*u.deg)
+        ecliptic_lat = np.array(c.barycentrictrueecliptic.lat)
+        df = df[ecliptic_lat < 0]
+        print('{} in CG18 w/ T<16 and finite Rstar, Mstar TIC8 match & in south'.format(len(df)))
+
+    Tmag = nparr(df.Tmag)
+    fra, fdec = 120, 0  # sector 6 cam 1 center
+    coords = np.array([fra*np.ones_like(Tmag), fdec*np.ones_like(Tmag)]).T
+    noise_1hr_ppm = 1e6*tnm.noise_model(Tmag, coords=coords, exptime=3600)
+
+    df['noise_1hr'] = noise_1hr_ppm[1,:]
+
+    planet_detection_estimate(df, southern_only=southern_only,
+                              extended_mission=extended_mission)
 
 
+def planet_detection_estimate(df, southern_only=True, extended_mission=False):
+    '''
+    estimate number of detections of hot Jupiters and hot Neptunes.
+    '''
+
+    # Now with the above dataframe, you are set to get detection estimate.
+    np.random.seed(42)
+
+    # Use Howard's numbers for reasonable cases...
+    _get_detection_estimate(df, 11*u.Rearth, 'w',
+        'dilution_ap1.50', 0.005, southern_only=southern_only,
+                            extended_mission=extended_mission)
+    _get_detection_estimate(df, 11*u.Rearth, 'a',
+        'dilution_ap2.00', 0.005, southern_only=southern_only,
+                            extended_mission=extended_mission)
+
+    _get_detection_estimate(df, 5*u.Rearth, 'a',
+        'dilution_ap1.50', 0.01, southern_only=southern_only,
+                            extended_mission=extended_mission)
+    _get_detection_estimate(df, 5*u.Rearth, 'a',
+        'dilution_ap2.00', 0.01, southern_only=southern_only,
+                            extended_mission=extended_mission)
+
+    _get_detection_estimate(df, 3*u.Rearth, 'a',
+        'dilution_ap1.50', 0.025, southern_only=southern_only,
+                            extended_mission=extended_mission)
+    _get_detection_estimate(df, 3*u.Rearth, 'a',
+        'dilution_ap2.00', 0.025, southern_only=southern_only,
+                            extended_mission=extended_mission)
+
+
+def _get_detection_estimate(df, Rp, writetype, dilkey, occ_rate,
+                            southern_only=False, extended_mission=False):
+        '''
+        args:
+        -----
+        df: a DataFrame of cluster members with T<16, selected to not include
+        anything in globulars (i.e. our correct cluster definition) and to only
+        be in the southern ecliptic hemisphere.
+
+        dilkey (str): key to column header of dilution, e.g., 'dilution_ap2.00'
+
+        Rp: astropy unitful planet radius assumed.
+
+        writetype (str): 'a' for append, 'w' for write.
+
+        occ_rate (float): fraction of stars with planet
+        -----
+
+        This routine assumes all cluster members are dwarf stars.
+        For a P=10day and P=3day planet of radius Rp, what fraction of the
+        stars are detectable, at what thresholds?
+        '''
+
+        noise_1hr_in_ppm = np.array(df['noise_1hr'])
+        noise_1hr_in_frac = noise_1hr_in_ppm/1e6
+
+        dilution = df[dilkey]
+
+        Rstar = np.array(df['rad'])*u.Rsun
+
+        signal = ((Rp/Rstar).cgs)**2
+
+        # assuming aperture photometry...
+        SNR_1hr = nparr( (signal / noise_1hr_in_frac)*np.sqrt(dilution) )
+
+        # # assuming difference imaging
+        # cutoff_dilution = 0.1
+        # SNR_1hr = nparr( (signal / noise_1hr_in_frac)*
+        #                 (dilution>cutoff_dilution).astype(int) )
+
+        if not extended_mission:
+            T_obs = 28*u.day
+        elif extended_mission:
+            T_obs = 56*u.day
+
+        P_long = 10*u.day
+
+        # Compute transit duration, avg over impact param
+        Mstar = np.array(df['mass'])*u.Msun
+        vol_star = (4*np.pi/3)*Rstar**3
+        rho_star = Mstar / vol_star
+        vol_sun = (4*np.pi/3)*u.Rsun**3
+        rho_sun = u.Msun / vol_sun
+
+        T_dur_long = 13*u.hr * (P_long.to(u.yr).value)**(1/3) \
+                             * (rho_star/rho_sun)**(-1/3)
+
+        P_short = 3*u.day
+        T_dur_short = 13*u.hr * (P_short.to(u.yr).value)**(1/3) \
+                              * (rho_star/rho_sun)**(-1/3)
+
+        T_in_transit_long = (T_obs / P_long)*T_dur_long*np.pi/4
+        T_in_transit_short = (T_obs / P_short)*T_dur_short*np.pi/4
+
+        SNR_pf_long = SNR_1hr * (T_in_transit_long.to(u.hr).value)**(1/2)
+        SNR_pf_short = SNR_1hr * (T_in_transit_short.to(u.hr).value)**(1/2)
+
+        # For how many cluster members can you get SNR > 10 in ONE HOUR?
+        N_1hr = len(SNR_1hr[SNR_1hr > 10])
+
+        # For how many cluster members can you get SNR > 10 phase folded,
+        # assuming the long period?
+        N_pf_long = len(SNR_pf_long[SNR_pf_long > 10])
+
+        # For how many cluster members can you get SNR > 10 phase folded,
+        # assuming the short period?
+        N_pf_short = len(SNR_pf_short[SNR_pf_short > 10])
+
+        a_long = (const.G * Mstar / (4*np.pi*np.pi) * P_long**2 )**(1/3)
+        transit_prob_long = (Rstar/a_long).cgs.value
+        a_short = (const.G * Mstar / (4*np.pi*np.pi) * P_short**2 )**(1/3)
+        transit_prob_short = (Rstar/a_short).cgs.value
+
+        # For how many planets do you get SNR>10 in one hour?
+        N_pla_1hr_long = 0
+        N_pla_1hr_short = 0
+        N_pla_pf_long = 0
+        N_pla_pf_short = 0
+
+        for ix, this_transit_prob in enumerate(transit_prob_long):
+            if np.random.rand() < occ_rate * this_transit_prob:
+                # Congrats, you have a transiting planet that exists
+                if SNR_1hr[ix] > 10:
+                    # Congrats, it's detected (1hr integration)
+                    N_pla_1hr_long += 1
+                if SNR_pf_long[ix] > 10:
+                    # Congrats, it's detected (phase-folded)
+                    N_pla_pf_long += 1
+
+        for ix, this_transit_prob in enumerate(transit_prob_short):
+            if np.random.rand() < occ_rate * this_transit_prob:
+                # Congrats, you have a transiting planet that exists
+                if SNR_1hr[ix] > 10:
+                    # Congrats, it's detected (1hr integration)
+                    N_pla_1hr_short += 1
+                if SNR_pf_short[ix] > 10:
+                    # Congrats, it's detected (phase-folded)
+                    N_pla_pf_short += 1
+
+        if southern_only:
+            southern_str = 'only count stars in southern ecliptic hemisphere!!'
+        else:
+            southern_str = ''
+
+        outstr = \
+        '''
+        ##################################################
+        {:s}
+
+        For Rp = {:.1f}, cluster star radii and masses from TIC8,
+        dilution aperture radius of {:s}
+
+        FRACTION OF STARS WITH PLANETS IS {:s}
+
+        MEDIAN STELLAR RADIUS IS {:s}
+        MEAN DILUTION IS {:.2f}
+
+        For how many cluster members can you get SNR > 10 in ONE HOUR?
+        {:d}
+
+        For how many cluster members can you get SNR > 10 phase folded, assuming
+        the long period (10day)?
+        {:d}
+
+        For how many cluster members can you get SNR > 10 phase folded, assuming
+        the short period (3day)?
+        {:d}
+
+        N_pla_1_hr_long: {:d}
+        N_pla_1_hr_short: {:d}
+        N_pla_pf_long: {:d}
+        N_pla_pf_short: {:d}
+
+        ##################################################
+        '''.format(
+        southern_str,
+        Rp,
+        dilkey,
+        repr(occ_rate),
+        repr(np.median(Rstar)),
+        np.mean(dilution),
+        N_1hr,
+        N_pf_long,
+        N_pf_short,
+        N_pla_1hr_long,
+        N_pla_1hr_short,
+        N_pla_pf_long,
+        N_pla_pf_short
+        )
+
+        if southern_only:
+            outpath = '../../results/yield_calculation/planet_detection_estimate_southern_only.out'
+        else:
+            outpath = '../../results/yield_calculation/planet_detection_estimate_allsky.out'
+
+        if extended_mission:
+            outpath = outpath.replace('.out', '_extendedmission.out')
+
+        with open(outpath, writetype) as f:
+            f.writelines(outstr)
+
+        print(outstr)
 
 
 if __name__ == "__main__":
@@ -511,4 +744,5 @@ if __name__ == "__main__":
         _merge_tic8_xmatch()
 
     if do_yield_calc:
-        calc_yield()
+        for a,b in product([True,False],[True,False]):
+            calc_yield(southern_only=a, extended_mission=b)
