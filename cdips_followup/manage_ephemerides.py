@@ -177,7 +177,12 @@ def query_ephemeris(source_id=None, ticid=None):
 
     # Get the newest entry for this source.
     if isinstance(source_id, str):
-        seldf = df[df.source_id == source_id].iloc[-1]
+        try:
+            seldf = df[df.source_id == source_id].iloc[-1]
+        except IndexError as e:
+            msg = 'Failed to get ephemeris for {}'
+            print(msg)
+            raise IndexError(msg)
 
     if isinstance(ticid, str):
         seldf = df[df.ticid == ticid].iloc[-1]
