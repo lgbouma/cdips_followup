@@ -247,7 +247,8 @@ def get_requests_given_ephem(
     max_airmass_submit=2.5,
     min_lunar_distance=20, oot_duration=45*u.minute,
     eventclass='OIBEO',
-    sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO'],
+    sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO',
+           'McDonald Observatory'],
     schedule_oot_duration=60*u.minute,
     semesterstr='20A',
     filtermode='ip',
@@ -486,7 +487,8 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
     if telescope_class == '2m0':
         sites = ['Siding Spring Observatory', 'Haleakala Observatories']
     elif telescope_class == '1m0':
-        sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO']
+        sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO',
+                 'McDonald Observatory']
     else:
         raise ValueError
 
