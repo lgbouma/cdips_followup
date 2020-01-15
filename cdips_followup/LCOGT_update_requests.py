@@ -93,8 +93,9 @@ def cancel_single_request(requestid):
 def get_new_ephemeris(targetid, verbose=True):
     # read in the new ephemeris provided by Joel Hartman
     ephem_path = (
-        os.path.join(DATADIR, 'updated_ephemerides/{}/{}.updateephem.txt'.)
-        format(today_YYYYMMDD(), targetid)
+        os.path.join(DATADIR,
+                     'updated_ephemerides/{}/{}.updateephem.txt'.
+                     format(today_YYYYMMDD(), targetid))
     )
 
     with open(ephem_path, 'r') as f:

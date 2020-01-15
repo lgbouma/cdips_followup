@@ -169,7 +169,7 @@ def validate_single_request(requestgroup, max_duration_error=15):
     if (window_durn - billed_durn)/60 > max_duration_error:
 
         errmsg = (
-            'ERROR! got a window of {:.2f} min; billed {:.2f} min.'.
+            'ERROR! got a window of {:.2f} min; but tried to bill {:.2f} min.'.
             format(window_durn/60, billed_durn/60)
         )
 
