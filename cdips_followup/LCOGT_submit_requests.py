@@ -26,6 +26,11 @@ with open(api_file, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
 
+from cdips_followup import __path__
+DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data')
+RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
+
+
 #############
 # functions #
 #############
@@ -231,11 +236,11 @@ def submit_all_requests(savstr, validate_all=1, submit_all=0,
 
     if not 'ephemupdate' in savstr:
         resultsdir = (
-            '../results/LCOGT_{}_observability/'.format(semesterstr)
+            os.path.join(RESULTSDIR,'LCOGT_{}_observability/'.format(semesterstr))
         )
     else:
         resultsdir = (
-            '../results/LCOGT_{}_updated_requests/'.format(semesterstr)
+            os.path.join(RESULTSDIR,'LCOGT_{}_updated_requests/'.format(semesterstr))
         )
 
     pkl_savpath = (

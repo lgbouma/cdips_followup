@@ -34,6 +34,10 @@ with open(api_file, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
 
+from cdips_followup import __path__
+DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data')
+RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
+
 #############
 # functions #
 #############
@@ -89,7 +93,7 @@ def cancel_single_request(requestid):
 def get_new_ephemeris(targetid, verbose=True):
     # read in the new ephemeris provided by Joel Hartman
     ephem_path = (
-        '../data/updated_ephemerides/{}/{}.updateephem.txt'.
+        os.path.join(DATADIR, 'updated_ephemerides/{}/{}.updateephem.txt'.)
         format(today_YYYYMMDD(), targetid)
     )
 
@@ -193,8 +197,9 @@ def prepare_for_ephem_update(targets_to_update, target_is_faint=False):
                 )
 
             outdir = (
-                '../results/LCOGT_19B20A_updated_requests/{}'.
-                format(savstr)
+                os.path.join(RESULTSDIR,
+                             'LCOGT_19B20A_updated_requests/{}'.
+                             format(savstr))
             )
 
             if not os.path.exists(outdir):

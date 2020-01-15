@@ -10,7 +10,7 @@ import requests, socket, os, pickle
 import numpy as np, pandas as pd
 from numpy import array as nparr
 
-from get_event_observability import (
+from cdips_followup.get_event_observability import (
         get_event_observability, print_event_observability
 )
 
@@ -70,6 +70,10 @@ MAXTIMEDICT = {
     '22B': Time('2021-11-30 23:59:00')
 }
 
+from cdips_followup import __path__
+DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data')
+RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
+
 #############
 # functions #
 #############
@@ -85,9 +89,9 @@ def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
     (any brighter and we might encounter smear issues -- need to test).
     """
     if telescope_class == '1m0':
-        df = pd.read_csv('../data/LCOGT_reverse_eng_exptime.csv')
+        df = pd.read_csv(os.path.join(DATADIR,'LCOGT_reverse_eng_exptime.csv'))
     elif telescope_class == '2m0':
-        df = pd.read_csv('../data/LCOGT_2m_guess_exptime.csv')
+        df = pd.read_csv(os.path.join(DATADIR, 'LCOGT_2m_guess_exptime.csv'))
 
     if Gmag > df.G.max():
         raise AssertionError('target too faint')
@@ -281,13 +285,15 @@ def get_requests_given_ephem(
 
     if 'ephemupdate' in savstr:
         outdir = (
-            "../results/LCOGT_{}_updated_requests/{}".
-            format(semesterstr, savstr)
+            os.path.join(RESULTSDIR,
+                         "LCOGT_{}_updated_requests/{}".
+                         format(semesterstr, savstr))
         )
     else:
         outdir = (
-            "../results/LCOGT_{}_observability/{}".
-            format(semesterstr, savstr)
+            os.path.join(RESULTSDIR,
+                         "LCOGT_{}_observability/{}".
+                         format(semesterstr, savstr))
         )
     if not os.path.exists(outdir):
         os.mkdir(outdir)
@@ -512,7 +518,9 @@ def get_targets(savstr, verbose=True):
 
     raise AssertionError('deprecated!!')
 
-    df = pd.read_csv('../data/ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
+    df = pd.read_csv(os.path.join(
+        DATADIR,'ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
+    )
 
     if savstr in ['all_requests_19B_easyones']:
         sel = (
@@ -614,11 +622,11 @@ def make_all_request_files(savstr=None, overwrite=None, eventclass=None,
 
     if not 'ephemupdate' in init_savstr:
         resultsdir = (
-            '../results/LCOGT_{}_observability/'.format(semesterstr)
+            os.path.join(RESULTSDIR,'LCOGT_{}_observability/'.format(semesterstr))
         )
     else:
         resultsdir = (
-            '../results/LCOGT_{}_updated_requests/'.format(semesterstr)
+            os.path.join(RESULTSDIR,'LCOGT_{}_updated_requests/'.format(semesterstr))
         )
 
     pkl_savpath = (

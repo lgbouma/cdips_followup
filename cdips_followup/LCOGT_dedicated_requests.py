@@ -11,6 +11,10 @@ from cdips_followup.LCOGT_submit_requests import (
 
 from cdips_followup.manage_ephemerides import query_ephemeris
 
+from cdips_followup import __path__
+DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data')
+RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
+
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
                           eventclasses, overwrite=0, semesterstr='20A',
                           max_search_time=None, filtermode='ip',
@@ -29,11 +33,11 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
 
     if not 'ephemupdate' in init_savstr:
         resultsdir = (
-            '../results/LCOGT_{}_observability/'.format(semesterstr)
+            os.path.join(RESULTSDIR,'LCOGT_{}_observability/'.format(semesterstr))
         )
     else:
         resultsdir = (
-            '../results/LCOGT_{}_updated_requests/'.format(semesterstr)
+            os.path.join(RESULTSDIR,'LCOGT_{}_updated_requests/'.format(semesterstr))
         )
 
     pkl_savpath = (

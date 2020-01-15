@@ -15,21 +15,25 @@ def main():
     overwrite = 1
     validate = 1
     submit = 0
-    max_duration_error = 20
-    savstr = '20191210_2m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
-    source_id = '2919143383943171200'
-    manual_ephemeris = False
-    max_search_time = Time('2020-03-01 23:59:00')
-    filtermode = 'ip'
-    telescope_class = '2m0'
 
-    # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
-    # submit_eventclasses = ['OIBEO']
+    savstr = '20200115_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    source_id = '5240531632175135616'
+
+    filtermode = 'ip'
+    telescope_class = '1m0'
+    max_duration_error = 20
+    max_search_time = Time('2020-04-15 23:59:00')
+    manual_ephemeris = False
+
+    create_eventclasses = ['OIBEO']
+    # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
+    # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
+
     submit_eventclasses = ['OIBEO']
+    # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
+    # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
     # submit_eventclasses = ['OIB', 'BEO']
 
-    create_eventclasses = ['OIBEO'] #, 'IBEO', 'OIBE', 'OIB', 'BEO']
-    # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
     ####################
 
 
