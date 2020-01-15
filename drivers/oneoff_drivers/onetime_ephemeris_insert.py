@@ -7,7 +7,8 @@ from glob import glob
 import numpy as np, pandas as pd
 
 joel_update = 0
-exofoptess_update = 1
+exofoptess_insert = 0
+toi_insert = 1
 
 ##################################################
 # if you have joel's updates (manual datestring) #
@@ -25,10 +26,23 @@ if joel_update:
 # if you have a list of CDIPS candidates from exofoptess, want CTOI ephem #
 ###########################################################################
 idpath = '../../data/updated_ephemerides/20200114_targetid_list.txt'
-if exofoptess_update:
+if exofoptess_insert:
     with open(idpath, 'r') as f:
         targetid_list = f.readlines()
 
     for targetid in targetid_list:
         insert_ephemeris(targetid='TIC'+targetid.replace('\n',''),
                          ephemeris_type='exofoptess_ctoi')
+
+########################################################################
+# if you have a list of TOI candidates from exofoptess, want TOI ephem #
+########################################################################
+idpath = '../../data/updated_ephemerides/20200115_toiid_list.txt'
+
+if toi_insert:
+    with open(idpath, 'r') as f:
+        targetid_list = f.readlines()
+
+    for targetid in targetid_list:
+        insert_ephemeris(targetid=targetid.replace('\n',''),
+                         ephemeris_type='exofoptess_toi')
