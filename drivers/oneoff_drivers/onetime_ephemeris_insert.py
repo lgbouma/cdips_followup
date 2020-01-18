@@ -6,16 +6,16 @@ import os
 from glob import glob
 import numpy as np, pandas as pd
 
-joel_update = 0
+joel_update = 1
 exofoptess_insert = 0
-toi_insert = 1
+toi_insert = 0
 
 ##################################################
 # if you have joel's updates (manual datestring) #
 ##################################################
 if joel_update:
     ephem_files = np.sort(glob(
-        '../../data/updated_ephemerides/20200114/*updateephem.txt'
+        '../../data/updated_ephemerides/20200118/*updateephem.txt'
     ))
 
     for e in ephem_files:
