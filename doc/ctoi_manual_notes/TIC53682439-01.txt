@@ -1,0 +1,78 @@
+* TIC53682439.01_OIBEO_2m0_20200113_ip_240_0.5
+  PMS M dwarf, T=15, Rp=20Re.
+  * check if the density of the host star and Rp/R* inferred from the higher
+    precision transit follow-up are consistent with a planet size object transiting
+    the candidate host star. 
+
+From LCO2m, have Rp/Rstar=0.24894.
+TIC8 gives Rstar = 0.80, Mstar=0.56, Teff=3725K
+Gaia DR2 gives Rstar 0.84, Mstar=0.86, Teff=3646K, Lstar=0.113Lsun
+
+Multiplying gives Rp=1.93-2.03Rjup, depending which Rstar you take.
+
+From Joel's report,
+Transit duration:   1.61 hour (longer than TESS best-fit 1.2 hour)
+Period:     0.64132155
+
+Tdur = T0 * sqrt(1-b^2),  = 13hr * (P/1yr)^{1/3] * (rho/rhosun)^{-1/3} * sqrt(1-b^2)
+
+so
+
+(rho/rhosun)^{-1/3} = (Tdur/13hr) * (P/1yr)^{-1/3} * (1-b^2)^{-1/2}
+
+(rho/rhosun) = (Tdur/13hr)^{-3} * (P/1yr) * (1-b^2)^{3/2}
+
+for this object, would infer from the transit duration that
+
+(rho/rhosun) = 0.924 * (1-b^2)^{3/2}.
+
+For comparison...
+rho/rhosun = (M/Msun) * (R/Rsun)^{-3}
+
+If TIC8: rho/rhosun = 1.09
+If GaiaDR2: rho/rhosun = 1.45
+
+From the densities above, if TIC8 is correct, then we're reasonably close.
+
+A few notes.
+
+Zari 2018's calculated extinction correction for this one is not that bad. A_G = 0.226 mag.
+
+http://vizier.u-strasbg.fr/viz-bin/VizieR-4?-ref=VIZ5e2340f162bf&-to=-4b&-from=-3&-this=-4&%2F%2Fsource=J%2FA%2BA%2F620%2FA172%2Fpms&%2F%2Ftables=J%2FA%2BA%2F620%2FA172%2Fpms&-out.max=50&%2F%2FCDSportal=http%3A%2F%2Fcdsportal.u-strasbg.fr%2FStoreVizierData.html&-out.form=HTML+Table&%2F%2Foutaddvalue=default&-order=I&-oc.form=sexa&-out.src=J%2FA%2BA%2F620%2FA172%2Fpms&-nav=cat%3AJ%2FA%2BA%2F620%2FA172%26tab%3A%7BJ%2FA%2BA%2F620%2FA172%2Fpms%7D%26key%3Asource%3DJ%2FA%2BA%2F620%2FA172%2Fpms%26HTTPPRM%3A&-c=&-c.eq=J2000&-c.r=++2&-c.u=arcmin&-c.geom=r&-source=&-source=J%2FA%2BA%2F620%2FA172%2Fpms&-out=Source&Source=2919143383943171200&-out=GLON&-out=GLAT&-out=Plx&-out=e_Plx&-out=pmGLON&-out=e_pmGLON&-out=pmGLAT&-out=e_pmGLAT&-out=pmlbcorr&-out=RV&-out=e_RV&-out=Gmag&-out=BPmag&-out=RPmag&-out=E%28BR%2FRP%29&-out=chi2AL&-out=NgAL&-out=AG&-out=E%28BP-RP%29&-out=UWE&-out=_RA.icrs&-out=_DE.icrs&-meta.ucd=2&-meta=1&-meta.foot=1&-usenav=1&-bmark=GET
+
+The Measured
+G = 16.34
+Bp= 17.48
+Rp= 15.27
+
+Bp-Rp = 2.21
+and E(Bp-Rp) = 0.11, so (Bp_Rp)_0 = 2.1 - 2.3 (depending on sign).
+
+M = m - 5log10(d_pc) + 5
+
+so
+M_G = 16.34 - 5log10( 1/(2.0162e-3) ) + 5 = 7.86
+
+and then add (subtract?) like 0.2 for A_G.
+
+So... it could just be a triple!
+
+Showing that this star is truly young will be a challenge. It's an M dwarf, and it's above the main sequence. But it
+could just be a triple! Its crazy rotation is typical of M dwarfs for a long time, and doesn't contain much age
+information, other than "<~5 Gyr".
+
+What we really want would be an AO image that lets us determine whether (or not) there are companions.
+Zorro on Gemini-S?
+"In speckle mode they provide simultaneous two-color diffraction-limited optical imaging (FWHM~0.02" at 650nm) of
+targets as faint as V~17 over a 6.7" field of view."
+
+TBH seems like the only chance, unless spectral indications can say anything for young M dwarfs.
+
+Answer: West et al (2011) showed that past ~M4 stars get much more Halpha active.
+If this one is <M4 (e.g., at Teff=3700K, assuming constant PMS, would be M1-2), and showed Halpha emission, could be a
+decent youth suggestor.
+
+But the point is: you would need to have ALL of these factors work TOGETHER. So shouldn't retire it, but probably should
+consider pursuing other easier targets first.
+
+

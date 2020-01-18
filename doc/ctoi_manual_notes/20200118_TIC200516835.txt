@@ -1,0 +1,8 @@
+From transit lightcurve for TIC200516835.11
+Tdur = 1.92 h
+Rp/R* = 0.2121
+R* = 0.55 solRad (TIC8)
+Rp = 1.14 jupiterRad (TIC8 Rstar +transit lightcurve depth)
+(density/solar density) = 3.187 (Tdur+P from LC, assume b=0)
+M* = 0.55 solMass (TIC8)
+(density/solar density) = 3.306 (TIC8)
