@@ -1,4 +1,8 @@
+import os
+import pandas as pd, numpy as np
+
 from cdips.utils.catalogs import ticid_to_toiid as cdips_ticid_to_toiid
+import cdips_followup as cf
 
 def ticid_to_toiid(tic_id):
 
@@ -22,3 +26,16 @@ def ticid_and_toiid_to_targetid(tic_id, toi_id):
     else:
 
         return None
+
+
+def get_cdips_candidates():
+
+    datadir = os.path.join(os.path.dirname(cf.__path__[0]), 'data')
+
+    df = pd.read_csv(
+        os.path.join(datadir, 'candidate_database/candidates.csv'),
+        sep="|"
+    )
+    df.targetid = df.targetid.astype(str)
+
+    return df
