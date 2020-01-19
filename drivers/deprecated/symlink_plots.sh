@@ -9,7 +9,7 @@ for g in $targetdirs; do
 
   echo 'symlinking '$g' ...'
 
-  outdir=/Users/luke/Dropbox/proj/cdips_followup/results/followup_planning/2020A_youngstar
+  outdir=/Users/luke/Dropbox/proj/cdips_followup/results/followup_planning/201909_youngstar_merge
 
   tolink=`ls $g*png`
 
