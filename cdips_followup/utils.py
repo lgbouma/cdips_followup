@@ -1,8 +1,10 @@
 import os
 import pandas as pd, numpy as np
 
+from astroquery.gaia import Gaia
+
 from cdips.utils.catalogs import ticid_to_toiid as cdips_ticid_to_toiid
-import cdips_followup as cf
+from cdips_followup import __path__
 
 def ticid_to_toiid(tic_id):
 
@@ -30,7 +32,7 @@ def ticid_and_toiid_to_targetid(tic_id, toi_id):
 
 def get_cdips_candidates():
 
-    datadir = os.path.join(os.path.dirname(cf.__path__[0]), 'data')
+    datadir = os.path.join(os.path.dirname(__path__[0]), 'data')
 
     df = pd.read_csv(
         os.path.join(datadir, 'candidate_database/candidates.csv'),
@@ -39,3 +41,22 @@ def get_cdips_candidates():
     df.targetid = df.targetid.astype(str)
 
     return df
+
+
+def given_sourceid_get_radec(source_id):
+
+    jobstr = (
+        "select top 1 g.ra, g.dec, g.pmra, g.pmdec, g.phot_g_mean_mag from "
+        "gaiadr2.gaia_source as g where g.source_id = {:s}".
+        format(source_id)
+    )
+
+    job = Gaia.launch_job(jobstr)
+    gaia_r = job.get_results()
+
+    if len(gaia_r) != 1:
+        raise AssertionError('gaia match failed')
+
+    ra, dec = float(gaia_r['ra']), float(gaia_r['dec'])
+
+    return ra, dec
