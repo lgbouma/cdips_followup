@@ -88,7 +88,7 @@ def make_observability_chart_singlesite(
 
     outpath = os.path.join(
         outdir,
-        'frac_visible_{:s}.png'.format(site.replace(' ','_').lower())
+        '{:s}_frac_visible_{:s}.png'.format(name, site.replace(' ','_').lower())
     )
     fig.savefig(outpath, dpi=300, bbox_inches='tight')
     print('saved {}'.format(outpath))
@@ -104,7 +104,7 @@ def make_observability_chart_multisite(
 
     outpath = os.path.join(
         outdir,
-        'frac_visible_multisite.png'
+        '{}_frac_visible_multisite.png'.format(name)
     )
 
     if os.path.exists(outpath) and not overwrite:
@@ -119,6 +119,8 @@ def make_observability_chart_multisite(
         )
         fracs.append(frac)
 
+    radecstr = 'RA {:.1f}, dec {:.1f}'.format(float(ra), float(dec))
+
     #
     # make the plot
     #
@@ -131,9 +133,10 @@ def make_observability_chart_multisite(
 
     ax.set_xlim([days[0].plot_date, days[-1].plot_date])
     ax.set_title(
-        '{}: altitude 20-85deg, airmass<3, w/in civil twilight'.format(name),
+        '{}: alt 20-85deg, airmass<3, civil twilight'.format(name),
         fontsize='xx-small'
     )
+    ax.text(0.03, 0.97, radecstr, va='top', ha='left', transform=ax.transAxes)
     plt.setp(ax.get_xticklabels(), rotation=75, ha='right', fontsize='small')
     plt.setp(ax.get_yticklabels(), fontsize='small')
 
