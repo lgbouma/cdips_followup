@@ -60,3 +60,20 @@ def given_sourceid_get_radec(source_id):
     ra, dec = float(gaia_r['ra']), float(gaia_r['dec'])
 
     return ra, dec
+
+
+def given_sourceid_get_gaiarow(source_id):
+
+    jobstr = (
+        "select top 1 g.ra, g.dec, g.pmra, g.pmdec, g.phot_g_mean_mag from "
+        "gaiadr2.gaia_source as g where g.source_id = {:s}".
+        format(source_id)
+    )
+
+    job = Gaia.launch_job(jobstr)
+    gaia_r = job.get_results()
+
+    if len(gaia_r) != 1:
+        raise AssertionError('gaia match failed')
+
+    return gaia_r
