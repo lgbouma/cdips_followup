@@ -15,7 +15,7 @@ toi_insert = 0
 ##################################################
 if joel_update:
     ephem_files = np.sort(glob(
-        '../../data/updated_ephemerides/20200118/*updateephem.txt'
+        '../../data/updated_ephemerides/20200204/*updateephem.txt'
     ))
 
     for e in ephem_files:
