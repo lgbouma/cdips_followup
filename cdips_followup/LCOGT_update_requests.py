@@ -42,7 +42,7 @@ RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
 # functions #
 #############
 
-def get_requests(limit=100, user='lbouma'):
+def get_requests(limit=500, user='lbouma'):
     # limit: maximum number of requests returned for pagination purposes
     # identifier: TICID, or TOI id. (Leading string)
 

@@ -74,7 +74,7 @@ kdf['dec'] = decs
 
 kdf['NumberPlanet'] = '0.11'
 kdf['Pipeline'] = 'CDIPS'
-kdf['DiscoverySector'] = 'S8-S11' #FIXME
+kdf['DiscoverySector'] = 'S8-S11' #FIXME: do this via tesscut last sector
 kdf['Priority'] = 3
 kdf['Disposition'] = 'PC'
 
