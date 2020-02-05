@@ -1,3 +1,5 @@
+import os
+
 from numpy import array as nparr
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from astropy.io import fits
@@ -11,7 +13,19 @@ from specutils.fitting import fit_generic_continuum, fit_lines
 from specutils.analysis import equivalent_width, centroid
 from astropy.modeling import models
 
+from specmatchemp.spectrum import Spectrum
+from specmatchemp.specmatch import SpecMatch
+import specmatchemp.library
+import specmatchemp.plots as smplot
+
 from stringcheese.plotutils import savefig, format_ax
+
+line_d = {
+    'Mgb1': 5183.62,
+    'Mgb2': 5172.70,
+    'Feb3': 5168.91,
+    'Mgb4': 5167.33
+}
 
 ########
 # read #
@@ -78,6 +92,24 @@ def given_vsys_get_li_target_wv(vsys=27*u.km/u.s):
     return new_lambda.to(u.AA)
 
 
+def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=6708*u.AA):
+
+    # NOTE: currently manual, thru Wright & Eastman's code
+    from astropy.time import Time
+    t = Time(['2020-02-04T00:00:00'], format='isot', scale='utc')
+    print(t.jd)
+
+    # note: varies by ~500m/s due to earth's rotation. (need the exact time to
+    # account for this better)
+    barycorr = 2203.497975544 # m/s from BARYCORR
+
+    # deltawvlen probably good to ~20-30%, so delta_v no better.
+    delta_v = const.c * (deltawvlen / wvlen_0)
+
+    v_star = delta_v + barycorr*(u.m/u.s)
+    print(v_star.to(u.m/u.s))
+
+
 
 #################
 # visualization #
@@ -122,16 +154,122 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
     plt.close()
 
 
-def viz_compare(wavlim=[6700,6725]):
-    # NOTE: doesnt work, b/c the install fails
+def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None):
 
-    import specmatchemp.library
-    import specmatchemp.plots as smplot
+    if not isinstance(outdir, str):
+        raise ValueError
+
+    if "PFS" in spectrum_path:
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+    elif "Veloce" in spectrum_path:
+        flx_2d, wav_2d = read_veloce(spectrum_path)
+    else:
+        raise NotImplementedError
+
+    for order in range(wav_2d.shape[0]):
+
+        if 'PFS' in spectrum_path:
+            start = 10
+            end = -10
+        elif 'Veloce' in spectrum_path:
+            start = 200
+            end = -200
+
+        flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
+
+        outname = '{}_order{}.png'.format(
+            idstring, str(order).zfill(2),
+        )
+
+        outpath = os.path.join(outdir, outname)
+
+        viz_1d_spectrum(flx, wav, outpath)
+
+
+
+
+def inspect_pfs(nightstr, targetline, xlim=None):
+    # NIST has the Li I resonance doublet listed with one transition at 6707.76
+    # and the other at 6707.91 A.
+
+    targetid = 'TIC268301217.01'
+    datestr = '20200203_{}'.format(nightstr)
+    xshift = 2.30
+    # note: wavelength soln might change by night...
+    spectrum_path = (
+        '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/rn56.{}'.
+        format(nightstr)
+    )
+    wvsol_path = (
+        '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/w_n56.dat'
+    )
+
+    flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+
+    if xlim == 'fullorder':
+        xlim = None
+        vlines = None
+        names = None
+        if targetline == 'Halpha':
+            target_wav = 6562.8
+        elif targetline == 'LiI':
+            target_wav = 6707.85
+        elif targetline == 'Mgb1':
+            target_wav = 5183.62
+
+    elif xlim == 'assign':
+        if targetline == 'Halpha':
+            target_wav = 6562.8
+            vlines = [target_wav]
+            names = ['Halpha']
+        elif targetline == 'LiI':
+            target_wav = 6707.85
+            # first two are guesstimates from Berger+18 fig3.
+            vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6718]
+            names = ['FeI', 'FeI', 'FeI', 'Li', '', 'CaI$\lambda$']
+        elif targetline == 'Mgb1':
+            target_wav = 5183.62
+            vlines = [target_wav]
+            names = ['Mgb1']
+
+        delta_wav = 5
+        xlim = [target_wav-delta_wav, target_wav+delta_wav]
+
+    # retrieve the order corresponding to target wavelength
+    _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
+    order = int(np.argwhere((_preorder != wav_2d.shape[1]-1) & (_preorder != 0)))
+
+    flx, wav = flx_2d[order, :], wav_2d[order, :]
+    shiftstr = ''
+    if isinstance(xshift, (float, int)):
+        wav = deepcopy(wav) - xshift
+        shiftstr = '_shift{:.2f}'.format(float(xshift))
+
+    xstr = ''
+    if isinstance(xlim, list) or isinstance(xlim, tuple):
+        xstr = '_{}_xlim{:.1f}-{:.1f}'.format(
+            targetline, xlim[0], xlim[1]
+        )
+
+    outname = '{}_{}_order{}{}{}.png'.format(
+        datestr, targetid, str(order).zfill(2), xstr, shiftstr
+    )
+
+    outpath = '../results/spec_analysis/PFS/spec_viz/{}'.format(outname)
+
+    viz_1d_spectrum(flx, wav, outpath, xlim=xlim, vlines=vlines, names=names)
+
+
+
+def specmatch_viz_compare(wavlim=[5160,5210]):
+    """
+    Visualize HIRES spectra for dwarf stars within the wavelengths.
+    """
 
     lib = specmatchemp.library.read_hdf(wavlim=wavlim)
 
     cut = lib.library_params.query('radius < 1.5 and -0.25 < feh < 0.25')
-    g = cut.groupby(pd.cut(cut.Teff,bins=arange(5000,7000,250)))
+    g = cut.groupby(pd.cut(cut.Teff,bins=np.arange(5000,7000,250)))
     cut = g.first()
 
     fig = plt.figure()
@@ -141,9 +279,35 @@ def viz_compare(wavlim=[6700,6725]):
     plt.legend()
     smplot.label_axes('Teff','radius')
     wvstr = '{}-{}'.format(wavlim[0], wavlim[1])
-    fig.savefig(
-        '../results/spec_viz/quickstart-library-selected-stars_{}.png'.  wvstr
+    outpath = (
+        '../results/spec_viz/specmatch/quickstart-library-selected-stars_{}.png'.
+        format(wvstr)
     )
+    savefig(fig, outpath, writepdf=False)
+
+    plt.close('all')
+
+    fig,ax = plt.subplots(figsize=(8,4))
+    trans = blended_transform_factory(ax.transAxes, ax.transData)
+    bbox = dict(facecolor='white', edgecolor='none',alpha=0.8)
+    step = 1
+    shift = 0
+    for _,row in cut.iterrows():
+        spec = lib.library_spectra[row.lib_index,0,:]
+        plt.plot(lib.wav, spec.T + shift,color='RoyalBlue',lw=0.5)
+        s = "{cps_name:s}, Teff={Teff:.0f}".format(**row)
+        plt.text(0.01, 1+shift, s, bbox=bbox, transform=trans)
+        shift+=step
+
+    plt.grid()
+    plt.xlabel('Wavelength (Angstroms)')
+    plt.ylabel('Normalized Flux (Arbitrary Offset)')
+
+    outpath = (
+        '../results/spec_viz/specmatch/quickstart-library-selected-stars-spectra_{}.png'.
+        format(wvstr)
+    )
+    savefig(fig, outpath, writepdf=False)
 
 
 ##############
@@ -152,15 +316,26 @@ def viz_compare(wavlim=[6700,6725]):
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
                    outpath=None):
     """
+    spectrum_path: path to PFS or Veloce spectrum
+
+    wvsol_path: path to PFS wavelength solution (optional)
+
     xshift: angstrom shift required to get into source frame (not vacuum frame).
 
     delta_wav: window to do the measurement over (angstrom)
+
+    outpath: summary figure is written here.
     """
 
     if not isinstance(outpath, str):
         raise ValueError
 
-    flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+    if "PFS" in spectrum_path:
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+    elif "Veloce" in spectrum_path:
+        flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
+    else:
+        raise NotImplementedError
 
     # FeI at 6703.58 and 6705.1 (Berger+18 Fig3).
     # FeI at 6707.44
@@ -297,3 +472,139 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
         format_ax(ax)
 
     savefig(f, outpath)
+
+
+######################
+# specmatch analysis #
+######################
+
+def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
+                     idstring=None):
+
+    for s in [outdir, region, idstring]:
+        if not isinstance(s, str):
+            raise ValueError
+
+    if 'PFS' not in outdir:
+        raise NotImplementedError('check wavlim works for non-pfs spectrum')
+
+    if region == 'Mgb1':
+        target_wav = 5183.62
+        wavlim = [5160,5210]
+
+    if "PFS" in spectrum_path:
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+    elif "Veloce" in spectrum_path:
+        flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
+    else:
+        raise NotImplementedError
+
+    #
+    # retrieve the order corresponding to target wavelength, and then trim the
+    # 1d spectrum from that order
+    #
+    _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
+    order = int(np.argwhere((_preorder != wav_2d.shape[1]-1) & (_preorder != 0)))
+
+    flx, wav = flx_2d[order, :], wav_2d[order, :]
+    sel = (wav > wavlim[0]-10) & (wav < wavlim[1]+10)
+    flx, wav = flx[sel], wav[sel]
+
+    #
+    # continuum normalize, and then check you did it ok.
+    #
+    spec = Spectrum1D(spectral_axis=wav*u.AA,
+                      flux=flx*u.dimensionless_unscaled)
+
+    # avoid manual exclude regions if possible
+    exclude_regions = []
+    if len(exclude_regions)>=1:
+        cont_flx = (
+            fit_generic_continuum(spec,
+                                  exclude_regions=exclude_regions
+            )(spec.spectral_axis)
+        )
+    else:
+        cont_flx = (
+            fit_generic_continuum(spec)(spec.spectral_axis)
+        )
+
+    cont_norm_spec = spec / cont_flx
+
+    outpath = os.path.join(outdir, '{}_cont_norm_check.png'.format(idstring))
+
+    f,axs = plt.subplots(nrows=2, ncols=1, figsize=(6,4))
+    axs[0].plot(wav, flx, c='k', zorder=3)
+    axs[0].plot(wav, cont_flx, c='r', zorder=2)
+    axs[1].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+
+    axs[0].set_ylabel('flux')
+    axs[1].set_ylabel('contnorm flux')
+    for ax in axs:
+        ax.set_xlim((wavlim[0], wavlim[1]))
+
+    axs[-1].set_xlabel('wavelength [angstrom]')
+    for ax in axs:
+        format_ax(ax)
+    savefig(f, outpath)
+    plt.close('all')
+
+    flx = cont_norm_spec.flux
+
+    #
+    # shift and cross-correlate w/ specmatch
+    #
+    lib = specmatchemp.library.read_hdf(wavlim=wavlim)
+    # cut = lib.library_params.query('radius < 1.5 and -0.25 < feh < 0.25')
+    # lib = specmatchemp.library.read_hdf(wavlim=wavlim,
+    #                                     lib_index_subset=list(cut.lib_index))
+
+    # g = cut.groupby(pd.cut(cut.Teff,bins=np.arange(5000,7000,250)))
+    # cut = g.first()
+
+
+    s_spectrum = Spectrum(wav, flx)
+    s_spectrum.name = idstring
+
+    sm_res = SpecMatch(s_spectrum, lib)
+    sm_res.shift()
+
+    match_row = lib.library_params[
+        (lib.library_params.cps_name == sm_res.shift_ref.name)
+    ]
+    print(match_row)
+
+    match_name = match_row.source_name.iloc[0]
+
+    outpath = os.path.join(outdir, '{}_shift_check.png'.format(idstring))
+    fig = plt.figure(figsize=(10,5))
+    sm_res.target_unshifted.plot(normalize=True, plt_kw={'color':'forestgreen'}, text='Target (unshifted)')
+    sm_res.target.plot(offset=1.0, plt_kw={'color':'royalblue'}, text='Target (shifted): {}'.format(idstring))
+    sm_res.shift_ref.plot(offset=2.0, plt_kw={'color':'firebrick'}, text='Reference: '+match_name)
+    plt.xlim((wavlim[0],wavlim[1]))
+    plt.ylim(0,3.0)
+    ax = plt.gca()
+    format_ax(ax)
+    savefig(fig, outpath)
+    plt.close('all')
+
+
+    #
+    # cross-correlate against the templates to fit for vsini, Rstar, FeH.
+    #
+    sm_res.match(wavlim=(wavlim[0],wavlim[1]))
+
+    # Plot chi-squared surfaces
+    outpath =  os.path.join(outdir, '{}_chisq.png'.format(idstring))
+    fig = plt.figure(figsize=(12, 8))
+    sm_res.plot_chi_squared_surface()
+    ax = plt.gca()
+    format_ax(ax)
+    savefig(fig, outpath)
+    plt.close('all')
+
+    sm_res.lincomb()
+
+    print('Derived Parameters: ')
+    print('Teff: {0:.0f}, Radius: {1:.2f}, [Fe/H]: {2:.2f}'.format(
+        sm_res.results['Teff'], sm_res.results['radius'], sm_res.results['feh']))
