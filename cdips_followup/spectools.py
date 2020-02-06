@@ -1,11 +1,12 @@
-import os
-
 from numpy import array as nparr
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
+from matplotlib.transforms import blended_transform_factory
+
 from astropy.io import fits
 from astropy import units as u, constants as const
 from scipy.io import readsav
-from matplotlib.transforms import blended_transform_factory
+
+import os
 from copy import deepcopy
 
 from specutils import Spectrum1D, SpectralRegion
@@ -158,6 +159,8 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None):
 
     if not isinstance(outdir, str):
         raise ValueError
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
 
     if "PFS" in spectrum_path:
         flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
@@ -310,6 +313,90 @@ def specmatch_viz_compare(wavlim=[5160,5210]):
     savefig(fig, outpath, writepdf=False)
 
 
+def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
+                               spectrum_path=None):
+
+    lib = specmatchemp.library.read_hdf(wavlim=wavlim)
+    if teff < 6500:
+        cut = lib.library_params.query('radius < 1.5 and -0.25 < feh < 0.25')
+        g = cut.groupby(pd.cut(
+            cut.Teff,
+            bins=np.arange(np.round(teff-300,-2), np.round(teff+300,-2), 100)
+        ))
+    else:
+        cut = lib.library_params.query('radius < 2.3 and -0.25 < feh < 0.25')
+        g = cut.groupby(pd.cut(
+            cut.Teff,
+            bins=np.arange(6300, 6800, 100)
+        ))
+
+    cut = g.first()
+
+    plt.close('all')
+
+    fig,ax = plt.subplots(figsize=(8,4))
+    trans = blended_transform_factory(ax.transAxes, ax.transData)
+    bbox = dict(facecolor='white', edgecolor='none',alpha=0.8)
+    step = 1
+    shift = 0
+    for _,row in cut.iterrows():
+        spec = lib.library_spectra[row.lib_index,0,:]
+        plt.plot(lib.wav, spec.T + shift,color='RoyalBlue',lw=0.5)
+        s = "{cps_name:s}, Teff={Teff:.0f}".format(**row)
+        plt.text(0.01, 1.3+shift, s, bbox=bbox, transform=trans, fontsize=6)
+        shift+=step
+
+    if not sm_res is None:
+        sm_res.target.plot(offset=shift,
+                           plt_kw={'color':'k', 'lw':0.5})
+        plt.text(0.01, 1+shift, 'shifted',
+                 bbox=bbox, transform=trans, fontsize=6)
+        shift += step
+        sm_res.target_unshifted.plot(
+            offset=shift, normalize=True, plt_kw={'color':'k', 'lw':0.5}
+        )
+        plt.text(0.01, 1.3+shift, 'Target (unshifted) {}'.format(idstring),
+                 bbox=bbox, transform=trans, fontsize=6)
+    if not spectrum_path is None:
+        ###########################
+        # copy in a bunch of code #
+        ###########################
+        if 'Veloce' not in spectrum_path:
+            raise NotImplementedError
+        flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
+        target_wav = np.mean(wavlim)
+        _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
+        viable_orders = np.argwhere((_preorder != wav_2d.shape[1]-1) &
+                                    (_preorder != 0))
+        order = int(viable_orders[np.argmin(np.abs(
+            _preorder[viable_orders] - wav_2d.shape[1]/2))])
+        flx, wav = flx_2d[order, :], wav_2d[order, :]
+        sel = (wav > wavlim[0]) & (wav < wavlim[1])
+        flx, wav = flx[sel], wav[sel]
+        wav = wav[::-1]
+        flx = flx[::-1]
+        spec = Spectrum1D(spectral_axis=wav*u.AA,
+                          flux=flx*u.dimensionless_unscaled)
+        cont_flx = fit_generic_continuum(spec)(spec.spectral_axis)
+        cont_norm_spec = spec / cont_flx
+        flx = cont_norm_spec.flux
+        ################
+        # done copying #
+        ################
+
+        plt.plot(wav, flx+shift, color='k', lw=0.5)
+        s = 'target (unshifted), teff={}'.format(teff)
+        plt.text(0.01, 1.3+shift, s, bbox=bbox, transform=trans, fontsize=6)
+        shift+=step
+
+    plt.grid(True)
+    plt.xlabel('Wavelength (Angstroms)')
+    plt.ylabel('Normalized Flux (Arbitrary Offset)')
+
+    outpath = os.path.join(outdir, '{}_compare_speclib.png'.format(idstring))
+    savefig(fig, outpath, writepdf=False)
+
+
 ##############
 # measure EW #
 ##############
@@ -332,8 +419,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
 
     if "PFS" in spectrum_path:
         flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+        instrument = 'PFS'
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
+        instrument = 'Veloce'
     else:
         raise NotImplementedError
 
@@ -351,9 +440,24 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     # then shift the wavelength solution to source frame, if needed.
     #
     _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
-    order = int(np.argwhere((_preorder != wav_2d.shape[1]-1) & (_preorder != 0)))
+    viable_orders = np.argwhere(
+        (_preorder != wav_2d.shape[1]-1) & (_preorder != 0)
+    )
+    order = int(
+        viable_orders[np.argmin(
+            np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
+        )]
+    )
 
     flx, wav = flx_2d[order, :], wav_2d[order, :]
+
+    if instrument == 'Veloce':
+        wav = wav[::-1]
+        flx = flx[::-1]
+        thispath = outpath.replace('.png', '_1d_check.png')
+        viz_1d_spectrum(flx, wav, thispath, xlim=(6700, 6725), vlines=vlines,
+                        names=names)
+
     shiftstr = ''
     if isinstance(xshift, (float, int)):
         wav = deepcopy(wav) - xshift
@@ -479,18 +583,34 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
 ######################
 
 def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
-                     idstring=None):
+                      idstring=None):
+
+    if 'PFS' in spectrum_path:
+        instrument = 'PFS'
+    elif 'Veloce' in spectrum_path:
+        instrument = 'Veloce'
+    else:
+        raise NotImplementedError('check wavlim works for non-pfs spectrum')
 
     for s in [outdir, region, idstring]:
         if not isinstance(s, str):
             raise ValueError
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
 
-    if 'PFS' not in outdir:
-        raise NotImplementedError('check wavlim works for non-pfs spectrum')
-
-    if region == 'Mgb1':
+    if region == 'Mgb1' and instrument=='PFS':
         target_wav = 5183.62
         wavlim = [5160,5210]
+    elif region == 'Mgb1' and instrument!='PFS':
+        raise NotImplementedError('veloce doesnt cover Mg b1')
+
+    if region == '6300' and instrument=='Veloce':
+        target_wav = 6300
+        wavlim = [6280,6350]
+    elif region == '6300' and instrument!='Veloce':
+        raise NotImplementedError(
+            'does this region work on {}?'.format(instrument)
+        )
 
     if "PFS" in spectrum_path:
         flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
@@ -500,15 +620,28 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
         raise NotImplementedError
 
     #
-    # retrieve the order corresponding to target wavelength, and then trim the
-    # 1d spectrum from that order
+    # first, find orders that contain the target wavelength. select the best
+    # order (the one for which the target wavelength is closest to the center
+    # of the order). then trim the 1d spectrum from that order
     #
     _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
-    order = int(np.argwhere((_preorder != wav_2d.shape[1]-1) & (_preorder != 0)))
+    viable_orders = np.argwhere(
+        (_preorder != wav_2d.shape[1]-1) & (_preorder != 0)
+    )
+    order = int(
+        viable_orders[np.argmin(
+            np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
+        )]
+    )
 
     flx, wav = flx_2d[order, :], wav_2d[order, :]
-    sel = (wav > wavlim[0]-10) & (wav < wavlim[1]+10)
+    sel = (wav > wavlim[0]) & (wav < wavlim[1])
     flx, wav = flx[sel], wav[sel]
+
+    if instrument == 'Veloce':
+        # the australians drive on the other side of the road?
+        wav = wav[::-1]
+        flx = flx[::-1]
 
     #
     # continuum normalize, and then check you did it ok.
@@ -534,14 +667,12 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     outpath = os.path.join(outdir, '{}_cont_norm_check.png'.format(idstring))
 
     f,axs = plt.subplots(nrows=2, ncols=1, figsize=(6,4))
-    axs[0].plot(wav, flx, c='k', zorder=3)
-    axs[0].plot(wav, cont_flx, c='r', zorder=2)
-    axs[1].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+    axs[0].plot(wav, flx, c='k', zorder=3, lw=0.5)
+    axs[0].plot(wav, cont_flx, c='r', zorder=2, lw=0.5)
+    axs[1].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k', lw=0.5)
 
     axs[0].set_ylabel('flux')
     axs[1].set_ylabel('contnorm flux')
-    for ax in axs:
-        ax.set_xlim((wavlim[0], wavlim[1]))
 
     axs[-1].set_xlabel('wavelength [angstrom]')
     for ax in axs:
@@ -555,13 +686,6 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     # shift and cross-correlate w/ specmatch
     #
     lib = specmatchemp.library.read_hdf(wavlim=wavlim)
-    # cut = lib.library_params.query('radius < 1.5 and -0.25 < feh < 0.25')
-    # lib = specmatchemp.library.read_hdf(wavlim=wavlim,
-    #                                     lib_index_subset=list(cut.lib_index))
-
-    # g = cut.groupby(pd.cut(cut.Teff,bins=np.arange(5000,7000,250)))
-    # cut = g.first()
-
 
     s_spectrum = Spectrum(wav, flx)
     s_spectrum.name = idstring
@@ -569,12 +693,14 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     sm_res = SpecMatch(s_spectrum, lib)
     sm_res.shift()
 
-    match_row = lib.library_params[
-        (lib.library_params.cps_name == sm_res.shift_ref.name)
-    ]
-    print(match_row)
-
-    match_name = match_row.source_name.iloc[0]
+    try:
+        match_row = lib.library_params[
+            (lib.library_params.cps_name == sm_res.shift_ref.name)
+        ]
+        print(match_row)
+        match_name = match_row.source_name.iloc[0]
+    except IndexError:
+        match_name = sm_res.shift_ref.name
 
     outpath = os.path.join(outdir, '{}_shift_check.png'.format(idstring))
     fig = plt.figure(figsize=(10,5))
@@ -609,50 +735,15 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     print('Teff: {0:.0f}, Radius: {1:.2f}, [Fe/H]: {2:.2f}'.format(
         sm_res.results['Teff'], sm_res.results['radius'], sm_res.results['feh']))
 
-
     #
     # make a plot comparing you spectrum to dwarf star spectra of comparable
     # Teff
     #
-
-    lib = specmatchemp.library.read_hdf(wavlim=wavlim)
-    cut = lib.library_params.query('radius < 1.5 and -0.25 < feh < 0.25')
-    g = cut.groupby(pd.cut(
-        cut.Teff,
-        bins=np.arange(np.round(sm_res.results['Teff']-300,-2),
-                       np.round(sm_res.results['Teff']+300,-2),
-                       100)
-    ))
-    cut = g.first()
-
-    plt.close('all')
-
-    fig,ax = plt.subplots(figsize=(8,4))
-    trans = blended_transform_factory(ax.transAxes, ax.transData)
-    bbox = dict(facecolor='white', edgecolor='none',alpha=0.8)
-    step = 1
-    shift = 0
-    for _,row in cut.iterrows():
-        spec = lib.library_spectra[row.lib_index,0,:]
-        plt.plot(lib.wav, spec.T + shift,color='RoyalBlue',lw=0.5)
-        s = "{cps_name:s}, Teff={Teff:.0f}".format(**row)
-        plt.text(0.01, 1+shift, s, bbox=bbox, transform=trans, fontsize=6)
-        shift+=step
-
-    sm_res.target.plot(offset=shift,
-                       plt_kw={'color':'k', 'lw':0.5})
-    plt.text(0.01, 1+shift, 'shifted',
-             bbox=bbox, transform=trans, fontsize=6)
-    shift += step
-    sm_res.target_unshifted.plot(
-        offset=shift, normalize=True, plt_kw={'color':'k', 'lw':0.5}
+    plot_spec_vs_dwarf_library(
+        wavlim,
+        sm_res.results['Teff'],
+        outdir,
+        idstring,
+        sm_res=sm_res
     )
-    plt.text(0.01, 1+shift, 'Target (unshifted) {}'.format(idstring),
-             bbox=bbox, transform=trans, fontsize=6)
 
-    plt.grid(True)
-    plt.xlabel('Wavelength (Angstroms)')
-    plt.ylabel('Normalized Flux (Arbitrary Offset)')
-
-    outpath = os.path.join(outdir, '{}_compare_speclib.png'.format(idstring))
-    savefig(fig, outpath, writepdf=False)
