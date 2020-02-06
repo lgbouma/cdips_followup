@@ -92,7 +92,7 @@ def given_vsys_get_li_target_wv(vsys=27*u.km/u.s):
     return new_lambda.to(u.AA)
 
 
-def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=6708*u.AA):
+def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=5180*u.AA):
 
     # NOTE: currently manual, thru Wright & Eastman's code
     from astropy.time import Time
@@ -107,7 +107,7 @@ def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=6708*u.AA):
     delta_v = const.c * (deltawvlen / wvlen_0)
 
     v_star = delta_v + barycorr*(u.m/u.s)
-    print(v_star.to(u.m/u.s))
+    print(v_star.to(u.km/u.s))
 
 
 
@@ -280,7 +280,7 @@ def specmatch_viz_compare(wavlim=[5160,5210]):
     smplot.label_axes('Teff','radius')
     wvstr = '{}-{}'.format(wavlim[0], wavlim[1])
     outpath = (
-        '../results/spec_viz/specmatch/quickstart-library-selected-stars_{}.png'.
+        '../results/spec_analysis/specmatch/quickstart-library-selected-stars_{}.png'.
         format(wvstr)
     )
     savefig(fig, outpath, writepdf=False)
@@ -304,7 +304,7 @@ def specmatch_viz_compare(wavlim=[5160,5210]):
     plt.ylabel('Normalized Flux (Arbitrary Offset)')
 
     outpath = (
-        '../results/spec_viz/specmatch/quickstart-library-selected-stars-spectra_{}.png'.
+        '../results/spec_analysis/specmatch/quickstart-library-selected-stars-spectra_{}.png'.
         format(wvstr)
     )
     savefig(fig, outpath, writepdf=False)
@@ -608,3 +608,51 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     print('Derived Parameters: ')
     print('Teff: {0:.0f}, Radius: {1:.2f}, [Fe/H]: {2:.2f}'.format(
         sm_res.results['Teff'], sm_res.results['radius'], sm_res.results['feh']))
+
+
+    #
+    # make a plot comparing you spectrum to dwarf star spectra of comparable
+    # Teff
+    #
+
+    lib = specmatchemp.library.read_hdf(wavlim=wavlim)
+    cut = lib.library_params.query('radius < 1.5 and -0.25 < feh < 0.25')
+    g = cut.groupby(pd.cut(
+        cut.Teff,
+        bins=np.arange(np.round(sm_res.results['Teff']-300,-2),
+                       np.round(sm_res.results['Teff']+300,-2),
+                       100)
+    ))
+    cut = g.first()
+
+    plt.close('all')
+
+    fig,ax = plt.subplots(figsize=(8,4))
+    trans = blended_transform_factory(ax.transAxes, ax.transData)
+    bbox = dict(facecolor='white', edgecolor='none',alpha=0.8)
+    step = 1
+    shift = 0
+    for _,row in cut.iterrows():
+        spec = lib.library_spectra[row.lib_index,0,:]
+        plt.plot(lib.wav, spec.T + shift,color='RoyalBlue',lw=0.5)
+        s = "{cps_name:s}, Teff={Teff:.0f}".format(**row)
+        plt.text(0.01, 1+shift, s, bbox=bbox, transform=trans, fontsize=6)
+        shift+=step
+
+    sm_res.target.plot(offset=shift,
+                       plt_kw={'color':'k', 'lw':0.5})
+    plt.text(0.01, 1+shift, 'shifted',
+             bbox=bbox, transform=trans, fontsize=6)
+    shift += step
+    sm_res.target_unshifted.plot(
+        offset=shift, normalize=True, plt_kw={'color':'k', 'lw':0.5}
+    )
+    plt.text(0.01, 1+shift, 'Target (unshifted) {}'.format(idstring),
+             bbox=bbox, transform=trans, fontsize=6)
+
+    plt.grid(True)
+    plt.xlabel('Wavelength (Angstroms)')
+    plt.ylabel('Normalized Flux (Arbitrary Offset)')
+
+    outpath = os.path.join(outdir, '{}_compare_speclib.png'.format(idstring))
+    savefig(fig, outpath, writepdf=False)

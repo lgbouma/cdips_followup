@@ -17,7 +17,7 @@ from cdips_followup.spectools import (
 
 if __name__ == "__main__":
 
-    do_orders = 0
+    do_orders = 0       # plot all orders
     do_inspect = 0      # inspect to figure out require rest-frame shift
     do_li_ew = 0        # once rest-frame shift is known
     do_sm_viz = 0       # specmatch-emp check
@@ -62,6 +62,18 @@ if __name__ == "__main__":
                        outpath=outpath)
 
     if do_sm_analysis:
+        # spectrum_path = (
+        #     '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/rn56.3555'
+        # )
+        # wvsol_path = (
+        #     '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/w_n56.dat'
+        # )
+        # outdir = '../results/spec_analysis/PFS/specmatch/'
+        # idstring = 'TIC268301217_20200203_3555'
+
+        # specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region='Mgb1',
+        #                   outdir=outdir, idstring=idstring)
+
         spectrum_path = (
             '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/rn56.3556'
         )
@@ -73,3 +85,5 @@ if __name__ == "__main__":
 
         specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region='Mgb1',
                           outdir=outdir, idstring=idstring)
+
+
