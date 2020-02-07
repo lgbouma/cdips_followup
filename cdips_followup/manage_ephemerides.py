@@ -96,6 +96,18 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
         print(wrnmsg)
         ephem_dict = read_exofoptess_ctoi_ephem(targetid)
 
+    elif ephemeris_type == 'cdipspipeline':
+        df = pd.read_csv(ephemsourcefile, sep="|")
+        sdf = df[df.target == targetid]
+        selcol = ['period', 'epoch', 'duration', 'period_unc', 'epoch_unc',
+                  'duration_unc', 'depth', 'depth_unc']
+        e_dict = sdf[selcol].to_dict('index')
+        keys = ['period_val', 'epoch_val', 'duration_val', 'period_unc',
+                'epoch_unc', 'duration_unc', 'depth_val', 'depth_unc']
+        ephem_dict = {}
+        for k, c in zip(keys, selcol):
+            ephem_dict[k] = e_dict[list(e_dict.keys())[0]][c]
+
     else:
         raise NotImplementedError
 
@@ -137,6 +149,14 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
         source_id = tic_to_gaiadr2(ticid)
         targetid = targetid
         ephemeris_origin = get_exofop_ctoi_catalog(returnpath=True)
+
+    elif ephemeris_type == 'cdipspipeline':
+        if not targetid.startswith('TIC'):
+            raise NotImplementedError
+        ticid = targetid.replace('TIC','').replace('.01','')
+        source_id = str(sdf.source_id.iloc[0])
+        targetid = targetid
+        ephemeris_origin = ephemsourcefile
 
     else:
         raise NotImplementedError
