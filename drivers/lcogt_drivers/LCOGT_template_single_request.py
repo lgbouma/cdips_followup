@@ -13,28 +13,30 @@ from cdips_followup.LCOGT_dedicated_requests import (
 def main():
 
     ####################
-    savstr = '20200204_2m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20200207_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 1
     submit = 1
 
-    source_id = '2919143383943171200'
-    max_n_events = 8 # else None. n_events is per eventclass.
+    source_id = '5256717749007641344'
+    max_n_events = 11 # else None. n_events is per eventclass.
 
     filtermode = 'gp'
-    telescope_class = '2m0'
-    max_duration_error = 20
-    max_search_time = Time('2020-05-29 23:59:00')
-    manual_ephemeris = False
+    telescope_class = '1m0'
 
     create_eventclasses = ['OIBEO']
     # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
     # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
+    # create_eventclasses = ['OIB', 'BEO']
 
     submit_eventclasses = ['OIBEO']
     # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
     # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
     # submit_eventclasses = ['OIB', 'BEO']
+
+    max_duration_error = 20
+    max_search_time = Time('2020-05-29 23:59:00')
+    manual_ephemeris = False
 
     ####################
 
