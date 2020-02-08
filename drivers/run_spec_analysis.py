@@ -15,19 +15,19 @@ class argclass(object):
 
 def main_pfs(args):
 
+    spectrum_path = (
+        '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/{}'.
+        format(args.spectrum_name)
+    )
+    wvsol_path = (
+        '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/{}'.
+        format(args.wvsol_name)
+    )
+
     if args.do_orders:
-
-        spectrum_path = (
-            '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/rn56.3556'
-        )
-        wvsol_path = (
-            '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/w_n56.dat'
-        )
         outdir = '../results/spec_analysis/PFS/spec_viz_orders/'
-        idstring = 'TIC268301217_20200203_3556'
-
-        plot_orders(spectrum_path, wvsol_path=wvsol_path, outdir=outdir,
-                    idstring=idstring)
+        plot_orders(spectrum_path, wvsol_path=wvsol_path,
+                    outdir=outdir, idstring=args.idstring)
 
     if args.do_sm_viz:
         # 4990 through 6410 in the SpecMatch library. b/c HIRES needs different
@@ -36,51 +36,27 @@ def main_pfs(args):
 
     if args.do_inspect:
         for xlim in ['assign', 'fullorder']:
-            for night in ['3555', '3556']:
-                inspect_pfs(night, 'Halpha', xlim)
-                inspect_pfs(night, 'LiI', xlim)
-                inspect_pfs(night, 'Mgb1', xlim)
+            night = args.spectrum_name.split('.')[-1]
+            inspect_pfs(night, 'Halpha', xlim)
+            inspect_pfs(night, 'LiI', xlim)
+            inspect_pfs(night, 'Mgb1', xlim)
 
     if args.do_li_ew:
-        spectrum_path = (
-            '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/rn56.3556'
-        )
-        wvsol_path = (
-            '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/w_n56.dat'
-        )
         outdir = '../results/spec_analysis/PFS/Li_EW/'
         outpath = os.path.join(
-            outdir, '{}_Li_EW_shift{:.2f}.png'.format(idstring, shift)
+            outdir,
+            '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
         )
-
-
-        get_Li_6708_EW(spectrum_path, wvsol_path=wvsol_path, xshift=2.30,
-                       outpath=outpath)
+        get_Li_6708_EW(spectrum_path, wvsol_path=wvsol_path,
+                       xshift=args.xshift, outpath=outpath)
 
     if args.do_sm_analysis:
-        # spectrum_path = (
-        #     '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/rn56.3555'
-        # )
-        # wvsol_path = (
-        #     '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/w_n56.dat'
-        # )
-        # outdir = '../results/spec_analysis/PFS/specmatch/'
-        # idstring = 'TIC268301217_20200203_3555'
-
-        # specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region='Mgb1',
-        #                   outdir=outdir, idstring=idstring)
-
-        spectrum_path = (
-            '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/rn56.3556'
-        )
-        wvsol_path = (
-            '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/PFS/w_n56.dat'
-        )
         outdir = '../results/spec_analysis/PFS/specmatch/'
-        idstring = 'TIC268301217_20200203_3556'
-
+        plot_spec_vs_dwarf_library([5160, 5210], args.teff, outdir,
+                                   args.idstring, spectrum_path=spectrum_path,
+                                   wvsol_path=wvsol_path)
         specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region='Mgb1',
-                          outdir=outdir, idstring=idstring)
+                          outdir=outdir, idstring=args.idstring)
 
 
 def main_veloce(args):
@@ -146,11 +122,25 @@ if __name__ == "__main__":
 
     args = argclass()
 
-    args.do_orders = 0       # plot all orders
-    args.do_sm_analysis = 0  # for Teff, Rstar, comparing spectra
-    args.do_sm_viz = 0       # specmatch-emp check
-    args.do_inspect = 0      # inspect to figure out require rest-frame shift
-    args.do_li_ew = 1        # once rest-frame shift is known
+    args.do_orders = 0          # plot all orders
+    args.do_sm_analysis = 1     # get Teff, Rstar + compare spectra
+    args.do_sm_viz = 0          # specmatch-emp check
+    args.do_inspect = 0         # inspect to figure out require rest-frame shift
+    args.do_li_ew = 0           # once rest-frame shift is known
 
-    main_veloce(args)
-    # main_pfs(args)
+    args.is_pfs = 1
+    args.is_veloce = 0
+
+    if args.is_pfs:
+        nightind =  3556 # 4257
+        args.spectrum_name = 'rn56.{}'.format(nightind)
+        args.wvsol_name = 'w_n56.dat'
+        args.idstring = 'TIC268301217_20200206_{}'.format(nightind)
+        if args.do_sm_analysis:
+            args.teff = 5700
+        if args.do_li_ew:
+            args.xshift = 2.30 # set 
+        main_pfs(args)
+
+    elif args.is_veloce:
+        main_veloce(args)

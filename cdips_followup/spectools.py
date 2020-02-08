@@ -314,7 +314,7 @@ def specmatch_viz_compare(wavlim=[5160,5210]):
 
 
 def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
-                               spectrum_path=None):
+                               spectrum_path=None, wvsol_path=None):
 
     lib = specmatchemp.library.read_hdf(wavlim=wavlim)
     if teff < 6500:
@@ -361,9 +361,12 @@ def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
         ###########################
         # copy in a bunch of code #
         ###########################
-        if 'Veloce' not in spectrum_path:
+        if 'Veloce' in spectrum_path:
+            flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
+        elif 'PFS' in spectrum_path:
+            flx_2d, wav_2d = flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+        else:
             raise NotImplementedError
-        flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
         target_wav = np.mean(wavlim)
         _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
         viable_orders = np.argwhere((_preorder != wav_2d.shape[1]-1) &
@@ -373,13 +376,14 @@ def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
         flx, wav = flx_2d[order, :], wav_2d[order, :]
         sel = (wav > wavlim[0]) & (wav < wavlim[1])
         flx, wav = flx[sel], wav[sel]
-        wav = wav[::-1]
-        flx = flx[::-1]
+        if 'Veloce' in spectrum_path:
+            wav, flx = wav[::-1], flx[::-1]
         spec = Spectrum1D(spectral_axis=wav*u.AA,
                           flux=flx*u.dimensionless_unscaled)
         cont_flx = fit_generic_continuum(spec)(spec.spectral_axis)
         cont_norm_spec = spec / cont_flx
         flx = cont_norm_spec.flux
+
         ################
         # done copying #
         ################
