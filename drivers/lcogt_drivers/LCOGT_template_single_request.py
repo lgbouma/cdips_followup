@@ -13,12 +13,12 @@ from cdips_followup.LCOGT_dedicated_requests import (
 def main():
 
     ####################
-    savstr = '20200210_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20200211_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 1
     submit = 1
 
-    source_id = '5523449717870971776'
+    source_id = '5525188767305211904'
     max_n_events = 10 # else None. n_events is per eventclass.
 
     filtermode = 'gp'
