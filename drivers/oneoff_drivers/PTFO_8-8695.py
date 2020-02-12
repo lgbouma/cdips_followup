@@ -17,9 +17,9 @@ def get_data(cdips=1, spoc=0):
 
     if cdips:
         # data: list of fits records
-        lcfiles = glob('../results/PTFO_8-8695/*fits')
+        lcfiles = glob('../../results/quicklooklc/PTFO_8-8695/*fits')
     if spoc:
-        lcfiles = glob('../results/PTFO_8-8695/MAST_2020-01-06T1938/TESS/tess2018349182459-s0006-0000000264461976-0126-s/tess2018349182459-s0006-0000000264461976-0126-s_lc.fits')
+        lcfiles = glob('../../results/quicklooklc/PTFO_8-8695/MAST_2020-01-06T1938/TESS/tess2018349182459-s0006-0000000264461976-0126-s/tess2018349182459-s0006-0000000264461976-0126-s_lc.fits')
 
     data = []
     for f in lcfiles:
@@ -37,7 +37,7 @@ def explore_mag_lightcurves(data):
 
             title = 'sector_7' if ix == 0 else 'sector_9'
             savpath = (
-                '../results/PTFO_8-8695/mag_lightcurve_{}_{}.png'.
+                '../../results/quicklooklc/PTFO_8-8695/mag_lightcurve_{}_{}.png'.
                 format(yval, title)
             )
             if os.path.exists(savpath):
@@ -69,7 +69,7 @@ def explore_flux_lightcurves(data, iscdips=1):
 
                 title = 'sector_6' if ix == 0 else None
                 savpath = (
-                    '../results/PTFO_8-8695/flux_lightcurve_{}_{}.png'.
+                    '../../results/quicklooklc/PTFO_8-8695/flux_lightcurve_{}_{}.png'.
                     format(yval, title)
                 )
                 if os.path.exists(savpath):
@@ -97,7 +97,7 @@ def explore_flux_lightcurves(data, iscdips=1):
 
             title = 'sector_6_spoc' if ix == 0 else None
             savpath = (
-                '../results/PTFO_8-8695/flux_lightcurve_{}.png'.
+                '../../results/quicklooklc/PTFO_8-8695/flux_lightcurve_{}.png'.
                 format(title)
             )
 
@@ -226,7 +226,7 @@ def do_phasefolds(data):
             xmax = max(plotxlim)
 
             savpath = (
-                '../results/PTFO_8-8695/{}_phasefold_xmin{}_xmax{}.png'.
+                '../../results/quicklooklc/PTFO_8-8695/{}_phasefold_xmin{}_xmax{}.png'.
                 format(chunktype, xmin, xmax)
             )
             if os.path.exists(savpath):
@@ -352,7 +352,7 @@ def make_riverplot(data):
 
     f.tight_layout()
 
-    outpath = '../results/PTFO_8-8695/riverplot.png'
+    outpath = '../../results/quicklooklc/PTFO_8-8695/riverplot.png'
     f.savefig(outpath, bbox_inches='tight', dpi=400)
     print('saved {}'.format(outpath))
 
@@ -424,7 +424,7 @@ def detrend_lightcurve_wotan(data, window_length=0.25, iscdips=True):
             axs[1].set_ylim([-0.1,0.1])
 
     isspoc = '' if iscdips else '_spoc2min'
-    savpath = '../results/PTFO_8-8695/detrend_lc{}_{:.2f}d.png'.format(
+    savpath = '../../results/quicklooklc/PTFO_8-8695/detrend_lc{}_{:.2f}d.png'.format(
         isspoc, window_length
     )
     f.savefig(savpath, dpi=300, bbox_inches='tight')
@@ -453,7 +453,7 @@ def detrend_lightcurve_wotan(data, window_length=0.25, iscdips=True):
         plt.plot(results.periods, results.power, color='black', lw=0.5)
         plt.xlim(0, max(results.periods))
 
-        savpath = '../results/PTFO_8-8695/detrend_lc{}_{:.2f}d_periodogram.png'.format(
+        savpath = '../../results/quicklooklc/PTFO_8-8695/detrend_lc{}_{:.2f}d_periodogram.png'.format(
             isspoc, window_length
         )
         fig.savefig(savpath, dpi=300, bbox_inches='tight')
@@ -461,16 +461,30 @@ def detrend_lightcurve_wotan(data, window_length=0.25, iscdips=True):
 
         plt.close('all')
         fig = plt.figure()
-        plt.plot(results.model_folded_phase, results.model_folded_model,
-                 color='orange', zorder=3)
-        plt.scatter(results.folded_phase, results.folded_y, color='black', s=2,
-                    alpha=0.9, zorder=4, linewidths=0)
+        # plt.plot(results.model_folded_phase, results.model_folded_model,
+        #          color='orange', zorder=3)
+        plt.scatter(results.folded_phase, results.folded_y, color='gray', s=2,
+                    alpha=0.8, zorder=4, linewidths=0)
+
+        pd = phase_bin_magseries(results.folded_phase, results.folded_y,
+                                 binsize=0.01)
+
+        plt.scatter(pd['binnedphases'], pd['binnedmags'], color='black', s=8,
+                    alpha=1, zorder=5, linewidths=0)
+
         #plt.xlim(0.35, 0.65)
-        plt.title('{}: {}d'.format(results.T0, results.period))
+        rstr = '(on residual)' if window_length <= 0.2 else '(on raw)'
+        plt.title('{} period {:.8f}d'.format(rstr, results.period))
         plt.xlabel('Phase')
         plt.ylabel('Relative flux');
 
-        savpath = '../results/PTFO_8-8695/detrend_lc{}_{:.2f}d_phasefold.png'.format(
+        pct_80 = np.percentile(results.model_folded_model, 80)
+        pct_20 = np.percentile(results.model_folded_model, 20)
+        center = np.nanmedian(results.model_folded_model)
+        delta_y = (10/6)*np.abs(pct_80 - pct_20)
+        plt.ylim(( center-0.7*delta_y, center+0.7*delta_y ))
+
+        savpath = '../../results/quicklooklc/PTFO_8-8695/detrend_lc{}_{:.2f}d_phasefold.png'.format(
             isspoc, window_length
         )
         fig.savefig(savpath, dpi=300, bbox_inches='tight')
@@ -497,8 +511,8 @@ def main():
     if do_flux_lcs:
         explore_flux_lightcurves(data, iscdips=cdips)
     if do_detrending:
-        #for wl in [99]:
-        for wl in [0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5]:
+        for wl in [99]:
+        #for wl in [0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5]:
             detrend_lightcurve_wotan(data, window_length=wl, iscdips=cdips)
     if do_pf:
         do_phasefolds(data)

@@ -16,21 +16,21 @@ def main():
     savstr = '20200211_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 1
-    submit = 1
+    submit = 0
 
-    source_id = '5525188767305211904'
-    max_n_events = 10 # else None. n_events is per eventclass.
+    source_id = '5251470948229949568'
+    max_n_events = 20 # else None. n_events is per eventclass.
 
     filtermode = 'gp'
     telescope_class = '1m0'
 
-    create_eventclasses = ['OIBEO']
-    # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
+    # create_eventclasses = ['OIBEO']
+    create_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
     # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
     # create_eventclasses = ['OIB', 'BEO']
 
-    submit_eventclasses = ['OIBEO']
-    # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
+    # submit_eventclasses = ['OIBEO']
+    submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
     # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
     # submit_eventclasses = ['OIB', 'BEO']
 

@@ -401,6 +401,20 @@ def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
     savefig(fig, outpath, writepdf=False)
 
 
+#####################
+# continuum fitting #
+#####################
+
+def fit_continuum(flx, wav, instrument=None):
+
+    spec = Spectrum1D(spectral_axis=wav*u.AA,
+                      flux=flx*u.dimensionless_unscaled)
+    cont_flx = fit_generic_continuum(spec)(spec.spectral_axis)
+    cont_norm_spec = spec / cont_flx
+    flx = cont_norm_spec.flux
+
+
+
 ##############
 # measure EW #
 ##############
