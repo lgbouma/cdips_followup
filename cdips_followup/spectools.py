@@ -1,5 +1,5 @@
-from numpy import array as nparr
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
+from numpy import array as nparr
 from matplotlib.transforms import blended_transform_factory
 
 from astropy.io import fits
@@ -9,6 +9,7 @@ from astropy.modeling.models import custom_model
 from astropy.modeling.fitting import LevMarLSQFitter
 
 from scipy.io import readsav
+from scipy.interpolate import interp1d
 
 import os
 from copy import deepcopy
@@ -25,6 +26,8 @@ import specmatchemp.plots as smplot
 
 from stringcheese.plotutils import savefig, format_ax
 
+from cdips_followup import __path__
+
 # usable orders in Veloce spectra. 0-based count.
 VELOCE_ORDERS = [
     6, 7, 8, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
@@ -34,7 +37,7 @@ VELOCE_ORDERS = [
 # usable orers in Veloce spectra for vsini measurements against the synthetic
 # "NextGen" model atmospheres. (The ones that are 20 years old).
 VELOCE_VSINI_ORDERS_VS_NEXTGEN = [
-    22, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36
+    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36
 ]
 
 # a few common lines
@@ -55,6 +58,12 @@ line_d = {
     'CaI_IRT_c': 8662
 }
 
+# directories
+DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
+OUTDIR = os.path.join(os.path.dirname(__path__[0]), 'results/spec_analysis')
+TESTOUTDIR = os.path.join(OUTDIR, 'tests')
+if not os.path.exists(TESTOUTDIR):
+    os.mkdir(TESTOUTDIR)
 
 ########
 # read #
@@ -107,7 +116,7 @@ def read_nextgen(teff=5500, vsini=5, logg=4.5, vturb=2):
 
 
 
-def read_veloce(spectrum_path, start=0, end=None):
+def read_veloce(spectrum_path, start=0, end=None, return_err=False):
     """
     Read Veloce FITS file.
     Return (39x4112) arrays of flux and wavelength.
@@ -124,7 +133,10 @@ def read_veloce(spectrum_path, start=0, end=None):
     flux_err = hdul[1].data[:, start:end]
     wav = hdul[2].data[:, start:end]
 
-    return flux, wav
+    if return_err:
+        return flux, wav, flux_err
+    else:
+        return flux, wav
 
 
 def read_pfs(spectrum_path, wvlen_soln, verbose=False):
@@ -169,22 +181,28 @@ def given_vsys_get_li_target_wv(vsys=27*u.km/u.s):
     return new_lambda.to(u.AA)
 
 
-def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=5180*u.AA):
+def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=5180*u.AA,
+                              time=None, verbose=True):
 
     # NOTE: currently manual, thru Wright & Eastman's code
-    from astropy.time import Time
-    t = Time(['2020-02-04T00:00:00'], format='isot', scale='utc')
-    print(t.jd)
+    # from astropy.time import Time
+    # t = Time(['2020-02-04T00:00:00'], format='isot', scale='utc')
+    # print(t.jd)
 
     # note: varies by ~500m/s due to earth's rotation. (need the exact time to
     # account for this better)
-    barycorr = 2203.497975544 # m/s from BARYCORR
+    if time is None:
+        barycorr = 0 # m/s from BARYCORR
+        print('WRN! barycorr = 0')
 
     # deltawvlen probably good to ~20-30%, so delta_v no better.
     delta_v = const.c * (deltawvlen / wvlen_0)
 
     v_star = delta_v + barycorr*(u.m/u.s)
-    print(v_star.to(u.km/u.s))
+    if verbose:
+        print(v_star.to(u.km/u.s))
+
+    return v_star
 
 
 
@@ -740,7 +758,7 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     savefig(f, outpath)
 
 
-def measure_vsini(wav, flx, teff=6000, logg=4.5, vturb=2, outdir=None,
+def measure_vsini(wav, flx, flxerr=None, teff=6000, logg=4.5, vturb=2, outdir=None,
                   targetname=None):
 
     if not isinstance(outdir, str):
@@ -764,35 +782,141 @@ def measure_vsini(wav, flx, teff=6000, logg=4.5, vturb=2, outdir=None,
          model_d['wav_vsini{}'.format(vsini)] = m_wav[sel]
          model_d['flx_vsini{}'.format(vsini)] = m_flx[sel]
 
-    # make a stack spectrum plot showing target spectrum on top, and the
+    # calculate chi^2 using the models as model spectra. will probably also
+    # want to have exclude regions (per order?) where the fit is obviously
+    # terrible.
+    chi2_d = {}
+    shifts = np.arange(-1, 1+0.05, 0.05)
+    for vsini in vsinis:
+        for shift in shifts:
+
+            # interpolate the high-resolution model grid onto data grid
+            m_wav_highres = model_d['wav_vsini{}'.format(vsini)]
+            m_flx_highres = model_d['flx_vsini{}'.format(vsini)]
+            interp_fn = interp1d(m_wav_highres+shift, m_flx_highres, kind='quadratic',
+                                 bounds_error=False, fill_value=np.nan)
+            m_wav_lowres = wav
+            m_flx_lowres = interp_fn(m_wav_lowres)
+
+            k = 'vsini{:d}_shift{:.2f}'.format(vsini, shift)
+            if not flxerr is None:
+                chi2_d[k] = np.nansum(
+                    (flx - m_flx_lowres)**2 / (flxerr**2)
+                ).value
+            else:
+                flxerr = 1e-2
+                chi2_d[k] = np.nansum(
+                    (flx - m_flx_lowres)**2 / (flxerr**2)
+                ).value
+
+    # now plot the preferred shift and template
+    min_key = min(chi2_d, key=chi2_d.get)
+    best_vsini = float(min_key.split('_')[0].split('vsini')[1])
+    best_shift = float(min_key.split('shift')[1])
+    best_chi2 = chi2_d[min_key]
+
+    # make a stacked spectrum plot showing target spectrum on top, and the
     # candidate model spectra below. Nice for "chi by eye"
-    plt.close('all')
-    f, ax = plt.subplots(figsize=(10,7))
-    trans = blended_transform_factory(ax.transAxes, ax.transData)
-    bbox = dict(facecolor='white', edgecolor='none', alpha=0.8)
-    n_spectra = len(vsinis) + 1
+    outpath = os.path.join(
+        outdir, targetname+'_vsini-stack-shift{:.2f}.png'.format(best_shift)
+    )
+    if not os.path.exists(outpath):
+        plt.close('all')
+        f, ax = plt.subplots(figsize=(10,7))
+        trans = blended_transform_factory(ax.transAxes, ax.transData)
+        bbox = dict(facecolor='white', edgecolor='none', alpha=0.7)
+        n_spectra = len(vsinis) + 1
 
-    offset = 0
-    for i, vsini in enumerate(vsinis):
-        ax.plot(model_d['wav_vsini{}'.format(vsini)],
-                offset+model_d['flx_vsini{}'.format(vsini)], lw=1, c='k')
-        s = "vsini {}".format(vsini)
-        ax.text(0.01, 0.9+offset, s, bbox=bbox, transform=trans)
-        offset +=1
+        offset = 0
+        for i, vsini in enumerate(vsinis):
+            ax.plot(model_d['wav_vsini{}'.format(vsini)]+best_shift,
+                    offset+model_d['flx_vsini{}'.format(vsini)], lw=0.5, c='k')
+            s = "Teff {} vsini {}\nshift {:.2f}".format(use_teff, vsini, best_shift)
+            ax.text(0.01, 0.9+offset, s, bbox=bbox, transform=trans,
+                    fontsize='xx-small')
+            offset +=1
 
-    ax.plot(wav, offset+flx, lw=1, c='C0')
-    s = "{}".format(targetname)
-    ax.text(0.01, 0.9+offset, s, bbox=bbox, transform=trans)
+        ax.plot(wav, offset+flx, lw=0.5, c='C0')
+        s = "{} (Teff {})".format(targetname, teff)
+        ax.text(0.01, 0.9+offset, s, bbox=bbox, transform=trans,
+                fontsize='xx-small')
 
-    ax.set_xlabel('wavelength [angstrom]')
-    ax.set_ylabel('relative flux')
-    format_ax(ax)
-    outpath = os.path.join(outdir, targetname+'_vsini-stack.png')
-    savefig(f, outpath, writepdf=False)
+        ax.text(0.97, 0.9+offset, '$\chi^2$ vsini: {}'.format(best_vsini),
+                bbox=bbox, transform=trans, ha='right', va='top', fontsize='small')
 
-    return 1
+        ax.set_xlabel('wavelength [angstrom]')
+        ax.set_ylabel('relative flux')
+        format_ax(ax)
+        savefig(f, outpath, writepdf=False)
+    else:
+        print('found {}'.format(outpath))
+
+    return best_vsini, best_shift, best_chi2
 
 
+def measure_veloce_vsini(specname, targetname, teff, outdir):
+    """
+    wrapper to measure_vsini, which uses a chi-squared grid. returns mean vsini
+    over selected orders, and mean wavelength shift over the same.
+    """
+
+    spectrum_path = os.path.join(
+        DATADIR, 'Veloce', specname
+    )
+
+    flx_2d, wav_2d, flxerr_2d = read_veloce(spectrum_path, start=400, end=-600,
+                                            return_err=True)
+
+    o_vsini, o_shift, o_chi2 = [], [], []
+    for o in VELOCE_VSINI_ORDERS_VS_NEXTGEN:
+
+        flx, wav, flxerr = flx_2d[o, :], wav_2d[o, :], flxerr_2d[o, :]
+        wav, flx, flxerr = wav[::-1], flx[::-1], flxerr[::-1]
+        cont_flx, cont_norm_spec = fit_continuum(flx, wav, instrument='Veloce')
+
+        sel = (
+            (cont_flx > 0) &
+            (cont_norm_spec.flux < 2) &
+            (cont_norm_spec.flux > -1)
+        )
+
+        flxerr = flxerr[sel] / cont_flx[sel]
+        wav, flx = cont_norm_spec.wavelength[sel], cont_norm_spec.flux[sel]
+
+        res = measure_vsini(wav, flx, flxerr=flxerr, teff=teff, logg=4.5,
+                            vturb=2, outdir=outdir,
+                            targetname=targetname+'_order{}'.format(o))
+
+        if res is None:
+            msg = (
+                'WRN! Order {} failed to get template and target overlap. '
+                'Skipping!'.format(o)
+            )
+            print(msg)
+
+        fit_vsini, fit_shift, fit_chi2 = res
+        o_vsini.append(fit_vsini)
+        o_shift.append(fit_shift)
+        o_chi2.append(fit_chi2)
+
+    out_df = pd.DataFrame({
+        'order': VELOCE_VSINI_ORDERS_VS_NEXTGEN,
+        'vsini': o_vsini,
+        'shift': o_shift,
+        'chi2': o_chi2
+    })
+    outpath = os.path.join(outdir, specname.replace('.fits','_vsini_fit.csv'))
+    out_df.to_csv(outpath, index=False)
+    print('made {}'.format(outpath))
+
+    gamma = given_deltawvlen_get_vsys(deltawvlen=np.mean(o_shift)*u.AA,
+                                      wvlen_0=6500*u.AA, verbose=False)
+
+    print('Average vsini: {}km/s'.format(np.mean(o_vsini)))
+    print('Average shift: {:.2f}A'.format(np.mean(o_shift)))
+    print('Average shift: {}'.format(gamma.to(u.km/u.s)))
+
+    return np.mean(o_vsini), np.mean(o_shift), gamma
 
 ######################
 # specmatch analysis #
@@ -962,4 +1086,3 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
         idstring,
         sm_res=sm_res
     )
-

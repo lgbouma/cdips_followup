@@ -1,5 +1,6 @@
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 import os
+from astropy import units as u
 
 from cdips_followup import __path__
 
@@ -16,8 +17,8 @@ from stringcheese.plotutils import savefig, format_ax
 ##########
 # config #
 ##########
-DEBUG = 0
-TEST = 1
+DEBUG = 1
+TEST = 0
 
 DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
 OUTDIR = os.path.join(os.path.dirname(__path__[0]), 'results/spec_analysis')
@@ -73,52 +74,23 @@ def test_veloce_continuum_fit():
         savefig(f, outpath, writepdf=False)
 
 
-def test_measure_vsini():
+def test_measure_veloce_vsini():
 
     specname = '20200131_837.01_Bouma_final_combined.fits'
     targetname = '20200131_837.01'
     teff = 6300
 
-    spectrum_path = os.path.join(
-        DATADIR, 'Veloce', specname
-    )
-
-    flx_2d, wav_2d = read_veloce(spectrum_path, start=400, end=-400)
-
-    for o in VELOCE_VSINI_ORDERS_VS_NEXTGEN:
-
-        flx, wav = flx_2d[o, :], wav_2d[o, :]
-        wav, flx = wav[::-1], flx[::-1] # wavelength increasing order
-        cont_flx, cont_norm_spec = fit_continuum(flx, wav, instrument='Veloce')
-
-        sel = (
-            (cont_flx > 0) &
-            (cont_norm_spec.flux < 2) &
-            (cont_norm_spec.flux > -1)
-        )
-
-        wav, flx = cont_norm_spec.wavelength[sel], cont_norm_spec.flux[sel]
-
-        res = measure_vsini(wav, flx, teff=teff, logg=4.5, vturb=2,
-                            outdir=TESTOUTDIR,
-                            targetname=targetname+'_order{}'.format(o))
-
-        if res is None:
-            msg = (
-                'WRN! Order {} failed to get template and target overlap. '
-                'Skipping!'.format(o)
-            )
-            print(msg)
+    vsini, shift, gamma = measure_veloce_vsini(specname, targetname, teff,
+                                               TESTOUTDIR)
 
 
 def main():
 
     if DEBUG:
-        given_deltawvlen_get_vsys()
+        given_deltawvlen_get_vsys(deltawvlen=0.167*u.AA, wvlen_0=6500*u.AA)
 
     if TEST:
-        test_measure_vsini()
-        assert 0
+        test_measure_veloce_vsini()
         test_veloce_continuum_fit()
 
 if __name__ == "__main__":
