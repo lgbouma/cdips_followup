@@ -130,7 +130,7 @@ def get_requestids_given_targetid(requestdict, targetid):
 
     for r in requestdict['results']:
 
-        if str(targetid) in r['name']:
+        if str(r['name']).startswith(str(targetid)):
             requestids.append(r['id'])
 
     return requestids
