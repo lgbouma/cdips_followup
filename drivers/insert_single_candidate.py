@@ -18,8 +18,8 @@ def insert_single_candidate(
 
     d = {
         'nbhd_rating': 1,
-        'init_priority': 1,
-        'current_priority': 1,
+        'init_priority': init_priority,
+        'current_priority': current_priority,
         'pending_spectroscopic_observations': pending_spectroscopic_observations,
         'pending_photometry_observations': pending_photometry_observations,
         'comment': comment,
@@ -36,10 +36,10 @@ def insert_single_candidate(
 if __name__ == "__main__":
 
     insert_single_candidate(
-        ticid = 'ENTER TICID',
-        comment = 'MAKE A COMMENT',
+        ticid = '62483237',
+        comment = 'Whopping Ca HK.',
         nbhd_rating = 0,
-        init_priority = 1,
-        pending_photometry_observations = '--',
-        pending_spectroscopic_observations = '--'
+        init_priority = 0,
+        pending_photometry_observations = 'SG1 has lost',
+        pending_spectroscopic_observations = 'Veloce17'
     )
