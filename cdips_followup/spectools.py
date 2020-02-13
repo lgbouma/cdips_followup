@@ -4,6 +4,10 @@ from matplotlib.transforms import blended_transform_factory
 
 from astropy.io import fits
 from astropy import units as u, constants as const
+from astropy.modeling.polynomial import Chebyshev1D
+from astropy.modeling.models import custom_model
+from astropy.modeling.fitting import LevMarLSQFitter
+
 from scipy.io import readsav
 
 import os
@@ -21,16 +25,88 @@ import specmatchemp.plots as smplot
 
 from stringcheese.plotutils import savefig, format_ax
 
+# usable orders in Veloce spectra. 0-based count.
+VELOCE_ORDERS = [
+    6, 7, 8, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    27, 28, 29, 30, 31, 32, 33, 34, 35, 36
+]
+
+# usable orers in Veloce spectra for vsini measurements against the synthetic
+# "NextGen" model atmospheres. (The ones that are 20 years old).
+VELOCE_VSINI_ORDERS_VS_NEXTGEN = [
+    22, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36
+]
+
+# a few common lines
 line_d = {
     'Mgb1': 5183.62,
     'Mgb2': 5172.70,
     'Feb3': 5168.91,
-    'Mgb4': 5167.33
+    'Mgb4': 5167.33,
+    'FeI_a': 6703.58,
+    'FeI_b': 6705.1,
+    'FeI_c': 6707.44,
+    'LiI_a': 6707.76,
+    'LiI_b': 6707.91,
+    'CaI$\lambda$': 6718,
+    'Halpha': 6562.8,
+    'CaI_IRT_a': 8498,
+    'CaI_IRT_b': 8542,
+    'CaI_IRT_c': 8662
 }
+
 
 ########
 # read #
 ########
+def read_nextgen(teff=5500, vsini=5, logg=4.5, vturb=2):
+    """
+    Read the NextGen Model Atmosphere Grid from Hauschildt et al 1999.
+
+    teff: 4000, 4250, 4500, ... up to 7000
+    vsini: 0, 2, 5, 10, 30, 60.
+    logg: 4.5
+    vturb: 2 or 4.
+
+    returns:
+        wavelength, flux
+    """
+
+
+    NEXTGENDIR = os.path.join(
+        os.path.expanduser('~'),
+        'local',
+        'HighResGrid'
+    )
+
+    if logg==4.5:
+        logg = 45
+    else:
+        raise NotImplementedError
+
+    spectrum_name = '{}_{}_{}_{}'.format(
+        str(teff).zfill(5),
+        str(logg),
+        str(vturb).zfill(3),
+        str(vsini).zfill(3)
+    )
+
+    spectrum_path = os.path.join(
+        NEXTGENDIR, spectrum_name
+    )
+
+    df = pd.read_csv(spectrum_path, comment='#', delim_whitespace=True,
+                     names=['wav', 'physical_flux', 'continuum_flux',
+                            'residual_flux'])
+
+    # f,ax = plt.subplots(figsize=(10,3))
+    # ax.plot(df.wav*10, df.residual_flux)
+    # f.savefig('temp_nextgen.png')
+
+    return 10*nparr(df.wav), nparr(df.residual_flux)
+
+
+
 def read_veloce(spectrum_path, start=0, end=None):
     """
     Read Veloce FITS file.
@@ -189,8 +265,6 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None):
         viz_1d_spectrum(flx, wav, outpath)
 
 
-
-
 def inspect_pfs(nightstr, targetline, xlim=None):
     # NIST has the Li I resonance doublet listed with one transition at 6707.76
     # and the other at 6707.91 A.
@@ -261,7 +335,6 @@ def inspect_pfs(nightstr, targetline, xlim=None):
     outpath = '../results/spec_analysis/PFS/spec_viz/{}'.format(outname)
 
     viz_1d_spectrum(flx, wav, outpath, xlim=xlim, vlines=vlines, names=names)
-
 
 
 def specmatch_viz_compare(wavlim=[5160,5210]):
@@ -405,19 +478,90 @@ def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
 # continuum fitting #
 #####################
 
+@custom_model
+def sum_of_Chebyshev1D_deg3(x, c0=0, c1=0, c2=0, d0=0, d1=0, d2=0):
+    # NOTE: does not work.
+
+    m1 = Chebyshev1D(3)
+    m2 = Chebyshev1D(3)
+
+    m1.c0 = c0
+    m1.c1 = c1
+    m1.c2 = c2
+
+    m2.c0 = d0
+    m2.c1 = d1
+    m2.c2 = d2
+
+    return (
+        m1.evaluate(x, c0, c1, c2)
+        +
+        m2.evaluate(x, d0, d1, d2)
+    )
+
+def Chebyshev1D_deg3(x, c0=0, c1=0, c2=0):
+    # NOTE: also does not work.
+
+    m1 = Chebyshev1D(3)
+
+    return (
+        m1.evaluate(x, c0, c1, c2)
+    )
+
+
+
 def fit_continuum(flx, wav, instrument=None):
+    """
+    ----------
+    Args:
+
+        flx, wav: 1d flux [arbitrary units] and wavelength [angstrom].
+
+    ----------
+    Returns:
+
+        cont_flx, cont_norm_spec: fitted continuum flux, and
+        continuum-normalized Spectrum1D instance.
+
+    ----------
+    Description:
+
+    By default, fit a quadratric polynomial (in fancy speak, a 3rd order
+    Chebyshev polynomial series).
+
+    For Veloce, the continuum is better described as a linear combination of
+    two quadratics, because there is a notch rougly in the middle of each
+    order.
+    """
 
     spec = Spectrum1D(spectral_axis=wav*u.AA,
                       flux=flx*u.dimensionless_unscaled)
-    cont_flx = fit_generic_continuum(spec)(spec.spectral_axis)
+
+    if instrument is None:
+        deg = 3
+        model = [Chebyshev1D(deg)]
+        cont_flx = fit_generic_continuum(
+            spec, model=model
+        )(spec.spectral_axis)
+
+    if instrument == 'Veloce':
+        #model = [sum_of_Chebyshev1D_deg3()]
+        #model = [Chebyshev1D_deg3()]
+        model = [Chebyshev1D(4)]
+        fit_m = fit_generic_continuum(
+            spec, model=model
+        )
+        cont_flx = fit_m[0](spec.spectral_axis)
+
     cont_norm_spec = spec / cont_flx
-    flx = cont_norm_spec.flux
+
+    return cont_flx, cont_norm_spec
 
 
 
-##############
-# measure EW #
-##############
+###########################################
+# measure quantities (Li EW, vsini, ....) #
+###########################################
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
                    outpath=None):
     """
@@ -594,6 +738,60 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
         format_ax(ax)
 
     savefig(f, outpath)
+
+
+def measure_vsini(wav, flx, teff=6000, logg=4.5, vturb=2, outdir=None,
+                  targetname=None):
+
+    if not isinstance(outdir, str):
+        raise ValueError
+    if not isinstance(targetname, str):
+        raise ValueError
+
+    model_teff_grid = np.arange(4000, 7000+250, 250)
+    use_teff = model_teff_grid[np.argmin(np.abs(teff - model_teff_grid))]
+
+    # vsini: 0, 2, 5, 10, 30, 60.
+    model_d = {}
+
+    vsinis = [60, 30, 10, 5, 2, 0]
+    for vsini in vsinis:
+         m_wav, m_flx = read_nextgen(teff=use_teff, vsini=vsini,
+                                     logg=logg, vturb=vturb)
+         sel = (m_wav > np.nanmin(wav.value)) & (m_wav < np.nanmax(wav.value))
+         if len(m_wav[sel])==0:
+             return None
+         model_d['wav_vsini{}'.format(vsini)] = m_wav[sel]
+         model_d['flx_vsini{}'.format(vsini)] = m_flx[sel]
+
+    # make a stack spectrum plot showing target spectrum on top, and the
+    # candidate model spectra below. Nice for "chi by eye"
+    plt.close('all')
+    f, ax = plt.subplots(figsize=(10,7))
+    trans = blended_transform_factory(ax.transAxes, ax.transData)
+    bbox = dict(facecolor='white', edgecolor='none', alpha=0.8)
+    n_spectra = len(vsinis) + 1
+
+    offset = 0
+    for i, vsini in enumerate(vsinis):
+        ax.plot(model_d['wav_vsini{}'.format(vsini)],
+                offset+model_d['flx_vsini{}'.format(vsini)], lw=1, c='k')
+        s = "vsini {}".format(vsini)
+        ax.text(0.01, 0.9+offset, s, bbox=bbox, transform=trans)
+        offset +=1
+
+    ax.plot(wav, offset+flx, lw=1, c='C0')
+    s = "{}".format(targetname)
+    ax.text(0.01, 0.9+offset, s, bbox=bbox, transform=trans)
+
+    ax.set_xlabel('wavelength [angstrom]')
+    ax.set_ylabel('relative flux')
+    format_ax(ax)
+    outpath = os.path.join(outdir, targetname+'_vsini-stack.png')
+    savefig(f, outpath, writepdf=False)
+
+    return 1
+
 
 
 ######################
