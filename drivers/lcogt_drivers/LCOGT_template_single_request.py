@@ -13,25 +13,25 @@ from cdips_followup.LCOGT_dedicated_requests import (
 def main():
 
     ####################
-    savstr = '20200213_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20200216_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 1
     submit = 1
 
-    source_id = '5338645555866749952'
+    source_id = '5544257185155788672'
     max_n_events = 10 # else None. n_events is per eventclass.
 
     filtermode = 'gp'
     telescope_class = '1m0'
 
-    # create_eventclasses = ['OIBEO']
+    create_eventclasses = ['OIBEO']
     # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
-    create_eventclasses = ['IBEO', 'OIBE']
+    # create_eventclasses = ['IBEO', 'OIBE']
     # create_eventclasses = ['OIB', 'BEO']
 
-    # submit_eventclasses = ['OIBEO']
+    submit_eventclasses = ['OIBEO']
     # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
-    submit_eventclasses = ['IBEO', 'OIBE']
+    # submit_eventclasses = ['IBEO', 'OIBE']
     # submit_eventclasses = ['OIB', 'BEO']
 
     max_duration_error = 20
