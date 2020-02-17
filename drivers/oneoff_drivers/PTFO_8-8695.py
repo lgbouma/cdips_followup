@@ -476,7 +476,10 @@ def detrend_lightcurve_wotan(data, window_length=0.25, iscdips=True):
         rstr = '(on residual)' if window_length <= 0.2 else '(on raw)'
         plt.title('{} period {:.8f}d'.format(rstr, results.period))
         plt.xlabel('Phase')
-        plt.ylabel('Relative flux');
+        plt.ylabel('Relative flux')
+        plt.xticks([0, 0.25, 0.5, 0.75, 1])
+        plt.grid(which='major', axis='both', linestyle='--', zorder=-3,
+                 alpha=0.5, color='gray')
 
         pct_80 = np.percentile(results.model_folded_model, 80)
         pct_20 = np.percentile(results.model_folded_model, 20)
@@ -511,7 +514,8 @@ def main():
     if do_flux_lcs:
         explore_flux_lightcurves(data, iscdips=cdips)
     if do_detrending:
-        for wl in [99]:
+        #for wl in [99]:
+        for wl in [0.15]:
         #for wl in [0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5]:
             detrend_lightcurve_wotan(data, window_length=wl, iscdips=cdips)
     if do_pf:

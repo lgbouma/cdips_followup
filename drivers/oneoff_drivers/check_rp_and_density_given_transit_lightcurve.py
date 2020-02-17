@@ -1,12 +1,20 @@
+import numpy as np
 from astropy import units as u
 
-name = 'TIC29786532.01'
-rp_rs = 0.4704  # measured Rp/Rstar
-Tdur = 2.65*u.hr
-P = 1.588*u.day
+# name = 'TIC29786532.01'
+# rp_rs = 0.4704  # measured Rp/Rstar
+# Tdur = 2.65*u.hr
+# P = 1.588*u.day
+# rstar = 0.85*u.Rsun # TIC8
+# mstar = 0.53*u.Msun # TIC8
 
-rstar = 0.85*u.Rsun # TIC8
-mstar = 0.53*u.Msun # TIC8
+name = 'PTFO8*'
+rp_rs = np.sqrt(1.5e-2)  # measured Rp/Rstar
+P = 0.4485*u.day
+Tdur = (9e-2 * P)
+rstar = 1.39*u.Rsun # TIC8
+mstar = 0.39*u.Msun # TIC8
+
 
 
 rp = (rp_rs * rstar).to(u.Rjup)
