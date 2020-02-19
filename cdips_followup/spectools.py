@@ -42,6 +42,10 @@ VELOCE_VSINI_ORDERS_VS_NEXTGEN = [
 
 # a few common lines
 line_d = {
+    'Fe_L': 3820.44,
+    'Ca_K': 3933.66,
+    'Ca_H': 3968.47,
+    'H$\delta$': 4101.75,
     'Mgb1': 5183.62,
     'Mgb2': 5172.70,
     'Feb3': 5168.91,
@@ -221,7 +225,7 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
         flx = flx[sel]
 
     plt.close('all')
-    f,ax = plt.subplots(figsize=(4,3))
+    f,ax = plt.subplots(figsize=(10,3))
     ax.plot(wav, flx, c='k', zorder=3, lw=0.2)
 
     ax.set_xlabel('wavelength [angstrom]')
@@ -580,6 +584,181 @@ def fit_continuum(flx, wav, instrument=None):
 ###########################################
 # measure quantities (Li EW, vsini, ....) #
 ###########################################
+def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
+                       delta_wav=5, outpath=None):
+    """
+    spectrum_path: path to PFS or Veloce spectrum
+
+    wvsol_path: path to PFS wavelength solution (optional)
+
+    xshift: angstrom shift required to get into source frame (not vacuum frame).
+
+    delta_wav: window to do the measurement over (angstrom)
+
+    outpath: summary figure is written here.
+    """
+
+    if not isinstance(outpath, str):
+        raise ValueError
+
+    if "PFS" in spectrum_path:
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+        instrument = 'PFS'
+    elif "Veloce" in spectrum_path:
+        raise ValueError('Veloce does not cover Ca HK')
+    else:
+        raise NotImplementedError
+
+    # target_wav = 3951.065
+    target_wavs = [3933.66, 3968.47]
+    vlines = [3933.66, 3968.47]
+    names = ['Ca_K', 'Ca_H']
+
+    for target_wav, vline, name in zip(target_wavs, vlines, names):
+
+        xlim = [target_wav-delta_wav, target_wav+delta_wav]
+
+        #
+        # retrieve the order corresponding to target wavelength.
+        # then shift the wavelength solution to source frame, if needed.
+        #
+        if instrument == 'PFS':
+            if target_wav == 3933.66:
+                order = 0
+            elif target_wav == 3968.47:
+                order = 2
+        else:
+            raise NotImplementedError
+
+        flx, wav = flx_2d[order, :], wav_2d[order, :]
+
+        thispath = outpath.replace('.png', '{}_1d_check.png'.format(name))
+        viz_1d_spectrum(flx, wav, thispath, xlim=xlim, vlines=vlines,
+                        names=names)
+
+        shiftstr = ''
+        if isinstance(xshift, (float, int)):
+            wav = deepcopy(wav) - xshift
+            shiftstr = '_shift{:.2f}'.format(float(xshift))
+
+        #
+        # cut spectrum to region of interest
+        #
+        if isinstance(xlim, list):
+            xmin = xlim[0]
+            xmax = xlim[1]
+            sel = (wav > xmin) & (wav < xmax)
+
+            wav = wav[sel]
+            flx = flx[sel]
+
+        spec = Spectrum1D(spectral_axis=wav*u.AA,
+                          flux=flx*u.dimensionless_unscaled)
+
+        #
+        # fit continuum. when doing so, exclude absorption lines.
+        #
+        if isinstance(xlim, list):
+            exclude_regions = []
+            for _wv in vlines:
+                if xmin < _wv-0.5 and xmax > _wv+0.5:
+                    exclude_regions.append(
+                        SpectralRegion((_wv-0.5)*u.AA, (_wv+0.5)*u.AA)
+                    )
+
+        cont_flx = (
+            fit_generic_continuum(spec,
+                                  exclude_regions=exclude_regions
+            )(spec.spectral_axis)
+        )
+
+        cont_norm_spec = spec / cont_flx
+
+        #
+        # to fit gaussians, look at 1-flux.
+        #
+        full_spec = Spectrum1D(spectral_axis=cont_norm_spec.wavelength,
+                               flux=(1-cont_norm_spec.flux))
+
+        # #
+        # # get the Ca H and Ca K equivalent widths
+        # #
+        # region = SpectralRegion((target_wav-0.5)*u.AA, (target_wav+0.5)*u.AA)
+        # li_equiv_width = equivalent_width(cont_norm_spec, regions=region)
+        # li_centroid = centroid(full_spec, region)
+
+        # #
+        # # fit a gaussian too, and get ITS equiv width
+        # # https://specutils.readthedocs.io/en/stable/fitting.html
+        # #
+        # g_init = models.Gaussian1D(amplitude=0.2*u.dimensionless_unscaled,
+        #                            mean=target_wav*u.AA, stddev=0.5*u.AA)
+        # g_fit = fit_lines(full_spec, g_init, window=(region.lower, region.upper))
+        # y_fit = g_fit(full_spec.wavelength)
+
+        # fitted_spec = Spectrum1D(spectral_axis=full_spec.wavelength,
+        #                          flux=(1-y_fit)*u.dimensionless_unscaled)
+        # fitted_li_equiv_width = equivalent_width(fitted_spec, regions=region)
+
+        # #
+        # # print bestfit params
+        # #
+        # print(42*'=')
+        # print('got Li equiv width of {}'.format(li_equiv_width))
+        # print('got fitted Li equiv width of {}'.format(fitted_li_equiv_width))
+        # print('got Li centroid of {}'.format(li_centroid))
+        # print('fit gaussian1d params are\n{}'.format(repr(g_fit)))
+        # print(42*'=')
+
+        #
+        # plot the results
+        #
+        f,axs = plt.subplots(nrows=2, ncols=1, figsize=(6,8))
+
+        axs[0].plot(wav, flx, c='k', zorder=3)
+        axs[0].plot(wav, cont_flx, c='r', zorder=2)
+
+        axs[1].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+
+        # axs[2].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+
+        # axs[3].plot(full_spec.wavelength, full_spec.flux, c='k')
+        # axs[3].plot(full_spec.wavelength, y_fit, c='g')
+
+        # txt = (
+        #     'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nEW:{:.3f}'.
+        #     format(g_fit.amplitude.value,
+        #            g_fit.mean.value,
+        #            g_fit.stddev.value,
+        #            fitted_li_equiv_width)
+        # )
+        # axs[3].text(
+        #     0.95, 0.95, txt, ha='right', va='top', transform=axs[3].transAxes,
+        #     fontsize='xx-small'
+        # )
+
+        axs[0].set_ylabel('flux')
+        axs[1].set_ylabel('contnorm flux')
+        # axs[2].set_ylabel('contnorm flux [zoom]')
+        # axs[3].set_ylabel('1 - (contnorm flux)')
+
+        if isinstance(xlim, list):
+            for ax in axs:
+                ax.set_xlim(xlim)
+
+        # axs[2].set_xlim([target_wav-1, target_wav+1])
+        # axs[3].set_xlim([target_wav-1, target_wav+1])
+        axs[-1].set_xlabel('wavelength [angstrom]')
+
+        for ax in axs:
+            format_ax(ax)
+
+        savefig(f, outpath.replace('.png', '_{}.png'.format(name)),
+                writepdf=False)
+
+
+
+
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
                    outpath=None):
     """
@@ -917,6 +1096,7 @@ def measure_veloce_vsini(specname, targetname, teff, outdir):
     print('Average shift: {}'.format(gamma.to(u.km/u.s)))
 
     return np.mean(o_vsini), np.mean(o_shift), gamma
+
 
 ######################
 # specmatch analysis #

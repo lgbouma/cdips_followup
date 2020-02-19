@@ -8,7 +8,8 @@ import os
 from cdips_followup import __path__
 from cdips_followup.spectools import (
     get_Li_6708_EW, inspect_pfs, specmatch_viz_compare, specmatch_analyze,
-    plot_orders, plot_spec_vs_dwarf_library, measure_veloce_vsini
+    plot_orders, plot_spec_vs_dwarf_library, measure_veloce_vsini,
+    get_Ca_HK_emission
 )
 
 DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
@@ -26,19 +27,20 @@ def main():
     args.do_sm_viz = 0          # specmatch-emp check
     args.do_inspect = 0         # inspect to figure out require rest-frame shift
     args.do_li_ew = 0           # once rest-frame shift is known
-    args.do_vsini = 1           # measure vsini
+    args.do_vsini = 0           # measure vsini
+    args.do_ca_hk = 1           # get Ca HK emission properties
 
-    args.is_pfs = 0
-    args.is_veloce = 1
+    args.is_pfs = 1
+    args.is_veloce = 0
 
     if args.is_pfs:
-        nightind =  3556 # 4257
+        nightind =  3556 # 3555 # # 4258 # 4257 # # 
         args.spectrum_name = 'rn56.{}'.format(nightind)
         args.wvsol_name = 'w_n56.dat'
         args.idstring = 'TIC268301217_20200206_{}'.format(nightind)
         if args.do_sm_analysis:
             args.teff = 5700
-        if args.do_li_ew:
+        if args.do_li_ew or args.do_ca_hk:
             args.xshift = 2.30 # set 
         main_pfs(args)
 
@@ -74,12 +76,26 @@ def main_pfs(args):
 
     if args.do_li_ew:
         outdir = os.path.join(OUTDIR, 'PFS', 'Li_EW')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
         outpath = os.path.join(
             outdir,
             '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
         )
         get_Li_6708_EW(spectrum_path, wvsol_path=wvsol_path,
                        xshift=args.xshift, outpath=outpath)
+
+    if args.do_ca_hk:
+        outdir = os.path.join(OUTDIR, 'PFS', 'Ca_HK')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        outpath = os.path.join(
+            outdir,
+            '{}_Ca_HK_shift{:.2f}.png'.format(args.idstring, args.xshift)
+        )
+        get_Ca_HK_emission(spectrum_path, wvsol_path=wvsol_path,
+                           xshift=args.xshift, outpath=outpath)
+
 
     if args.do_sm_analysis:
         outdir = os.path.join(OUTDIR, 'PFS', 'specmatch')
