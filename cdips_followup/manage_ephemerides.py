@@ -205,6 +205,7 @@ def query_ephemeris(source_id=None, ticid=None):
             raise IndexError(msg)
 
     if isinstance(ticid, str):
+        df.ticid = df.ticid.astype(str)
         seldf = df[df.ticid == ticid].iloc[-1]
 
     return dict(seldf)
