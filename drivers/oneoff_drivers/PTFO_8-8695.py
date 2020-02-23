@@ -3,7 +3,6 @@ import os, multiprocessing
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from astropy.io import fits
 from astrobase import lcmath
-from astrobase.periodbase import kbls
 from astrobase.checkplot.png import _make_phased_magseries_plot
 from astrobase.lcmath import phase_bin_magseries
 from copy import deepcopy
@@ -208,6 +207,8 @@ def get_light_detrended_data(data):
 
 
 def do_phasefolds(data):
+
+    from astrobase.periodbase import kbls
 
     data_dict = get_light_detrended_data(data)
 
@@ -439,6 +440,14 @@ def detrend_lightcurve_wotan(data, window_length=0.25, iscdips=True):
         )
         results = model.power(period_min=0.3, period_max=0.6, M_star_min=0.1,
                               M_star_max=5, R_star=0.5, M_star=0.5)
+
+        print(42*'-')
+        print(
+            't0: {}'.format(results.T0)+
+            '\nperiod: {}'.format(results.period)+
+            '\nperiod_unc: {}'.format(results.period_uncertainty)
+        )
+        print(42*'-')
 
         plt.close('all')
         fig = plt.figure()
