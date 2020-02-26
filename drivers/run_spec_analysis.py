@@ -22,26 +22,40 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 0          # plot all orders
+    args.do_orders = 1          # plot all orders
     args.do_sm_analysis = 0     # get Teff, Rstar + compare spectra
     args.do_sm_viz = 0          # specmatch-emp check
     args.do_inspect = 0         # inspect to figure out require rest-frame shift
     args.do_li_ew = 0           # once rest-frame shift is known
     args.do_vsini = 0           # measure vsini
-    args.do_ca_hk = 1           # get Ca HK emission properties
+    args.do_ca_hk = 0           # get Ca HK emission properties
 
     args.is_pfs = 1
     args.is_veloce = 0
 
     if args.is_pfs:
+
+        # Night-specific quicklooks
         nightind =  3556 # 3555 # # 4258 # 4257 # # 
         args.spectrum_name = 'rn56.{}'.format(nightind)
         args.wvsol_name = 'w_n56.dat'
         args.idstring = 'TIC268301217_20200206_{}'.format(nightind)
+        args.is_template = False
+
+        # Template quicklooks
+        args.spectrum_name = 'TIC268301217.dat'
+        args.wvsol_name = None
+        args.idstring = 'TIC268301217_20200225_template'
+        args.is_template = True
+
         if args.do_sm_analysis:
             args.teff = 5700
-        if args.do_li_ew or args.do_ca_hk:
-            args.xshift = 2.30 # set 
+        if args.do_li_ew or args.do_ca_hk or args.do_orders:
+            args.xshift = 1.6 # set 
+
+        if args.is_template:
+            args.idstring += '_shift{:.2f}'.format(args.xshift)
+
         main_pfs(args)
 
     elif args.is_veloce:
@@ -60,7 +74,8 @@ def main_pfs(args):
     if args.do_orders:
         outdir = os.path.join(OUTDIR, 'PFS', 'spec_viz_orders')
         plot_orders(spectrum_path, wvsol_path=wvsol_path,
-                    outdir=outdir, idstring=args.idstring)
+                    outdir=outdir, idstring=args.idstring,
+                    is_template=args.is_template, xshift=args.xshift)
 
     if args.do_sm_viz:
         # 4990 through 6410 in the SpecMatch library. b/c HIRES needs different
@@ -94,7 +109,8 @@ def main_pfs(args):
             '{}_Ca_HK_shift{:.2f}.png'.format(args.idstring, args.xshift)
         )
         get_Ca_HK_emission(spectrum_path, wvsol_path=wvsol_path,
-                           xshift=args.xshift, outpath=outpath)
+                           xshift=args.xshift, outpath=outpath,
+                           is_template=args.is_template)
 
 
     if args.do_sm_analysis:
@@ -116,9 +132,9 @@ def main_veloce(args):
     # teff = 6140
     # shift = -0.20
 
-    idstring = '20200131_TIC146129309'
-    teff = 6633
-    shift = -0.02
+    # idstring = '20200131_TIC146129309'
+    # teff = 6633
+    # shift = -0.02
 
     specname = '{}_Bouma_final_combined.fits'.format(idstring)
     spectrum_path = os.path.join(

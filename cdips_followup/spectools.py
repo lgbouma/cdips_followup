@@ -143,17 +143,32 @@ def read_veloce(spectrum_path, start=0, end=None, return_err=False):
         return flux, wav
 
 
-def read_pfs(spectrum_path, wvlen_soln, verbose=False):
+def read_pfs(spectrum_path, wvlen_soln, verbose=False, is_template=False):
     """
     Read PFS IDL SAV file.
     Return (73, 3520) arrays of flux and wavelength.
     73 orders, 3520 pixels in the cross-dispersion direction.
+
+    Args:
+        spectrum_path: path to spectrum
+        wvlen_soln: path to wavelength solution (might not exist, if you're
+        given a template)
+        is_template: if True, uses spectrum_path to get the wavelength
+        solution.
     """
 
-    sp = readsav(spectrum_path, python_dict=True, verbose=verbose)
-    wvlen = readsav(wvlen_soln, python_dict=True, verbose=verbose)
+    if not is_template:
 
-    return sp['sp'], wvlen['w']
+        sp = readsav(spectrum_path, python_dict=True, verbose=verbose)
+        wvlen = readsav(wvlen_soln, python_dict=True, verbose=verbose)
+
+        return sp['sp'], wvlen['w']
+
+    else:
+
+        s = readsav(spectrum_path, python_dict=True, verbose=verbose)
+
+        return s['star'], s['w']
 
 
 def read_feros(spectrum_path):
@@ -231,6 +246,26 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
     ax.set_xlabel('wavelength [angstrom]')
     ax.set_ylabel('flux [e-]')
 
+    xmin = min(wav)
+    xmax = max(wav)
+
+    this_d = {}
+    for k, v in line_d.items():
+        if v > xmin and v<xmax:
+            this_d[k] = v
+
+    if len(this_d) > 0:
+        for k, v in this_d.items():
+            ylim = ax.get_ylim()
+            delta_y = 0.9*(max(ylim) - min(ylim))
+            ax.vlines(v, min(ylim)+delta_y, max(ylim), zorder=-3,
+                      linestyles=':', color='k', lw=0.3)
+            ax.set_ylim(ylim)
+
+            tform = blended_transform_factory(ax.transData, ax.transAxes)
+            ax.text(v, 0.95, k, ha='center', va='top', transform=tform,
+                    fontsize=4)
+
     if isinstance(xlim, (list, tuple)):
         ax.set_xlim(xlim)
 
@@ -248,12 +283,15 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
             ax.text(x, 0.95, n, ha='center', va='top', transform=tform,
                     fontsize=4)
 
+    ax.grid(b=True, which='both', axis='x', zorder=-3, lw=0.3, ls='--')
+
     format_ax(ax)
     savefig(f, outpath, writepdf=False)
     plt.close()
 
 
-def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None):
+def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
+                is_template=False, xshift=0):
 
     if not isinstance(outdir, str):
         raise ValueError
@@ -261,7 +299,8 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None):
         os.mkdir(outdir)
 
     if "PFS" in spectrum_path:
-        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
+                                  is_template=is_template)
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path)
     else:
@@ -277,6 +316,13 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None):
             end = -200
 
         flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
+
+        if 'PFS' in spectrum_path:
+            sel = (flx > 0)
+            flx, wav = flx[sel], wav[sel]
+
+        if isinstance(xshift, (float, int)):
+            wav = deepcopy(wav) - xshift
 
         outname = '{}_order{}.png'.format(
             idstring, str(order).zfill(2),
@@ -585,7 +631,7 @@ def fit_continuum(flx, wav, instrument=None):
 # measure quantities (Li EW, vsini, ....) #
 ###########################################
 def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
-                       delta_wav=5, outpath=None):
+                       delta_wav=5, outpath=None, is_template=False):
     """
     spectrum_path: path to PFS or Veloce spectrum
 
@@ -596,13 +642,16 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
     delta_wav: window to do the measurement over (angstrom)
 
     outpath: summary figure is written here.
+
+    is_template: special PFS arg for template path I/O.
     """
 
     if not isinstance(outpath, str):
         raise ValueError
 
     if "PFS" in spectrum_path:
-        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
+                                  is_template=is_template)
         instrument = 'PFS'
     elif "Veloce" in spectrum_path:
         raise ValueError('Veloce does not cover Ca HK')
