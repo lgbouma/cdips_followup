@@ -16,14 +16,16 @@ $ python exoarchive_age_plots.py
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
+from matplotlib.ticker import StrMethodFormatter
+
 import pandas as pd, numpy as np
+import os
 
 from astropy.table import Table
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord
 import astropy.units as u
-
-import os
 
 from astroquery.nasa_exoplanet_archive import NasaExoplanetArchive
 
@@ -82,7 +84,7 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
     f,ax = plt.subplots(figsize=(4,3))
 
     label = (
-        'NASA Exoplanet Archive, '+
+        'Exoplanet Archive, '+
         r"$\langle \sigma_{{\mathrm{{age}}}} \rangle$ = "+
         "{:.1f} Gyr".format(np.median(age_errs))
     )
@@ -90,8 +92,10 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
         label = (
             'Known hot Jupiters'
         )
+        rp /= 11.2089 # used jupiter radii
+
     ax.scatter(age, rp,
-               color='gray', s=3, zorder=1, marker='o', linewidth=0,
+               color='C1', s=3, zorder=1, marker='o', linewidth=0,
                label=label, alpha=1)
 
     #
@@ -178,29 +182,29 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
         )
         if hjs_only:
             label = (
-                'Candidate hot Jupiters'
+                'Possible hot Jupiters'
             )
 
         istoi = ~(sdf.toi == '--')
 
         if split_toi_ctoi:
             ax.scatter(
-                target_age[istoi], target_rp[istoi], color='black', s=10, zorder=3,
+                target_age[istoi], target_rp[istoi], color='C0', s=10, zorder=3,
                 marker='s', linewidth=0
             )
             ax.scatter(
-                target_age[~istoi], target_rp[~istoi], color='black', s=25,
+                target_age[~istoi], target_rp[~istoi], color='C0', s=25,
                 zorder=3, marker='*', linewidth=0, label=label
             )
         elif hjs_only:
             hj = (target_rp > 7) & (target_rp < 29)
             ax.scatter(
-                target_age[hj], target_rp[hj], color='black', s=25,
+                target_age[hj], target_rp[hj]/11.2089, color='C0', s=35,
                 zorder=3, marker='*', linewidth=0, label=label
             )
         else:
             ax.scatter(
-                target_age, target_rp, color='black', s=25,
+                target_age, target_rp, color='C0', s=25,
                 zorder=3, marker='*', linewidth=0, label=label
             )
 
@@ -222,13 +226,18 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
                 np.random.uniform(0.8,1.2,
                                   size=len(target_rp[sel]))
             )
+        else:
+            # HACK: for the one very small object...
+            sel = target_rp_rel_unc > 0.33
+            target_rp_unc[sel] = target_rp[sel] * 0.33
         ##########
 
         if hjs_only:
-            ax.errorbar(target_age[hj], target_rp[hj], yerr=target_rp_unc[hj],
-                        elinewidth=0.3, ecolor='k', capsize=0, capthick=0,
-                        linewidth=0, fmt='*', ms=0, zorder=2, color='black',
-                        alpha=0.5)
+            pass
+            #ax.errorbar(target_age[hj], target_rp[hj], yerr=target_rp_unc[hj],
+            #            elinewidth=0.3, ecolor='k', capsize=0, capthick=0,
+            #            linewidth=0, fmt='*', ms=0, zorder=2, color='black',
+            #            alpha=0.5)
         else:
             ax.errorbar(target_age, target_rp, yerr=target_rp_unc,
                         elinewidth=0.3, ecolor='k', capsize=0, capthick=0,
@@ -244,15 +253,17 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
     else:
         leg = ax.legend(handles[::-1], labels[::-1], loc='upper right',
                         borderpad=0.3, handletextpad=0.3, fontsize='small',
-                        framealpha=1)
+                        framealpha=0)
 
     leg.get_frame().set_linewidth(0.5)
 
     ax.set_xlabel('Age [billion years]')
     ax.set_ylabel('Planet size [Earth radii]')
+    if hjs_only:
+        ax.set_ylabel('Planet size [Jupiter radii]')
 
-    ax.set_xlim([8e-3, 17])
-    ax.set_xticklabels([0.01, 0.1, 1, 10])
+    ax.set_xlim([6e-3, 17])
+
     ax.get_yaxis().set_tick_params(which='both', direction='in')
     ax.get_xaxis().set_tick_params(which='both', direction='in')
 
@@ -260,11 +271,17 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
         ax.set_ylim([0.13, 85])
         ax.set_yscale('log')
     if hjs_only:
-        ax.set_ylim([4, 36])
+        ax.set_ylim([0.1, 3])
         ax.set_yscale('linear')
 
     ax.set_xscale('log')
     ax.tick_params(top=True, bottom=True, left=True, right=True, which='both')
+
+    if hjs_only:
+        ax.xaxis.set_major_formatter(StrMethodFormatter('{x:.2g}'))
+    else:
+        ax.yaxis.set_major_formatter(StrMethodFormatter('{x:.2g}'))
+
 
     f.tight_layout()
     savstr = '_no_overplot' if not active_targets else '_active_targets'
@@ -284,12 +301,10 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
 
 if __name__=='__main__':
 
-    plot_rp_vs_age_scatter(active_targets=0, hjs_only=1)
-    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0, hjs_only=1)
-    assert 0
-
     plot_rp_vs_age_scatter(active_targets=0)
     plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0)
     plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=1)
 
+    plot_rp_vs_age_scatter(active_targets=0, hjs_only=1)
+    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0, hjs_only=1)
 
