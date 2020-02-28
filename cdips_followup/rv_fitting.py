@@ -35,30 +35,39 @@ class args_object(object):
         self.gp = False
 
 
-def convert_vels_to_radvel_ready(ticid, is_bin):
+def convert_vels_to_radvel_ready(ticid, is_bin, instrument):
     # "vels" is the Paul Butler pipeline format -> "radvel_vels" to be radvel
     # readable
 
-    if is_bin:
-        name = 'HD{}_PFSBIN.vels'.format(ticid)
-    else:
-        name = 'HD{}_PFS.vels'.format(ticid)
+    if instrument == 'PFS':
+        if is_bin:
+            name = 'HD{}_PFSBIN.vels'.format(ticid)
+        else:
+            name = 'HD{}_PFS.vels'.format(ticid)
+        datadir = os.path.join(DATADIR, 'PFS', 'butler_vels')
+        velspath = os.path.join(datadir, name)
+        if is_bin:
+            names = ['time','mnvel','errvel']
+        else:
+            names = ['time','mnvel','errvel','idk0','idk1','idk2','exptime']
+        df = pd.read_csv(velspath, delim_whitespace=True, names=names)
+        outdir = os.path.join(DATADIR, 'PFS', 'radvel_vels', today_YYYYMMDD())
 
-    datadir = os.path.join(DATADIR, 'PFS', 'butler_vels')
-    velspath = os.path.join(datadir, name)
-
-    if is_bin:
+    elif instrument == 'CHIRON':
+        assert not is_bin
+        name = 'T{}.csv'.format(str(ticid).zfill(10))
+        datadir = os.path.join(DATADIR, 'CHIRON', 'Zhou')
+        velspath = os.path.join(datadir, name)
         names = ['time','mnvel','errvel']
-    else:
-        names = ['time','mnvel','errvel','idk0','idk1','idk2','exptime']
+        df = pd.read_csv(velspath, delim_whitespace=True, names=names)
+        df.mnvel *= 1e3
+        df.errvel *= 1e3
+        outdir = os.path.join(DATADIR, 'CHIRON', 'radvel_vels', today_YYYYMMDD())
 
-    df = pd.read_csv(velspath, delim_whitespace=True, names=names)
-
-    df['tel'] = 'PFS'
     df['Name'] = 'TIC{}'.format(ticid)
     df['source'] = velspath
+    df['tel'] = instrument
 
-    outdir = os.path.join(DATADIR, 'PFS', 'radvel_vels', today_YYYYMMDD())
     if not os.path.exists(outdir):
         os.mkdir(outdir)
     outname = 'TIC{}.csv'.format(ticid)
@@ -72,7 +81,9 @@ def convert_vels_to_radvel_ready(ticid, is_bin):
 
 
 def prepare_template(ticid, periodval, t0val, timebase,
-                     rv_path, period_unc, t0_unc, k_prior_init=100):
+                     rv_path, period_unc, t0_unc, instrument,
+                     k_prior_init=100, log_k_prior_low=np.log(10),
+                     log_k_prior_high=np.log(400)):
     # make a radvel_driver for this target
 
     template_path = os.path.join(DRIVERDIR, 'template.py')
@@ -84,10 +95,12 @@ def prepare_template(ticid, periodval, t0val, timebase,
         'PERIODVAL': str(periodval),
         'T0VAL': str(t0val),
         'KPRIORINIT': str(k_prior_init),
+        'LOG_K_PRIOR_LOW, LOG_K_PRIOR_HIGH': str(log_k_prior_low)+', '+str(log_k_prior_high),
         'MEDIANTIMEBASE': str(timebase),
         'RV_PATH': rv_path,
         'PERIOD_UNC': str(period_unc),
-        'T0_UNC': str(t0_unc)
+        'T0_UNC': str(t0_unc),
+        'PFS': str(instrument)
     }
 
     for ix, l in enumerate(lines):
