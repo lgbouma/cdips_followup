@@ -20,35 +20,67 @@ from cdips_followup.rv_fitting import (
 # config #
 ##########
 
-RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
-                           'spec_analysis', 'PFS', 'phased_RVs')
-if not os.path.exists(RVRESULTDIR):
-    os.mkdir(RVRESULTDIR)
-
-
 def main():
 
+    # TODO: implement
+    # ticid = '59859387'
+    # is_bin = 0
+    # instrument = ['CHIRON','PFS']
+
     ticid = '59859387'
+    instrument = 'CHIRON'
+    k_prior_init = 500
+    log_k_prior_high = np.log(1000)
+    log_k_prior_low = np.log(100)
     is_bin = 0
+    phase_with_prot = 1
+
+    # ticid = '59859387'
+    # is_bin = 0
+    # instrument = 'PFS'
 
     # ticid = '268301217'
     # is_bin = 1
+    # instrument = 'PFS'
+    # k_prior_init = 100
+    # log_k_prior_high = np.log(400)
+    # log_k_prior_low = np.log(10)
 
-    is_pfs = 1
 
-    if not is_pfs:
+    if not instrument in ['PFS', 'CHIRON']:
         errmsg = 'need to implement instrument specific read functions'
         raise NotImplementedError(errmsg)
 
-    rv_path = convert_vels_to_radvel_ready(ticid, is_bin)
+    rv_path = convert_vels_to_radvel_ready(ticid, is_bin, instrument)
 
     rv_df = pd.read_csv(rv_path)
     timebase = np.nanmedian(rv_df.time)
 
     e = query_ephemeris(ticid=ticid)
 
-    driver_path = prepare_template(ticid, e['period'], e['epoch'], timebase,
-                                   rv_path, e['period_unc'], e['epoch_unc'])
+    if phase_with_prot:
+        period_mean = 3
+        period_std = 1.5
+        epoch_mean = 2458888.13511
+        epoch_std = 2
+        driver_path = prepare_template(ticid, period_mean, epoch_mean, timebase,
+                                       rv_path, period_std, epoch_std,
+                                       instrument, k_prior_init=k_prior_init,
+                                       log_k_prior_high=log_k_prior_high,
+                                       log_k_prior_low=log_k_prior_low)
+
+    else:
+        # phase with planet orbit
+        driver_path = prepare_template(ticid, e['period'], e['epoch'], timebase,
+                                       rv_path, e['period_unc'], e['epoch_unc'],
+                                       instrument, k_prior_init=k_prior_init,
+                                       log_k_prior_high=log_k_prior_high,
+                                       log_k_prior_low=log_k_prior_low)
+
+    RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
+                               'spec_analysis', instrument, 'phased_RVs')
+    if not os.path.exists(RVRESULTDIR):
+        os.mkdir(RVRESULTDIR)
 
     run_radvel(driver_path, RVRESULTDIR)
 
