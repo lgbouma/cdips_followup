@@ -98,7 +98,9 @@ def plot_quadrature_windows(ra, dec, ticid, t0, period, start_time, end_time, si
 
     # calculate the expected RV signal. note we are ignoring barycentric timing
     # effects (BJD vs JD), which are of order 16 minutes.
-    rv = np.sin( ( (2*pi/period) * (observe_time.jd*u.day - t0) )*u.rad )
+    #
+    # note: it's cos, not sin. Eg., Eq 3 from Fulton+2018.
+    rv = np.cos( ( (2*pi/period) * (observe_time.jd*u.day - t0) )*u.rad )
 
     ax.legend(loc='best')
     ax.get_xaxis().set_tick_params(which='both', direction='in')
