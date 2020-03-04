@@ -1,3 +1,9 @@
+"""
+Given a TICID, make diagnostic plots to help do an initial analysis of any
+light-curve of interest. (E.g., phase-folding, river plots, different wide
+figure sizes).
+"""
+
 from glob import glob
 import os, multiprocessing
 import numpy as np, pandas as pd, matplotlib.pyplot as plt

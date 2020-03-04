@@ -1,8 +1,12 @@
 """
-Given spectrum from PFS / Veloce / CHIRON / FEROS...
+Given spectrum from PFS / Veloce / CHIRON / FEROS:
+
+* Plot all orders
 * Measure Li EW at 6708A.
-* Vis Halpha at 6562.8A
+* Visualize Halpha at 6562.8A
 * Measure Teff, vsini, logg.
+* Measure Ca HK
+* Run specmatch-emp.
 """
 import os
 from cdips_followup import __path__
