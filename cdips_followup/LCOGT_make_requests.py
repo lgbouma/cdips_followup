@@ -38,14 +38,11 @@ from astrobase.services.gaia import objectid_search as gaia_objectid_search
 
 DEBUG = True
 
-if socket.gethostname() == 'brik':
-    api_file = '/home/luke/.lcogt_api_token'
-elif 'astro' in socket.gethostname():
-    api_file = '/Users/luke/.lcogt_api_token'
-else:
+HOMEDIR = os.path.expanduser('~')
+API_FILE = os.path.join(HOMEDIR, '.lcogt_api_token')
+if not os.path.exists(API_FILE):
     raise NotImplementedError('where to get API file?')
-
-with open(api_file, 'r') as f:
+with open(API_FILE, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
 
@@ -92,6 +89,8 @@ def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
         df = pd.read_csv(os.path.join(DATADIR,'LCOGT_reverse_eng_exptime.csv'))
     elif telescope_class == '2m0':
         df = pd.read_csv(os.path.join(DATADIR, 'LCOGT_2m_guess_exptime.csv'))
+    elif telescope_class == 'special':
+        return 0, 0
 
     if Gmag > df.G.max():
         raise AssertionError('target too faint')
@@ -176,6 +175,10 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
         instrument_type = '2M0-SCICAM-SPECTRAL'
         mode = 'default'
         bin_x, bin_y = 2, 2
+    elif telescope_class == 'special':
+        instrument_type = '0'
+        mode = '0'
+        bin_x, bin_y = 0, 0
 
     configurations = [
         {
@@ -399,9 +402,12 @@ def get_all_requests_19B(savstr, eventclass, ephem_dict=None):
     return results
 
 
-def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
-                                 max_search_time=None, filtermode='ip',
-                                 telescope_class=None):
+def make_single_request_from_row(
+        r, savstr, eventclass, ephem_dict=None,
+        min_search_time=Time(dt.datetime.today().isoformat()),
+        max_search_time=None, filtermode='ip', telescope_class=None,
+        sites=None
+    ):
     #
     # require the passed dataframe row has the right format.
     #
@@ -489,6 +495,9 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
     elif telescope_class == '1m0':
         sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO',
                  'McDonald Observatory']
+    elif telescope_class == 'special':
+        assert len(sites) >= 1
+        pass
     else:
         raise ValueError
 
@@ -506,6 +515,7 @@ def make_single_request_from_row(r, savstr, eventclass, ephem_dict=None,
                                     r['epoch_unc'], r['depth'],
                                     r['depth_unc'], duration,
                                     r['duration_unc'], sites=sites,
+                                    min_search_time=min_search_time,
                                     max_search_time=max_search_time,
                                     eventclass=eventclass,
                                     filtermode=filtermode,

@@ -1,4 +1,6 @@
 import pandas as pd, numpy as np
+import datetime as dt
+from astropy.time import Time
 import pickle, os
 from copy import deepcopy
 
@@ -17,8 +19,12 @@ RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
 
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
                           eventclasses, overwrite=0, semesterstr='20A',
+                          min_search_time=Time(dt.datetime.today().isoformat()),
                           max_search_time=None, filtermode='ip',
-                          telescope_class='1m0'):
+                          telescope_class='1m0',
+                          sites=['Cerro Tololo', 'Siding Spring Observatory',
+                                 'SAAO', 'McDonald Observatory']
+                         ):
     #
     # savstr: e.g., request_2m_tc_secondary. "ephemupdate" if it is one...
     #
@@ -54,8 +60,9 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
             df = pd.DataFrame(r, index=[0])
             for _, row in df.iterrows():
                 req = make_single_request_from_row(
-                    row, savstr, eventclass, max_search_time=max_search_time,
-                    filtermode=filtermode, telescope_class=telescope_class
+                    row, savstr, eventclass, min_search_time=min_search_time,
+                    max_search_time=max_search_time, filtermode=filtermode,
+                    telescope_class=telescope_class, sites=sites
                 )
             requests.append(req)
 

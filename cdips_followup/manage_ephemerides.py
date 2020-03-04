@@ -34,11 +34,13 @@ from cdips.utils.catalogs import (
 
 from cdips_followup.manage_candidates import validate_source_id_ticid
 
-if socket.gethostname() == 'ast1607-astro':
-    EPHEM_PATH = '/Users/luke/Dropbox/proj/cdips_followup/data/ephemerides/ephemerides.csv'
-elif socket.gethostname() == 'brik':
-    EPHEM_PATH = '/home/luke/Dropbox/proj/cdips_followup/data/ephemerides/ephemerides.csv'
-else:
+HOMEDIR = os.path.expanduser('~')
+EPHEM_PATH = os.path.join(
+    HOMEDIR,
+    'Dropbox/proj/cdips_followup/data/ephemerides/ephemerides.csv'
+)
+
+if not os.path.exists(EPHEM_PATH):
     errmsg = 'Need to define EPHEM_PATH on this machine.'
     raise NotImplementedError(errmsg)
 

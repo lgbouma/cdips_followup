@@ -66,11 +66,10 @@ from cdips_followup.utils import (
 
 HOMEDIR = os.path.expanduser('~')
 
-if socket.gethostname() in ['ast1607-astro', 'brik']:
-    CAND_PATH = os.path.join(
-        HOMEDIR,
-        'Dropbox/proj/cdips_followup/data/candidate_database/candidates.csv'
-    )
+CAND_PATH = os.path.join(
+    HOMEDIR,
+    'Dropbox/proj/cdips_followup/data/candidate_database/candidates.csv'
+)
 
 if not os.path.exists(CAND_PATH):
     errmsg = 'Need to define CAND_PATH on this machine.'
@@ -394,6 +393,28 @@ def query_candidate(source_id=None, ticid=None):
         seldf = df[df.ticid == ticid].iloc[-1]
 
     return dict(seldf)
+
+
+def get_live_candidates(condition=None):
+    """
+    Return list of source_ids from candidates.csv that are "live".
+
+    condition:
+        None: filters on current_priority < 2
+        'SP0SP1': & not pending_spectroscopic_observations contains 'SP2'
+    """
+
+    df = pd.read_csv(CAND_PATH, sep='|')
+
+    sel = df.current_priority < 2
+
+    if condition == 'SP0SP1':
+        sel &= (~df.pending_spectroscopic_observations.str.contains('SP2'))
+
+    print('Got {} live candidates meeting condition {}'.
+          format(len(df[sel]), condition))
+
+    return list(df[sel].source_id)
 
 
 def save_candidates_csv_file(cand_df):

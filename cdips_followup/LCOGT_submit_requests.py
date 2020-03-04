@@ -15,14 +15,11 @@ import numpy as np, pandas as pd
 from astropy.time import Time
 import astropy.units as u
 
-if socket.gethostname() == 'brik':
-    api_file = '/home/luke/.lcogt_api_token'
-elif 'astro' in socket.gethostname():
-    api_file = '/Users/luke/.lcogt_api_token'
-else:
+HOMEDIR = os.path.expanduser('~')
+API_FILE = os.path.join(HOMEDIR, '.lcogt_api_token')
+if not os.path.exists(API_FILE):
     raise NotImplementedError('where to get API file?')
-
-with open(api_file, 'r') as f:
+with open(API_FILE, 'r') as f:
     l = f.readlines()
 token = str(l[0].replace('\n',''))
 
