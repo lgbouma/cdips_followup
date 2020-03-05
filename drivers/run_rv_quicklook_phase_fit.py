@@ -1,5 +1,5 @@
 """
-Environment: py36_emcee2
+Environment: py37_emcee2
 Given RV vs time, does it phase up?
 """
 
@@ -22,11 +22,6 @@ from cdips_followup.rv_fitting import (
 
 def main():
 
-    # TODO: implement
-    # ticid = '59859387'
-    # is_bin = 0
-    # instrument = ['CHIRON','PFS']
-
     ticid = '59859387'
     instrument = 'CHIRON'
     k_prior_init = 500
@@ -45,7 +40,6 @@ def main():
     # k_prior_init = 100
     # log_k_prior_high = np.log(400)
     # log_k_prior_low = np.log(10)
-
 
     if not instrument in ['PFS', 'CHIRON']:
         errmsg = 'need to implement instrument specific read functions'
@@ -85,5 +79,24 @@ def main():
     run_radvel(driver_path, RVRESULTDIR)
 
 
+def manual_main():
+    # If you manually wrote the driver file (rather than automatically
+    # producing it). E.g., right now, this is for multi-instrument fitting.
+    driver_path = '/home/luke/Dropbox/proj/cdips_followup/drivers/radvel_drivers/20200305/TIC59859387.py'
+
+    RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
+                               'spec_analysis', 'multi_instrument', 'phased_RVs')
+    if not os.path.exists(RVRESULTDIR):
+        os.mkdir(RVRESULTDIR)
+
+    run_radvel(driver_path, RVRESULTDIR)
+
+
 if __name__ == "__main__":
-    main()
+    automain = 1
+    manualmain = 0
+
+    if automain:
+        main()
+    if manualmain:
+        manual_main()

@@ -2,9 +2,10 @@
 Given RV vs time, does it phase up?
 """
 import numpy as np, pandas as pd
+import os
+from glob import glob
 
 from radvel import driver
-import os
 import emcee
 if not emcee.__version__ == "2.2.1":
     raise AssertionError('radvel requires emcee v2')
@@ -13,8 +14,6 @@ from cdips.utils import today_YYYYMMDD
 from cdips_followup import __path__
 DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
 DRIVERDIR = os.path.join(os.path.dirname(__path__[0]), 'drivers/radvel_drivers')
-
-
 
 ###########
 # classes #
@@ -34,6 +33,9 @@ class args_object(object):
         self.plotkw = {}
         self.gp = False
 
+#############
+# functions #
+#############
 
 def convert_vels_to_radvel_ready(ticid, is_bin, instrument):
     # "vels" is the Paul Butler pipeline format -> "radvel_vels" to be radvel
@@ -78,6 +80,36 @@ def convert_vels_to_radvel_ready(ticid, is_bin, instrument):
     print('made {}'.format(outpath))
 
     return outpath
+
+
+def merge_to_multiinstrument(ticid, singleinstrfiles=None, datadir=None):
+    """
+    Given single-instrument formatted radvel data CSV files, merge them into a
+    multi-instrument radvel CSV file, which gets saved to `datadir`.
+    """
+
+    ticid = '59859387'
+
+    if singleinstrfiles is None:
+        # can manually modify
+        datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/multi_instrument/radvel_vels/20200305'
+        singleinstrfiles = glob(os.path.join(datadir, '{}_*.csv'.format(ticid)))
+
+    for f in singleinstrfiles:
+        if os.path.exists(f):
+            print('Found {}'.format(f))
+
+    dfs = [pd.read_csv(f) for f in singleinstrfiles]
+
+    scols = ['time', 'mnvel', 'errvel', 'Name', 'source', 'tel']
+
+    dfs = [df[scols] for df in dfs]
+
+    df = pd.concat(dfs)
+
+    outpath = os.path.join(datadir, 'TIC{}.csv'.format(ticid))
+    df.to_csv(outpath, index=False)
+    print('made {}'.format(outpath))
 
 
 def prepare_template(ticid, periodval, t0val, timebase,
