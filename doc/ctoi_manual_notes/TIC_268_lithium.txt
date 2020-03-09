@@ -1,0 +1,64 @@
+TIC 268:
+
+- Gaia-ESO, Randich+18, and Li:
+
+  - were their Pmemb determined from kinematics, or with lithium?
+  "Cluster membership probabilities for the Gaia-ESO Survey targets are derived
+  based on several spectroscopic tracers."
+
+  answer: it's claimed that it'll be explained in some future paper, but it's not.
+
+  - in addition, they targeted stars that they THOUGHT to be members based on
+    previous literature, in particular previousl literature that already
+    filtered for lithium. so any Li-poor member stars (if they exist), should
+    not be in the target star sample. (...)
+
+  ~ how many non-detections in NGC 2516?
+
+  ~ for stars with 5400-5800K, how many of the Randich members showed Li?
+    - A: most. perhaps not all. but given their selection funtion ("stars that
+      already showed Li"), this is meaningless.
+
+  - Reasons to be worried:
+    - some NGC 2516 members in a Teff = 5400 - 5800 K range do show lithium
+      abundances.
+
+  - Reasons to cast doubt:
+    - different instrument! UVES/GIRAFFE vs PFS--> different SNR and resoln.
+    - The Randich+2018 selection function pre-assumed Li-rich stars (section
+      3.1). It can't be used to assess the Q: "if I don't see Li, can it still
+      be a cluster member?"
+
+  - Read Boesgaard+2016 to understand the Hyades state of the art Li
+    measurements.
+
+  - Email Boesgaard asking about intermediate age Li results. 100-300Myr. E.g.,
+    there's Fig 5 of the Berger+ paper showing the Hyades result. Are there
+    younger? Could we have detected that kind of Li EW??? 
+    (Did we have the S/N?)
+
+----------
+
+We don't see Li in the PFS template.
+
+From the Randich+18 Gaia ESO paper, this is a bit worrying, because plenty of
+their 5500 - 6000 K dwarfs in NGC 2516 do show Li. The Boesgaard+ results seem
+to imply that the majority (>90%) of NGC 2516's cluster members should show Li
+in the relevant Teff range.
+
+There is a question though about whether and how planets affect Li. This has
+been debated for quiet sun-like stars. Israelian+09 wrote a nature paper
+claiming planet-hosting stars had less Li than a "planet-free" comparison
+sample, suggesting that more planets == less angular momentum for the star,
+enabling deeper convective mixing. Baumann+10 and Ramirez+12 (a different
+group, including Asplund) argued that Israelian+09 didn't correct for
+age/metallicity properly, and that there was no effect. Delgado Mena+14 (the
+same group as the initial claim) retorted with a "no, look, we are correcting,
+and still see a difference". Figueira+14 and Delgado Mena+15, the same group,
+continued to argue that they saw Li-depletion in planet hosts.
+
+Despite all this, the lack of Li is worrying enough to me that any "triumphant
+youth claim" will have to be toned down with a number of qualifiers. This is
+fine -- and I think motivates the rotation period analysis even more strongly!
+
+
