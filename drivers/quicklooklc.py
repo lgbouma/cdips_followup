@@ -179,16 +179,17 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
 
     ax.scatter(stimes, smags, c='k', s=5)
 
-    tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
+    if not epoch is None:
+        tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
 
-    xlim = ax.get_xlim()
-    ylim = ax.get_ylim()
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
 
-    ax.set_ylim((min(ylim), max(ylim)))
-    ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
-              linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
-    ax.set_ylim((min(ylim), max(ylim)))
-    ax.set_xlim(xlim)
+        ax.set_ylim((min(ylim), max(ylim)))
+        ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
+                  linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+        ax.set_ylim((min(ylim), max(ylim)))
+        ax.set_xlim(xlim)
 
     ax.set_xlabel('time [bjdtdb]')
     ax.set_ylabel('relative '+yval)
@@ -202,10 +203,10 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
 
 def main():
 
-    ticid = 59859387
+    ticid = '220322660'
     # optional #
-    period = 1.12041120
-    epoch = 2458715.57911000
+    period = None #1.12041120
+    epoch = None #2458715.57911000
 
     cdips = 0
     spoc = 0
