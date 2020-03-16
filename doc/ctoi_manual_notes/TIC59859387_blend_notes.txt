@@ -1,0 +1,25 @@
+TIC 598:
+
+    The neighbor star is TIC 767810561 == 5510676828723794176
+
+    It is 3.3 arcsec away. If we had FOCUSED LCOGT observations, instead of
+    DEFOCUSED, I think we might do better. 
+
+    In defocus=2.5 ip band, the target star is 30px across.
+
+    0.39" per pixel.
+
+    So, 11.7 arcseconds across, when it's defocused.
+
+    But in focus, it should be limited by the seeing. I.e., it should be just a
+    few arcseconds.  The trick will be not saturating it.
+
+    30 second exposures at 2.5mm defocus.
+
+    It's a pretty bright star...
+    The LCO exposure time calculator suggests 4 second exposures to avoid
+    saturation.
+    
+    Subsequent SNR will probably be worse.
+
+
