@@ -115,7 +115,8 @@ def merge_to_multiinstrument(ticid, singleinstrfiles=None, datadir=None):
 def prepare_template(ticid, periodval, t0val, timebase,
                      rv_path, period_unc, t0_unc, instrument,
                      k_prior_init=100, log_k_prior_low=np.log(10),
-                     log_k_prior_high=np.log(400)):
+                     log_k_prior_high=np.log(400), allowlineartrend=False):
+
     # make a radvel_driver for this target
 
     template_path = os.path.join(DRIVERDIR, 'template.py')
@@ -132,7 +133,8 @@ def prepare_template(ticid, periodval, t0val, timebase,
         'RV_PATH': rv_path,
         'PERIOD_UNC': str(period_unc),
         'T0_UNC': str(t0_unc),
-        'PFS': str(instrument)
+        'PFS': str(instrument),
+        'ALLOWLINEARTREND': str(bool(allowlineartrend))
     }
 
     for ix, l in enumerate(lines):

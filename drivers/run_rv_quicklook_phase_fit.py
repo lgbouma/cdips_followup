@@ -15,31 +15,33 @@ from cdips_followup.rv_fitting import (
     run_radvel
 )
 
-
 ##########
 # config #
 ##########
 
 def main():
 
-    ticid = '59859387'
-    instrument = 'CHIRON'
-    k_prior_init = 500
-    log_k_prior_high = np.log(1000)
-    log_k_prior_low = np.log(100)
-    is_bin = 0
-    phase_with_prot = 1
+    # ticid = '59859387'
+    # instrument = 'CHIRON'
+    # k_prior_init = 500
+    # log_k_prior_high = np.log(1000)
+    # log_k_prior_low = np.log(100)
+    # is_bin = 0
+    # phase_with_prot = 1
 
     # ticid = '59859387'
     # is_bin = 0
     # instrument = 'PFS'
 
-    # ticid = '268301217'
-    # is_bin = 1
-    # instrument = 'PFS'
-    # k_prior_init = 100
-    # log_k_prior_high = np.log(400)
-    # log_k_prior_low = np.log(10)
+    ticid = '268301217'
+    is_bin = 1
+    instrument = 'PFS'
+    k_prior_init = 100
+    log_k_prior_high = np.log(800)
+    log_k_prior_low = np.log(10)
+    phase_with_prot = 0
+
+    allowlineartrend = 1
 
     if not instrument in ['PFS', 'CHIRON']:
         errmsg = 'need to implement instrument specific read functions'
@@ -61,7 +63,8 @@ def main():
                                        rv_path, period_std, epoch_std,
                                        instrument, k_prior_init=k_prior_init,
                                        log_k_prior_high=log_k_prior_high,
-                                       log_k_prior_low=log_k_prior_low)
+                                       log_k_prior_low=log_k_prior_low,
+                                       allowlineartrend=allowlineartrend)
 
     else:
         # phase with planet orbit
@@ -69,7 +72,8 @@ def main():
                                        rv_path, e['period_unc'], e['epoch_unc'],
                                        instrument, k_prior_init=k_prior_init,
                                        log_k_prior_high=log_k_prior_high,
-                                       log_k_prior_low=log_k_prior_low)
+                                       log_k_prior_low=log_k_prior_low,
+                                       allowlineartrend=allowlineartrend)
 
     RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
                                'spec_analysis', instrument, 'phased_RVs')
