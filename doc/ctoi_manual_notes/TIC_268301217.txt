@@ -1,3 +1,5 @@
+------------------------------------------
+ON LITHIUM
 TIC 268:
 
 - Gaia-ESO, Randich+18, and Li:
@@ -61,4 +63,13 @@ Despite all this, the lack of Li is worrying enough to me that any "triumphant
 youth claim" will have to be toned down with a number of qualifiers. This is
 fine -- and I think motivates the rotation period analysis even more strongly!
 
+------------------------------------------
+OTHER
 
+Did you know that there is a sector 7 light-curve too? Omg!
+Wasn't made in the main CDIPS paper because Kounkel & Covey 2019 was not part
+of target list.
+
+Yep. ELEANOR sector 7 shows a nice consistent spot signal.
+
+Will need to include this for the eventual analysis.
