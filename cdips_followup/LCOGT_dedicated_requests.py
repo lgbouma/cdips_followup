@@ -77,7 +77,8 @@ def given_dedicated_requests_validate_submit(requests,
                                              validate=1, submit=0,
                                              max_duration_error=15,
                                              overwrite_acceptability=None,
-                                             overwrite_ipp=None):
+                                             overwrite_ipp=None,
+                                             raise_error=True):
     """
     Choose desired events to submit, then validate and submit them.
 
@@ -108,7 +109,8 @@ def given_dedicated_requests_validate_submit(requests,
                 print(requestgroup)
             requestgroup, is_modified = (
                 validate_single_request(
-                    requestgroup, max_duration_error=max_duration_error
+                    requestgroup, max_duration_error=max_duration_error,
+                    raise_error=raise_error
                 )
             )
 

@@ -32,7 +32,8 @@ RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
 # functions #
 #############
 
-def validate_single_request(requestgroup, max_duration_error=15):
+def validate_single_request(requestgroup, max_duration_error=15,
+                            raise_error=True):
     """
     Submit the RequestGroup through the "validate" API, cf.
     https://developers.lco.global/#validate-a-requestgroup
@@ -149,7 +150,12 @@ def validate_single_request(requestgroup, max_duration_error=15):
             return requestgroup, is_modified
 
         else:
-            raise NotImplementedError('got new API error: {}'.format(errmsg))
+            if raise_error:
+                raise NotImplementedError('got new API error: {}'.format(errmsg))
+            else:
+                print('WRN!: Got API error: {}'.format(errmsg))
+                print(requestgroup)
+                return np.nan, np.nan
 
     billed_durn = (
         requestgroup_dict['request_durations']['requests'][0]['duration']
