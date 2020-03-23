@@ -41,6 +41,7 @@ def main():
     log_k_prior_low = np.log(10)
     phase_with_prot = 0
 
+    do_mcmc = 0
     allowlineartrend = 1
 
     if not instrument in ['PFS', 'CHIRON']:
@@ -80,7 +81,7 @@ def main():
     if not os.path.exists(RVRESULTDIR):
         os.mkdir(RVRESULTDIR)
 
-    run_radvel(driver_path, RVRESULTDIR)
+    run_radvel(driver_path, RVRESULTDIR, do_mcmc=do_mcmc)
 
 
 def manual_main():
