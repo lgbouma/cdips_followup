@@ -41,20 +41,20 @@ def insert_single_candidate(
 def manual_insert_many():
 
     sourceids = [
-        '5514577414951631488',
-        '1835201042675810688',
-        '2192733400508791552'
+        '5805824988445654144',
+        '5952590785523816960',
+        '5974331982990013696',
+        '6042883578050870912'
     ]
     comments = [
-        "PC. T=9, Rp=4.6, P=3.5, Teff 8500K.",
-        "KC19, needs check. (Interesting cluster). FIES (Buchave) showed vrot",
-        "200km/s. T=8, Rp=4.4, P=2.3d.",
-        "High priority, VPC.",
-        "TRES FR, weak odd-even, Rp=5, P=1.1",
-        "Hot star, needs phot FU"
+        "Rp 6.0, P=4.6, K9V/M0V. d=160pc, bright for M dwarf.",
+        "Rp 14.6, P=3.6, ZariPMS, d=214pc 8% rot amp, Prot 3d. Rstar 1.13; inflated.",
+        "Rp 5.0, P=7.88, ZariPMS. 3 dips including eleanor LC (2 in CDIPS). 120pc.",
+        "Rp 6.8Re, P=0.96d, ZariPMS. 150pc. 5% rot amp, Prot~1d.",
     ]
 
     for s, c in zip(sourceids, comments):
+
         ticid = gaiadr2_to_tic(s)
 
         insert_single_candidate(

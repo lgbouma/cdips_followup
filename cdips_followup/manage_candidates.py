@@ -305,7 +305,8 @@ def insert_candidate(
         'candidate_provenance': candidate_provenance,
         'insert_time': pd.Timestamp.now(),
         'last_update_time': pd.Timestamp.now(),
-        'isretired': isretired
+        'isretired': isretired,
+        'disposition': 'PC'
     }, index=[0])
 
     cand_df = pd.read_csv(CAND_PATH, sep='|')
@@ -440,7 +441,7 @@ def save_candidates_csv_file(cand_df):
         'gaia_Rmag', 'tic_Bmag', 'tic_Vmag', 'tic_Jmag', 'tic_Hmag',
         'tic_Kmag', 'tic_Tmag', 'tic_teff', 'tic_logg', 'tic_rstar',
         'tic_mstar', 'candidate_provenance', 'insert_time', 'last_update_time',
-        'isretired'
+        'isretired', 'disposition'
     ]
 
     cand_df['insert_time'] = pd.to_datetime(cand_df.insert_time)
