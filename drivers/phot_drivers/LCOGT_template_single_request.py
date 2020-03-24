@@ -13,13 +13,13 @@ from cdips_followup.LCOGT_dedicated_requests import (
 def main():
 
     ####################
-    savstr = '20200321_1m_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20200321_tic268_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
-    validate = 1
-    submit = 1
+    validate = 0
+    submit = 0
 
     source_id = '5489726768531119616'
-    max_n_events = 15 # else None. n_events is per eventclass.
+    max_n_events = 20 # else None. n_events is per eventclass.
 
     filtermode = 'zs' # 'zs', 'gp', 'ip'
     telescope_class = '1m0'
@@ -36,7 +36,7 @@ def main():
 
     raise_error = True
     max_duration_error = 20
-    max_search_time = Time('2020-05-01 23:59:00')
+    max_search_time = Time('2020-05-30 23:59:00')
     manual_ephemeris = False
 
     ####################
