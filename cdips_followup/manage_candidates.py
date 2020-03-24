@@ -9,32 +9,28 @@ Contents:
     insert_candidate
     query_candidate
     save_candidates_csv_file
+    update_candidate_rot_params
 
 Use cases:
 
 * Add candidates given source_id or ticid: use `insert_candidate`.
 
-* Update arbitrary columns given new information: use Libreoffice Calc
-  (separated by "|", with "format quoted field as text"). Saving matches the
-  pandas read/write formatting. The following columns are changed the most:
+* Update columns given new information: use Libreoffice Calc (separated by "|",
+with "format quoted field as text"). Saving matches the pandas read/write
+formatting. The following columns are changed the most:
 
     current_priority
     pending_spectroscopic_observations
     pending_photometry_observations
     comment
 
+* Update manually gauged rotation parameters for particular candidates, with
+update_candidate_rot_params. Note that this cannot be done through localc.
+
 * View spreadsheet to select viable candidates. Viewing is done in Libreoffice
 Calc (separated by "|", with "format quoted field as text"), or else in Google
 Spreadsheets. Google Sheets has nice auto-coloring logic, but cannot be used
 for updates. (While Libreoffice calc can).
-
-`candidates.csv` has columns:
-    source_id, ticid, toi, targetid, reference, name, nbhd_rating,
-    init_priority, current_priority, pending_spectroscopic_observations,
-    pending_photometry_observations, comment, gaia_ra, gaia_dec, gaia_plx,
-    gaia_Gmag, gaia_Bmag, gaia_Rmag, tic_Bmag, tic_Vmag, tic_Jmag, tic_Hmag,
-    tic_Kmag, tic_Tmag, tic_teff, tic_logg, tic_rstar, tic_mstar,
-    candidate_provenance, insert_time, last_update_time, isretired
 """
 
 ######################
@@ -45,6 +41,7 @@ import pandas as pd, numpy as np
 import socket, os, csv
 from datetime import datetime
 from parse import search
+from astropy import units as u
 
 from astrobase.services.identifiers import (
     tic_to_gaiadr2, gaiadr2_to_tic
@@ -348,7 +345,9 @@ def format_candidates_file(candidates_df):
     strcols = ['source_id', 'ticid', 'targetid', 'nbhd_rating',
                'pending_spectroscopic_observations',
                'pending_photometry_observations', 'comment',
-               'candidate_provenance', 'insert_time', 'last_update_time']
+               'candidate_provenance', 'insert_time', 'last_update_time',
+               'rot_quality', 'Prot', 'vsini', 'rot_amp', 'Mp_pred',
+               'sig_Prot', 'K_orb', 'K_RM', 'K_orb/sig_Prot', 'K_RM/sig_Prot' ]
     for strcol in strcols:
         candidates_df[strcol] = candidates_df[strcol].astype(str)
 
@@ -401,7 +400,7 @@ def query_candidate(source_id=None, ticid=None):
         seldf = df[df.source_id == source_id].iloc[-1]
 
     if isinstance(ticid, str):
-        seldf = df[df.ticid == ticid].iloc[-1]
+        seldf = df[df.ticid.astype(str) == ticid].iloc[-1]
 
     return dict(seldf)
 
@@ -473,3 +472,113 @@ def save_candidates_csv_file(cand_df):
     )
     print('{}: overwrite {} with updated values'.
           format(datetime.utcnow(), CAND_PATH))
+
+
+def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
+                                Prot='--', vsini='--', rot_amp='--',
+                                Mp_pred='--'):
+    """
+    Inputs:
+        * rot_quality: 0 is good. 1 is so-so. 2 is very uncertain.
+        * ticid or source_id: str.
+        * At least one of Prot or vsini.
+            (E.g., 3.14 and '--', or 42 and None, or 42 and 42)
+        * rot_amp: float
+        * Mp_pred (astropy quantity).
+    """
+
+    if not isinstance(Prot, u.Quantity) and not isinstance(vsini, u.Quantity):
+        msg = 'Need at least one of Prot or vsini.'
+        raise ValueError(msg)
+
+    if not isinstance(rot_amp, float):
+        msg = 'Need rotation amplitude.'
+        raise ValueError(msg)
+
+    if not isinstance(Mp_pred, u.Quantity):
+        msg = 'Need predicted mass.'
+        raise ValueError(msg)
+
+    cdict = query_candidate(source_id=source_id, ticid=ticid)
+
+    # Require finite Rstar, Mstar, P_orb, and Rp for this calculation.
+    keys = ['tic_rstar', 'tic_mstar', 'period', 'rp']
+    for k in keys:
+        if float(cdict[k]) < 0:
+            raise ValueError('Got bad {} for {}'.
+                             format(k, cdict['ticid']))
+
+    update_d = {
+        'rot_quality': rot_quality,
+        'rot_amp': rot_amp,
+        'Mp_pred': Mp_pred.value
+    }
+
+    # Calculate derived parameters
+    # Potentially 'vsini',
+    # definitely 'sig_Prot', 'K_orb', 'K_RM', 'K_orb/sig_Prot', 'K_RM/sig_Prot'
+
+    sini = 1
+    if not isinstance(vsini, u.Quantity):
+        Rstar = float(cdict['tic_rstar'])*u.Rsun
+        vsini = (
+            2*np.pi*Rstar * sini / Prot
+        ).to(u.km/u.s)
+
+    # Spot induced jitter at Prot [in m/s] ~= vsini*rotation amplitude.
+    sig_Prot = (rot_amp * vsini).to(u.m/u.s)
+
+    # K_orb: orbital semi-amplitude. Lovis & Fischer 2010, Eq 14.
+    Mstar = float(cdict['tic_mstar'])*u.Msun
+    P_orb = float(cdict['period'])*u.day
+    Rplanet = float(cdict['rp'])*u.Rearth
+
+    K_orb = (
+        (28.4329*u.m/u.s)*
+        (Mp_pred/(1*u.Mjup))*sini*
+        ((Mp_pred + Mstar)/(1*u.Msun))**(-2/3)*
+        (P_orb/(1*u.year))**(-1/3)
+    ).to(u.m/u.s)
+
+    # K_RM: Rossiter McLaughlin anomaly. Winn 2010, Eq 40.
+    b = 0.7 # standard guess.
+    depth = ((Rplanet/Rstar).cgs.value)**2
+    K_RM = (
+        depth * np.sqrt(1 - b**2) * vsini
+    ).to(u.m/u.s)
+
+    if isinstance(Prot, u.Quantity):
+        update_d['Prot'] = Prot.value
+    else:
+        update_d['Prot'] = Prot
+    update_d['vsini'] = vsini.value
+    update_d['sig_Prot'] = sig_Prot.value
+    update_d['K_orb'] = K_orb.value
+    update_d['K_RM'] = K_RM.value
+    update_d['K_orb/sig_Prot'] = (K_orb/sig_Prot).value
+    update_d['K_RM/sig_Prot'] = (K_RM/sig_Prot).value
+
+    # Prepare the row to be updated.
+
+    df = pd.read_csv(CAND_PATH, sep='|')
+    inds = df.index.where(df.ticid.astype(str) == ticid)
+    update_index = inds[~pd.isnull(inds)][0]
+
+    for k,v in update_d.items():
+        if isinstance(v, str):
+            cdict[k] = v
+        elif isinstance(v, float):
+            if k == 'rot_amp':
+                cdict[k] = '{:.4f}'.format(v)
+            else:
+                cdict[k] = '{:.2f}'.format(v)
+        else:
+            raise NotImplementedError
+
+    updated_row = pd.DataFrame(cdict, index=[update_index])
+
+    df.loc[update_index] = updated_row.values[0]
+
+    df = format_candidates_file(df)
+
+    save_candidates_csv_file(df)
