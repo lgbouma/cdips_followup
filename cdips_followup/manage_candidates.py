@@ -307,6 +307,7 @@ def insert_candidate(
         'last_update_time': pd.Timestamp.now(),
         'isretired': isretired,
         'disposition': 'PC',
+        'rot_quality': '--',
         'Prot': '--',
         'vsini': '--',
         'rot_amp': '--',
@@ -450,8 +451,9 @@ def save_candidates_csv_file(cand_df):
         'gaia_Rmag', 'tic_Bmag', 'tic_Vmag', 'tic_Jmag', 'tic_Hmag',
         'tic_Kmag', 'tic_Tmag', 'tic_teff', 'tic_logg', 'tic_rstar',
         'tic_mstar', 'candidate_provenance', 'insert_time', 'last_update_time',
-        'isretired', 'disposition', 'Prot', 'vsini', 'rot_amp', 'Mp_pred',
-        'sig_Prot', 'K_orb', 'K_RM', 'K_orb/sig_Prot', 'K_RM/sig_Prot'
+        'isretired', 'disposition', 'rot_quality', 'Prot', 'vsini', 'rot_amp',
+        'Mp_pred', 'sig_Prot', 'K_orb', 'K_RM', 'K_orb/sig_Prot',
+        'K_RM/sig_Prot'
     ]
 
     cand_df['insert_time'] = pd.to_datetime(cand_df.insert_time)
