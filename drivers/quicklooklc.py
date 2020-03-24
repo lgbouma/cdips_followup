@@ -203,7 +203,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
 
 def main():
 
-    ticid = '34488204' # '165722603' # '268301217'
+    ticid = '166527623' # '34488204' # '165722603' # '268301217'
     # ticid = '220322660'
     # optional #
     period = None #1.12041120

@@ -17,8 +17,8 @@ import astropy.units as u
 from astrobase.services.identifiers import gaiadr2_to_tic
 
 def main():
-    update_single = 1
-    update_many = 0
+    update_single = 0
+    update_many = 1
 
     if update_single:
         # * rot_quality: 0 is good. 1 is so-so. 2 is very uncertain.
@@ -38,7 +38,35 @@ def main():
         )
 
     if update_many:
-        raise NotImplementedError
+
+        #
+        # this list was a one-off manual update from SP0 targets on 2020/03/24
+        #
+        ticids = ['257605131', '460205581', '360630575', '59859387',
+                  '383390264', '166527623', '62483237', '217933560',
+                  '198262850']
+        rot_qualitys = ['0', '0', '0', '0', '0', '0', '0', '0', '0']
+        Prots = [4.5*u.day, None, 6.5*u.day, None, 1.8*u.day, 1.5*u.day,
+                 8*u.day, 3*u.day, 2.2*u.day]
+        vsinis = [None, 17*u.km/u.s, None, 27.2*u.km/u.s, None, None, None,
+                  None, None]
+        rot_amps = [2.00E-02, 2.00E-02, 1.50E-02, 1.00E-03, 5.00E-03, 2.00E-02,
+                    4.00E-03, 8.00E-02, 4.10E-02]
+        Mp_preds = [15.6*u.Mearth, 49.6*u.Mearth, 6*u.Mearth, 20*u.Mearth,
+                    9.5*u.Mearth, 20*u.Mearth, 10*u.Mearth, 1*u.Mjup,
+                    15*u.Mearth]
+
+        for ticid, rot_quality, Prot, vsini, rot_amp, Mp_pred in zip(
+            ticids, rot_qualitys, Prots, vsinis, rot_amps, Mp_preds
+        ):
+            update_candidate_rot_params(
+                ticid=ticid,
+                rot_quality=rot_quality,
+                Prot=Prot,
+                vsini=vsini,
+                rot_amp=rot_amp,
+                Mp_pred=Mp_pred
+            )
 
 if __name__ == "__main__":
     main()

@@ -519,8 +519,8 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
     # definitely 'sig_Prot', 'K_orb', 'K_RM', 'K_orb/sig_Prot', 'K_RM/sig_Prot'
 
     sini = 1
+    Rstar = float(cdict['tic_rstar'])*u.Rsun
     if not isinstance(vsini, u.Quantity):
-        Rstar = float(cdict['tic_rstar'])*u.Rsun
         vsini = (
             2*np.pi*Rstar * sini / Prot
         ).to(u.km/u.s)
@@ -572,6 +572,8 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
                 cdict[k] = '{:.4f}'.format(v)
             else:
                 cdict[k] = '{:.2f}'.format(v)
+        elif v is None:
+            cdict[k] = '--'
         else:
             raise NotImplementedError
 
