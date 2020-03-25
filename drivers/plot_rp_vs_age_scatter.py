@@ -21,6 +21,7 @@ from matplotlib.ticker import StrMethodFormatter
 
 import pandas as pd, numpy as np
 import os
+from copy import deepcopy
 
 from astropy.table import Table
 from astropy.io import ascii
@@ -34,7 +35,8 @@ from cdips.utils import today_YYYYMMDD
 def arr(x):
     return np.array(x)
 
-def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
+def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
+                           ismanualsubset=0):
 
     #
     # columns described at
@@ -109,17 +111,40 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
         sep='|'
     )
 
-    sel = (
-        ~cdf.isretired
-        &
-        (cdf.current_priority <= 1)
-        &
-        ~pd.isnull(cdf.rp)
-        &
-        cdf.iscdipstarget
-    )
+    if ismanualsubset:
+        manualsourceids = [
+            "4844691297067063424",
+            "5251470948229949568",
+            "5838450865699668736",
+            "5510676828723793920",
+            "5489726768531119616",
+            "5765748511163751936",
+            "6113920619134019456",
+            "6598814657249555328",
+            "5952590785523816960",
+            "5974331982990013696",
+        ]
+        source_df = pd.DataFrame(manualsourceids, columns=['source_id'])
+        cdf.source_id = cdf.source_id.astype(str)
 
-    sdf = cdf[sel]
+        mdf = source_df.merge(cdf, on='source_id')
+
+        sdf = deepcopy(mdf)
+        assert len(sdf) == len(manualsourceids)
+
+    else:
+        # standard selection
+        sel = (
+            ~cdf.isretired
+            &
+            (cdf.current_priority <= 1)
+            &
+            ~pd.isnull(cdf.rp)
+            &
+            cdf.iscdipstarget
+        )
+
+        sdf = cdf[sel]
 
     target_age = np.array(sdf.age)
     target_rp = np.array(sdf.rp)
@@ -301,10 +326,12 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0):
 
 if __name__=='__main__':
 
-    plot_rp_vs_age_scatter(active_targets=0)
-    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0)
-    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=1)
+    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0, ismanualsubset=1)
 
-    plot_rp_vs_age_scatter(active_targets=0, hjs_only=1)
-    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0, hjs_only=1)
+    # plot_rp_vs_age_scatter(active_targets=0)
+    #plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0)
+
+    # plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=1)
+    # plot_rp_vs_age_scatter(active_targets=0, hjs_only=1)
+    # plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0, hjs_only=1)
 
