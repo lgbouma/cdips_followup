@@ -308,12 +308,14 @@ def insert_candidate(
         'Prot': '--',
         'vsini': '--',
         'rot_amp': '--',
-        'Mp_pred': '--',
         'sig_Prot': '--',
+        'Tdur': '--',
+        'sig_Tdur': '--',
+        'Mp_pred': '--',
         'K_orb': '--',
         'K_RM': '--',
         'K_orb/sig_Prot': '--',
-        'K_RM/sig_Prot': '--'
+        'K_RM/sig_Tdur': '--'
     }, index=[0])
 
     cand_df = pd.read_csv(CAND_PATH, sep='|')
@@ -346,8 +348,10 @@ def format_candidates_file(candidates_df):
                'pending_spectroscopic_observations',
                'pending_photometry_observations', 'comment',
                'candidate_provenance', 'insert_time', 'last_update_time',
-               'rot_quality', 'Prot', 'vsini', 'rot_amp', 'Mp_pred',
-               'sig_Prot', 'K_orb', 'K_RM', 'K_orb/sig_Prot', 'K_RM/sig_Prot' ]
+               'rot_quality', 'Prot', 'vsini', 'rot_amp', 'sig_Prot', 'Tdur',
+               'sig_Tdur', 'Mp_pred', 'K_orb', 'K_RM', 'K_orb/sig_Prot',
+               'K_RM/sig_Tdur' ]
+
     for strcol in strcols:
         candidates_df[strcol] = candidates_df[strcol].astype(str)
 
@@ -451,8 +455,8 @@ def save_candidates_csv_file(cand_df):
         'tic_Kmag', 'tic_Tmag', 'tic_teff', 'tic_logg', 'tic_rstar',
         'tic_mstar', 'candidate_provenance', 'insert_time', 'last_update_time',
         'isretired', 'disposition', 'rot_quality', 'Prot', 'vsini', 'rot_amp',
-        'Mp_pred', 'sig_Prot', 'K_orb', 'K_RM', 'K_orb/sig_Prot',
-        'K_RM/sig_Prot'
+        'sig_Prot', 'Tdur', 'sig_Tdur', 'Mp_pred', 'K_orb', 'K_RM',
+        'K_orb/sig_Prot', 'K_RM/sig_Tdur'
     ]
 
     cand_df['insert_time'] = pd.to_datetime(cand_df.insert_time)
@@ -476,13 +480,14 @@ def save_candidates_csv_file(cand_df):
 
 def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
                                 Prot='--', vsini='--', rot_amp='--',
-                                Mp_pred='--'):
+                                Mp_pred='--', Tdur='--'):
     """
     Inputs:
         * rot_quality: 0 is good. 1 is so-so. 2 is very uncertain.
         * ticid or source_id: str.
         * At least one of Prot or vsini.
             (E.g., 3.14 and '--', or 42 and None, or 42 and 42)
+        * Tdur (astropy quantity)
         * rot_amp: float
         * Mp_pred (astropy quantity).
     """
@@ -499,6 +504,10 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
         msg = 'Need predicted mass.'
         raise ValueError(msg)
 
+    if not isinstance(Tdur, u.Quantity):
+        msg = 'Need transit duration.'
+        raise ValueError(msg)
+
     cdict = query_candidate(source_id=source_id, ticid=ticid)
 
     # Require finite Rstar, Mstar, P_orb, and Rp for this calculation.
@@ -507,12 +516,6 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
         if float(cdict[k]) < 0:
             raise ValueError('Got bad {} for {}'.
                              format(k, cdict['ticid']))
-
-    update_d = {
-        'rot_quality': rot_quality,
-        'rot_amp': rot_amp,
-        'Mp_pred': Mp_pred.value
-    }
 
     # Calculate derived parameters
     # Potentially 'vsini',
@@ -525,8 +528,18 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
             2*np.pi*Rstar * sini / Prot
         ).to(u.km/u.s)
 
+    Prot_is_photometric = True
+    if not isinstance(Prot, u.Quantity):
+        Prot = (
+            2*np.pi*Rstar * sini / vsini
+        ).to(u.day)
+        Prot_is_photometric = False
+
     # Spot induced jitter at Prot [in m/s] ~= vsini*rotation amplitude.
     sig_Prot = (rot_amp * vsini).to(u.m/u.s)
+
+    # Spot induced linear trend jitter at Tdur [in m/s]
+    sig_Tdur = sig_Prot * (Tdur.to(u.day) / Prot.to(u.day)).cgs.value
 
     # K_orb: orbital semi-amplitude. Lovis & Fischer 2010, Eq 14.
     Mstar = float(cdict['tic_mstar'])*u.Msun
@@ -547,19 +560,25 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
         depth * np.sqrt(1 - b**2) * vsini
     ).to(u.m/u.s)
 
-    if isinstance(Prot, u.Quantity):
+    update_d = {}
+
+    update_d['rot_quality'] = rot_quality,
+    if Prot_is_photometric:
         update_d['Prot'] = Prot.value
     else:
         update_d['Prot'] = Prot
     update_d['vsini'] = vsini.value
+    update_d['rot_amp'] = rot_amp
     update_d['sig_Prot'] = sig_Prot.value
-    update_d['K_orb'] = K_orb.value
-    update_d['K_RM'] = K_RM.value
-    update_d['K_orb/sig_Prot'] = (K_orb/sig_Prot).value
-    update_d['K_RM/sig_Prot'] = (K_RM/sig_Prot).value
+    update_d['Tdur'] = Tdur.to(u.hour).value
+    update_d['sig_Tdur'] = sig_Tdur.to(u.m/u.s).value
+    update_d['Mp_pred'] Mp_pred.to(u.Mearth).value
+    update_d['K_orb'] = K_orb.to(u.m/u.s).value
+    update_d['K_RM'] = K_RM.to(u.m/u.s).value
+    update_d['K_orb/sig_Prot'] = (K_orb.to(u.m/u.s)/sig_Prot.to(u.m/u.s)).value
+    update_d['K_RM/sig_Tdur'] = (K_RM.to(u.m/u.s)/sig_Tdur.to(u.m/u.s)).value
 
     # Prepare the row to be updated.
-
     df = pd.read_csv(CAND_PATH, sep='|')
     inds = df.index.where(df.ticid.astype(str) == ticid)
     update_index = inds[~pd.isnull(inds)][0]
