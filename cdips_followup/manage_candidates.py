@@ -563,6 +563,8 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
     update_d = {}
 
     if Prot_is_photometric:
+        pass
+    else:
         rot_quality = 'spec'
     update_d['rot_quality'] = rot_quality
     update_d['Prot'] = Prot.to(u.day).value
