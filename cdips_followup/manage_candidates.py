@@ -562,17 +562,16 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
 
     update_d = {}
 
-    update_d['rot_quality'] = rot_quality,
     if Prot_is_photometric:
-        update_d['Prot'] = Prot.value
-    else:
-        update_d['Prot'] = Prot
-    update_d['vsini'] = vsini.value
+        rot_quality = 'spec'
+    update_d['rot_quality'] = rot_quality
+    update_d['Prot'] = Prot.to(u.day).value
+    update_d['vsini'] = vsini.to(u.km/u.s).value
     update_d['rot_amp'] = rot_amp
-    update_d['sig_Prot'] = sig_Prot.value
+    update_d['sig_Prot'] = sig_Prot.to(u.m/u.s).value
     update_d['Tdur'] = Tdur.to(u.hour).value
     update_d['sig_Tdur'] = sig_Tdur.to(u.m/u.s).value
-    update_d['Mp_pred'] Mp_pred.to(u.Mearth).value
+    update_d['Mp_pred'] = Mp_pred.to(u.Mearth).value
     update_d['K_orb'] = K_orb.to(u.m/u.s).value
     update_d['K_RM'] = K_RM.to(u.m/u.s).value
     update_d['K_orb/sig_Prot'] = (K_orb.to(u.m/u.s)/sig_Prot.to(u.m/u.s)).value
@@ -594,6 +593,7 @@ def update_candidate_rot_params(ticid=None, source_id=None, rot_quality='--',
         elif v is None:
             cdict[k] = '--'
         else:
+            import IPython; IPython.embed()
             raise NotImplementedError
 
     updated_row = pd.DataFrame(cdict, index=[update_index])
