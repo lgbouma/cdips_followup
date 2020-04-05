@@ -73,3 +73,31 @@ of target list.
 Yep. ELEANOR sector 7 shows a nice consistent spot signal.
 
 Will need to include this for the eventual analysis.
+
+------------------------------------------
+Lithium cont'd
+
+Sestito et al 2003 is a good counterpoint.
+They took X-RAY SELECTED members of M7.
+For optical counterparts that were "earlier" than say late G, G9, the xray
+study (Prosser 1995) presumed that most of these corresponded to binaries with
+a faint M dwarf secondary providing the xrays.
+The MAJORITY of these stars though showed Li, at EW>50mA. (Like consistent with
+>90%).
+So yes, I think it's worth being a bit concerned about the lack of lithium in
+TIC 268.
+
+------------------------------------------
+
+E.g., Delgado Mena+15 write
+"Furthermore, we compare the observed spectra of several couples of stars with
+very similar parameters that show differences in Li abundances up to 1.6 dex.
+Therefore we show that neither age, mass, nor metallicity of a parent star is
+the only cause for enhanced Li depletion in solar analogues."
+
+"Israelian et al. (2009) confirm former results using the homogeneous and
+high-quality HARPS GTO sample. They find that about 50% of 60 solar analogues
+(Teff = T 2 ± 80 K) without detected planets had A(Li) ≥ 1.5, while only 2 out
+of 24 planet hosts had high Li abundances."
+
+
