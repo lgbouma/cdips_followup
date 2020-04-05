@@ -42,3 +42,6 @@ results/TIC_268*
 *DS_Store*
 drivers/*fits
 results/followup_target_selection*
+notebooks/*png
+notebooks/*fits
+notebooks/.ipynb_checkpoints/*
