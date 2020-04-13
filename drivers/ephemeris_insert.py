@@ -7,8 +7,8 @@ from glob import glob
 import numpy as np, pandas as pd
 
 joel_update = 0
-exofoptess_ctoi_insert = 1
-toi_insert = 0
+exofoptess_ctoi_insert = 0
+toi_insert = 1
 pipe_insert = 0
 
 ##################################################
@@ -38,7 +38,7 @@ if exofoptess_ctoi_insert:
 ########################################################################
 # if you have a list of TOI candidates from exofoptess, want TOI ephem #
 ########################################################################
-idpath = '../data/updated_ephemerides/20200115_toiid_list.txt'
+idpath = '../data/updated_ephemerides/20200413_toiid_list.txt'
 
 if toi_insert:
     with open(idpath, 'r') as f:
