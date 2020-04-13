@@ -6,8 +6,8 @@ import os
 from glob import glob
 import numpy as np, pandas as pd
 
-joel_update = 1
-exofoptess_ctoi_insert = 0
+joel_update = 0
+exofoptess_ctoi_insert = 1
 toi_insert = 0
 pipe_insert = 0
 
@@ -26,7 +26,7 @@ if joel_update:
 ###########################################################################
 # if you have a list of CDIPS candidates from exofoptess, want CTOI ephem #
 ###########################################################################
-idpath = '../data/updated_ephemerides/20200207_targetid_list.txt'
+idpath = '../data/updated_ephemerides/20200413_targetid_list.txt'
 if exofoptess_ctoi_insert:
     with open(idpath, 'r') as f:
         targetid_list = f.readlines()
