@@ -41,16 +41,37 @@ def insert_single_candidate(
 def manual_insert_many():
 
     sourceids = [
-        '5805824988445654144',
+        #'5805824988445654144',
+        #'5838183443852841216',
+        #'5838450865699668736',
+        '5878452576220299520',
+        '5885456190393040512',
+        '5889360246986113024',
+        '5940265981724168064',
+        '5940850376492524800',
         '5952590785523816960',
-        '5974331982990013696',
-        '6042883578050870912'
+        '6024033615115982848',
+        '6037044827717626112',
+        '6042883578050870912',
+        '6637496339607744768',
+        '6658373007402886400'
     ]
+
     comments = [
-        "Rp 6.0, P=4.6, K9V/M0V. d=160pc, bright for M dwarf.",
-        "Rp 14.6, P=3.6, ZariPMS, d=214pc 8% rot amp, Prot 3d. Rstar 1.13; inflated.",
-        "Rp 5.0, P=7.88, ZariPMS. 3 dips including eleanor LC (2 in CDIPS). 120pc.",
-        "Rp 6.8Re, P=0.96d, ZariPMS. 150pc. 5% rot amp, Prot~1d.",
+        #'Hot Jup or Nept, Theia 597 (KC19); cluster existence dubious.',
+        #'Hot Nept, PMS M dwarf (Zari+18), Prot 2d, RotAmp 2%.',
+        #'Warm subNept, Theia 64 (KC19). TOI 1097.',
+        'EB or Warm Jup, NGC 5617 (170Myr, CG18).',
+        'Likely EB, NGC 5925 (180Myr, CG18). Star properties unclear. ',
+        'Likely EB, Alessi 8 (CG18, 120Myr). Prot 6d; dubious bc Teff 6500K.',
+        'Crowded. HJ or EB. Collinder 307 (CG18, 30Myr). pmDec off.',
+        '10 Myr EB or HJ. PMS K dwarf host (NGC 6193, CG18).',
+        'PMS K dwarf HJ (Zari+18). Prot 2d, RotAmp 8%. Good target.',
+        'Likely EB. PMS (Zari+18), Teff 5000K, Prot 5d, ampltiude 2%.',
+        'Hot Jup. PMS M dwarf (Zari+18), Prot 2d?, Tdur a bit long.absHot',
+        'superNept. PMS M dwarf (Zari+18). Prot  0.8d, RotAmp 5%.',
+        'Host is a subgiant field star.',
+        'HATS-47. Theia 1098 (KC19); cluster existence dubious.'
     ]
 
     for s, c in zip(sourceids, comments):
