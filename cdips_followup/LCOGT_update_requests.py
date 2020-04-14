@@ -23,11 +23,8 @@ from cdips.utils import today_YYYYMMDD
 from cdips_followup.LCOGT_make_requests import make_all_request_files
 from cdips_followup.LCOGT_submit_requests import submit_all_requests
 
-if socket.gethostname() == 'brik':
-    api_file = '/home/luke/.lcogt_api_token'
-elif 'astro' in socket.gethostname():
-    api_file = '/Users/luke/.lcogt_api_token'
-else:
+api_file = os.path.join(os.path.expanduser('~'), '.lcogt_api_token')
+if not os.path.exists(api_file):
     raise NotImplementedError('where to get API file?')
 
 with open(api_file, 'r') as f:
