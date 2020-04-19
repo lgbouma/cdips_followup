@@ -26,11 +26,15 @@ from astrobase.services.tesslightcurves import (
 )
 
 
-def get_data(ticid, cdips=1, spoc=0, eleanor=0):
+def get_data(ticid, cdips=1, spoc=0, eleanor=0, cdipspre=0):
 
     outdir = '../results/quicklooklc/TIC{}'.format(ticid)
     if not os.path.exists(outdir):
         os.mkdir(outdir)
+
+    if cdipspre:
+        # e.g., 5996151172781298304_llc.fits
+        lcfiles = glob(os.path.join(outdir,'*_llc.fits'))
 
     if cdips:
         lcfiles = glob(os.path.join(outdir,'hlsp_cdips*fits'))
@@ -57,7 +61,7 @@ def get_data(ticid, cdips=1, spoc=0, eleanor=0):
     return data
 
 
-def explore_mag_lightcurves(data):
+def explore_mag_lightcurves(data, ticid):
 
     for yval in ['TFA1','TFA2','TFA3','IRM1','IRM2','IRM3']:
 
@@ -65,8 +69,8 @@ def explore_mag_lightcurves(data):
         for ix, d in enumerate(data):
 
             savpath = (
-                '../../results/TIC308538095/mag_lightcurve_{}_{}.png'.
-                format(yval, ix)
+                '../results/quicklooklc/TIC{}/mag_lightcurve_{}_{}.png'.
+                format(ticid, yval, ix)
             )
             if os.path.exists(savpath):
                 print('found {}, continue'.format(savpath))
@@ -97,8 +101,8 @@ def explore_mag_lightcurves(data):
         )
 
         savpath = (
-            '../../results/TIC308538095/mag_lightcurve_{}_allsector.png'.
-            format(yval)
+            '../results/quicklooklc/TIC{}/mag_lightcurve_{}_allsector.png'.
+            format(ticid, yval)
         )
         if os.path.exists(savpath):
             print('found {}, continue'.format(savpath))
@@ -109,19 +113,18 @@ def explore_mag_lightcurves(data):
 
         ax.scatter(stimes, smags, c='k', s=5)
 
-        period = 11.69201165
-        epoch = 2458642.44550000
-
-        tra_times = epoch + np.arange(-100,100,1)*period
+        # period = 11.69201165
+        # epoch = 2458642.44550000
+        # tra_times = epoch + np.arange(-100,100,1)*period
 
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
 
-        ax.set_ylim((min(ylim), max(ylim)))
-        ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
-                  linestyle='--', zorder=-2, lw=2, alpha=0.3)
-        ax.set_ylim((min(ylim), max(ylim)))
-        ax.set_xlim(xlim)
+        # ax.set_ylim((min(ylim), max(ylim)))
+        # ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
+        #           linestyle='--', zorder=-2, lw=2, alpha=0.3)
+        # ax.set_ylim((min(ylim), max(ylim)))
+        # ax.set_xlim(xlim)
 
         ax.set_xlabel('time [bjdtdb]')
         ax.set_ylabel('relative '+yval)
@@ -203,7 +206,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
 
 def main():
 
-    ticid = '166527623' # '34488204' # '165722603' # '268301217'
+    ticid = '279819212' # '268016868' # '166527623' # '34488204' # '165722603' # '268301217'
     # ticid = '220322660'
     # optional #
     period = None #1.12041120
@@ -211,22 +214,24 @@ def main():
 
     cdips = 0
     spoc = 0
-    eleanor = 1
+    eleanor = 0
+    cdipspre = 1
 
-    do_mag_lcs = 0
-    do_eleanor_lcs = 1
+    do_mag_lcs = 1
+    do_eleanor_lcs = 0
     do_flux_lcs = 0
     do_detrending = 0
     do_pf = 0
     do_riverplot = 0
 
-    data = get_data(ticid, cdips=cdips, spoc=spoc, eleanor=eleanor)
+    data = get_data(ticid, cdips=cdips, spoc=spoc, cdipspre=cdipspre,
+                    eleanor=eleanor)
 
     if do_eleanor_lcs:
         explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch)
 
     if do_mag_lcs:
-        explore_mag_lightcurves(data)
+        explore_mag_lightcurves(data, ticid)
 
     if do_flux_lcs:
         explore_flux_lightcurves(data, iscdips=cdips)
