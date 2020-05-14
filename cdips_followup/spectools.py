@@ -143,6 +143,28 @@ def read_veloce(spectrum_path, start=0, end=None, return_err=False):
         return flux, wav
 
 
+def read_hires(spectrum_path, start=0, end=None, is_registered=1, return_err=1):
+    """
+    Read HIRES FITS file. Assume was "registered" (blaze-corrected, and then
+    shifted).
+    """
+    hdul = fits.open(spectrum_path)
+
+    if is_registered:
+        flux = hdul[3].data[:, start:end]
+        flux_err = hdul[4].data[:, start:end]
+        wav = hdul[5].data[:, start:end]
+    else:
+        flux = hdul[0].data[:, start:end]
+        flux_err = hdul[1].data[:, start:end]
+        wav = hdul[2].data[:, start:end]
+
+    if return_err:
+        return flux, wav, flux_err
+    else:
+        return flux, wav
+
+
 def read_pfs(spectrum_path, wvlen_soln, verbose=False, is_template=False):
     """
     Read PFS IDL SAV file.
@@ -243,6 +265,13 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
     f,ax = plt.subplots(figsize=(10,3))
     ax.plot(wav, flx, c='k', zorder=3, lw=0.2)
 
+    y_90 = np.nanpercentile(flx, 90)
+    y_10 = np.nanpercentile(flx, 10)
+    y_median = np.nanmedian(flx)
+    y_diff = y_90 - y_10
+
+    # ax.set_ylim( (y_median-1.1*y_diff, y_median+1.1*y_diff) )
+
     ax.set_xlabel('wavelength [angstrom]')
     ax.set_ylabel('flux [e-]')
 
@@ -303,6 +332,15 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
                                   is_template=is_template)
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path)
+    elif 'hires' in spectrum_path.lower():
+        if 'registered' in spectrum_path:
+            flx_2d, wav_2d = read_hires(spectrum_path, is_registered=1,
+                                        return_err=0)
+        elif 'deblazed' in spectrum_path:
+            flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0,
+                                        return_err=0)
+        else:
+            raise NotImplementedError
     else:
         raise NotImplementedError
 
@@ -314,6 +352,9 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
         elif 'Veloce' in spectrum_path:
             start = 200
             end = -200
+        elif 'hires' in spectrum_path:
+            start = 10
+            end = -10
 
         flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
 
