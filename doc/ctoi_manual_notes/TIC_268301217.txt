@@ -25,6 +25,10 @@ TIC 268:
     - some NGC 2516 members in a Teff = 5400 - 5800 K range do show lithium
       abundances.
 
+    - Pleiades members (which are ~coeval in Gyro space with 2516) seem to have
+      consistently detectable lithium too. See Jones+1996, Soderblom+1993, and
+      similar studies. (They do report upper limits...)
+
   - Reasons to cast doubt:
     - different instrument! UVES/GIRAFFE vs PFS--> different SNR and resoln.
     - The Randich+2018 selection function pre-assumed Li-rich stars (section
@@ -100,4 +104,29 @@ high-quality HARPS GTO sample. They find that about 50% of 60 solar analogues
 (Teff = T 2 ± 80 K) without detected planets had A(Li) ≥ 1.5, while only 2 out
 of 24 planet hosts had high Li abundances."
 
+
+------------------------------------------
+Lithium re cont'd from George Zhou correspondence
+
+Hi George,
+
+Thought you might appreciate a followup on this. I think Sestito et al 2003
+provide the beginning of an answer. They took X-ray selected members of M7.
+Since the cluster is like ~200-250 Myr old, many of these stars were binaries
+in which the primary provides most of the light, and there's an X-ray bright M
+dwarf secondary. At least like 80-90% of the "solar analogs" in this sample
+(Teff 5600 - 5900K) showed Li EW >~ 50 mA.
+
+So it seems that the answer to my original (perhaps poorly expressed) question
+of "what fraction of kinematically or x-ray selected solar-analog members show
+Li, once it starts being depleted?" is ">90%, at least at the age of M7".
+
+The annoying thing is that the star that prompted me to ask the question
+(TIC268301217, Teff 5700K, supposed age ~300Myr, Li EW ~< 20 mA) likely has a
+HJ. There's a rather large body of work that indicates the presence of giant
+planets is anti-correlated with Li abundance (e.g., Delgado-Mena 2014). The
+opposite of the usual planet-metallicity correlation.
+
+Anyway, thanks for entertaining this perhaps poorly posed question --
+Luke
 
