@@ -45,3 +45,4 @@ results/followup_target_selection*
 notebooks/*png
 notebooks/*fits
 notebooks/.ipynb_checkpoints/*
+doc/2020B_observing*
