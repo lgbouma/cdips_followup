@@ -155,6 +155,11 @@ def get_event_observability(
 
     is_obs_df = pd.DataFrame(is_obs_dict)
 
+    is_obs_df['ing'] = ing_egr[:,0]
+    is_obs_df['egr'] = ing_egr[:,1]
+    is_obs_df['isoing'] = Time(ing_egr[:,0], format='iso')
+    is_obs_df['isoegr'] = Time(ing_egr[:,1], format='iso')
+
     # this function returns the observable events that are LONGEST. e.g.,
     # during an OIBEO transit you COULD observe just OIB, but why would you?
 
