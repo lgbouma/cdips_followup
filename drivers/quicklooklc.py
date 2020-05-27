@@ -39,7 +39,7 @@ def get_data(ticid, cdips=1, spoc=0, eleanor=0, cdipspre=0):
     if cdips:
         lcfiles = glob(os.path.join(outdir,'hlsp_cdips*fits'))
         if len(lcfiles) == 0:
-            lcfiles = get_hlsp_lightcurves(tic_id, hlsp_products=['CDIPS'],
+            lcfiles = get_hlsp_lightcurves(ticid, hlsp_products=['CDIPS'],
                                            download_dir=outdir, verbose=True)
 
     if spoc:
@@ -63,7 +63,7 @@ def get_data(ticid, cdips=1, spoc=0, eleanor=0, cdipspre=0):
 
 def explore_mag_lightcurves(data, ticid):
 
-    for yval in ['TFA1','TFA2','TFA3','IRM1','IRM2','IRM3']:
+    for yval in ['TFA1','TFA2','TFA3','IRM1','IRM2','IRM3','PCA1','PCA2','PCA3']:
 
         times, mags= [], []
         for ix, d in enumerate(data):
@@ -206,16 +206,16 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
 
 def main():
 
-    ticid = '279819212' # '268016868' # '166527623' # '34488204' # '165722603' # '268301217'
+    ticid =  '34488204' # '279819212' # '268016868' # '166527623' # '34488204' # '165722603' # '268301217'
     # ticid = '220322660'
     # optional #
     period = None #1.12041120
     epoch = None #2458715.57911000
 
-    cdips = 0
+    cdips = 1
     spoc = 0
     eleanor = 0
-    cdipspre = 1
+    cdipspre = 0
 
     do_mag_lcs = 1
     do_eleanor_lcs = 0
