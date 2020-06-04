@@ -16,6 +16,7 @@ from copy import deepcopy
 
 from cdips.plotting import vetting_pdf as vp
 from cdips.lcproc import mask_orbit_edges as moe
+from cdips.lcproc import detrend as dtr
 
 from numpy.polynomial.legendre import Legendre
 
@@ -43,7 +44,7 @@ def get_data(ticid, cdips=1, spoc=0, eleanor=0, cdipspre=0):
                                            download_dir=outdir, verbose=True)
 
     if spoc:
-        raise NotImplementedError
+        lcfiles = get_two_minute_spoc_lightcurves(ticid, download_dir=outdir)
 
     if eleanor:
         lcfiles = glob(os.path.join(outdir,'hlsp_eleanor*fits'))
@@ -203,23 +204,130 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
     print('made {}'.format(savpath))
 
 
+def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
+                            detrend=False, window_length=None):
+
+    if not isspoc:
+        raise NotImplementedError
+
+    yval = 'PDCSAP_FLUX'
+
+    times, fluxs= [], []
+    for ix, d in enumerate(data):
+
+        outdir = '../results/quicklooklc/TIC{}'.format(ticid)
+        savpath = os.path.join(outdir, 'spoc_lightcurve_{}.png'.format(ix))
+        if detrend:
+            savpath = os.path.join(outdir, 'spoc_lightcurve_detrended_{}.png'.format(ix))
+
+        plt.close('all')
+        f,ax = plt.subplots(figsize=(16*2,4*1.5))
+
+        sel = (d['QUALITY'] == 0) & (d[yval] > 0)
+
+        x_obs = d['TIME'][sel]
+        y_obs = d[yval][sel] / np.nanmedian(d[yval][sel])
+
+        if detrend:
+            y_obs, _ = dtr.detrend_flux(x_obs, y_obs)
+
+        ax.scatter(x_obs, y_obs, c='k', s=4)
+
+        times.append( x_obs )
+        fluxs.append( y_obs )
+
+        ax.set_xlabel('time [bjdtdb]')
+        ax.set_ylabel(yval)
+        ylim = ax.get_ylim()
+
+        ax.set_title(ix)
+
+        iqr = (np.nanpercentile(y_obs, 75) -
+               np.nanpercentile(y_obs, 25))
+        ylower = np.nanmedian(y_obs) - 2.5*iqr
+        yupper = np.nanmedian(y_obs) + 2.5*iqr
+        ax.set_ylim((ylower, yupper))
+
+        if not epoch is None:
+            tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
+
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+
+            ax.set_ylim((min(ylim), max(ylim)))
+            ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
+                      linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+            ax.set_ylim((min(ylim), max(ylim)))
+            ax.set_xlim(xlim)
+
+        f.savefig(savpath, dpi=300, bbox_inches='tight')
+        print('made {}'.format(savpath))
+
+    times = np.hstack(np.array(times).flatten())
+    fluxs = np.hstack(np.array(fluxs).flatten())
+
+    stimes, smags, _ = lcmath.sigclip_magseries(
+        times, fluxs, np.ones_like(fluxs), sigclip=[8,3], iterative=True,
+        magsarefluxes=True
+    )
+
+    savpath = os.path.join(
+        outdir, 'spoc_lightcurve_{}_allsector.png'.  format(yval)
+    )
+    if detrend:
+        savpath = os.path.join(
+            outdir, 'spoc_lightcurve_detrended_{}_allsector.png'.  format(yval)
+        )
+
+    plt.close('all')
+    f,ax = plt.subplots(figsize=(16,4))
+
+    ax.scatter(stimes, smags, c='k', s=5)
+
+    if not epoch is None:
+        tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
+
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+
+        ax.set_ylim((min(ylim), max(ylim)))
+        ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
+                  linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+        ax.set_ylim((min(ylim), max(ylim)))
+        ax.set_xlim(xlim)
+
+    ax.set_xlabel('time [bjdtdb]')
+    ax.set_ylabel('relative '+yval)
+
+    ax.set_title(ix)
+
+    f.savefig(savpath, dpi=400, bbox_inches='tight')
+    print('made {}'.format(savpath))
+
+
+
 
 def main():
 
-    ticid =  '34488204' # '279819212' # '268016868' # '166527623' # '34488204' # '165722603' # '268301217'
+    ticid =  '34488204' #
+    ticid = '389423271' # speedy mic
+    ticid = '245821931' # hyades 40pc 2Re maybe from s5
+    ticid = '245833065' # another hyad with snr=7.5
     # ticid = '220322660'
     # optional #
-    period = None #1.12041120
-    epoch = None #2458715.57911000
+    period = None
+    epoch = None
 
-    cdips = 1
-    spoc = 0
+    cdips = 0
+    spoc = 1
     eleanor = 0
     cdipspre = 0
 
-    do_mag_lcs = 1
+    detrend = 1
+
+    do_mag_lcs = 0
     do_eleanor_lcs = 0
-    do_flux_lcs = 0
+    do_flux_lcs = 1
     do_detrending = 0
     do_pf = 0
     do_riverplot = 0
@@ -234,15 +342,15 @@ def main():
         explore_mag_lightcurves(data, ticid)
 
     if do_flux_lcs:
-        explore_flux_lightcurves(data, iscdips=cdips)
+        explore_flux_lightcurves(data, ticid, isspoc=spoc, period=period,
+                                 epoch=epoch)
+        if detrend:
+            explore_flux_lightcurves(data, ticid, isspoc=spoc, period=period,
+                                     epoch=epoch, detrend=detrend)
 
     if do_pf:
         do_phasefolds(data)
 
-    if do_detrending:
-        #for wl in [99]:
-        for wl in [0.05,0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5]:
-            detrend_lightcurve_wotan(data, window_length=wl, iscdips=cdips)
     if do_riverplot:
         make_riverplot(data)
 
