@@ -512,7 +512,9 @@ def main():
     # ticid = '268397995' # V830 Tau (claimed RV planet, rot period 2.741d)
     # ticid = '460950389' # IC 2602, PATHOS-31
     # ticid = '220322660'
-    ticid = '11286209' # sigma Ori E
+    # ticid = '11286209' # sigma Ori E
+    ticid = '411614400' # weirdo from s11
+    ticid = '11893637' # GJ 1151
     # optional #
     period = None
     epoch = None
