@@ -209,7 +209,11 @@ def insert_candidate(
         }
 
     if isinstance(plproperties_r, pd.DataFrame):
-        assert len(plproperties_r) == 1
+        assert len(plproperties_r) != 0
+        if len(plproperties_r) > 1:
+            print(42*'-')
+            print(f'WRN! Got multiple catalog entries for TIC{ticid}')
+            print(42*'-')
         plproperties_r = plproperties_r.iloc[0]
 
         for col in plproperties_r.index:
