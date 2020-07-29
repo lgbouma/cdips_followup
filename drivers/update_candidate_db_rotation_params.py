@@ -1,6 +1,6 @@
 """
 One-time updates of stellar rotation parameters for planet candidates in
-candidates.csv
+candidates.csv. Used for RM predictions.
 
 The relevant manually updated parameters are:
     'rot_quality', 'Prot', 'vsini', 'rot_amp', 'Mp_pred'
@@ -17,8 +17,8 @@ import astropy.units as u
 from astrobase.services.identifiers import gaiadr2_to_tic
 
 def main():
-    update_single = 0
-    update_many = 1
+    update_single = 1
+    update_many = 0
 
     if update_single:
         # * rot_quality: 0 is good. 1 is so-so. 2 is very uncertain.
@@ -29,13 +29,13 @@ def main():
         # * Mp_pred (astropy quantity).
 
         update_candidate_rot_params(
-            ticid='268301217',
+            ticid='146520535',
             rot_quality='0',
-            Prot=7.0*u.day,
-            vsini=None,  # quantity, None, or '--'
-            rot_amp=1.1e-2,
-            Mp_pred=1*u.Mjup,
-            Tdur=1.38*u.hour
+            Prot=3.41*u.day,#None,#7.0*u.day,
+            vsini=None, # 54*u.km/u.s,  # quantity, None, or '--'
+            rot_amp=3.1e-2,
+            Mp_pred=0.1*u.Mjup,
+            Tdur=0.143*u.day
         )
 
     if update_many:
