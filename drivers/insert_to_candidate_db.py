@@ -55,12 +55,18 @@ def manual_insert_many():
         #'6042883578050870912',
         #'6637496339607744768',
         #'6658373007402886400',
-        '5239758155778687360',
-        '6539037542941988736',
-        '2974906868489280768',
-        '1476485996883837184',
-        '875071278432954240',
+        #'5239758155778687360',
+        #'6539037542941988736',
+        #'2974906868489280768',
+        #'1476485996883837184',
+        #'875071278432954240',
         #'6113920619134019456',
+        '2003624341205485056',
+        '2067161441672227968',
+        '3033676761434888320',
+        '5254512781523942912',
+        '5290752787819629056',
+        '5312912791851427840',
     ]
 
     comments = [
@@ -78,12 +84,18 @@ def manual_insert_many():
         #'superNept. PMS M dwarf (Zari+18). Prot  0.8d, RotAmp 5%.',
         #'Host is a subgiant field star.',
         #'HATS-47. Theia 1098 (KC19); cluster existence dubious.',
-        'PATHOS-31: IC2602 Rp=4Re NON-GRAZING candidate. High quality.',
-        'TOI-251: Zhou+20 shows <200 Myr + validated. Rp=2.7, P=5d.',
-        'TOI-942: Zhou+20 shows <100 Myr + 2 planet validated. Both RM good.',
-        'TOI-1807 + TIC-27491137. 3 planets transiting 2749, 1 USP transiting 1807. Age 100-200Myr, in a Gaia comoving group. Hughes & C. Hedges, in prep.',
-        'TOI 1726, Mann+20 THYME3 confirmed. UMa MG member (400 Myr). V=6.9. Dai+20 submitted RM measurement.',
+        #'PATHOS-31: IC2602 Rp=4Re NON-GRAZING candidate. High quality.',
+        #'TOI-251: Zhou+20 shows <200 Myr + validated. Rp=2.7, P=5d.',
+        #'TOI-942: Zhou+20 shows <100 Myr + 2 planet validated. Both RM good.',
+        #'TOI-1807 + TIC-27491137. 3 planets transiting 2749, 1 USP transiting 1807. Age 100-200Myr, in a Gaia comoving group. Hughes & C. Hedges, in prep.',
+        #'TOI 1726, Mann+20 THYME3 confirmed. UMa MG member (400 Myr). V=6.9. Dai+20 submitted RM measurement.',
         #'HIP67522b, Rizzuto+20 THYME2 validated (b near 0). Claimed is HJ; but no mass. No RM yet either.'
+        'NEB 34arcsec W (SG1).  KC19 Cluster might exist. HR diagram decently coeval.',
+        'NEB 22arcsec NW (SG1). Group definitely real and KC19 membership seems good. MIT notes that Could be on neighbor',
+        'SP2, PP2. Star is far from cluster core but could be part of fuzz-like population. Check Prot-Teff of the fuzz to see if the Kounkel members are real. FIES(1) shows Vrot=160km/s.',
+        'SP0: check for Li. PP0: get multicolor zs, gp, ip. It seems to be grazing (boo). CDIPS vetting report looks good (not sure why missed). MIT odd-even is 4sigma --perhaps bc bad initial detrending. Prot is 2.5d for a 6000K star, correct for IC2602.  KC19 IC2602 structure seems clearly wrong because of one merged group at RA/dec 130-55. But this star seems like it could be in the outskirts of the main known cluster. MIT notes crowded field. No 2 min available. ',
+        'NEB with eccentric secondary eclipse (SG2). Source is 17" SW. KC19 Membership seems good. MIT notes 9.9 day eccentric system with separations between events of ~4.72; 5.16',
+        'SP2, PP2. MIT notes: probably an EB. Clearly not CG18 member. KC19s IC2602 structure seems wrong because of one merged group at RA/dec 130-55. But the HR diagram is pretty clean. So maybe the two populations are actually related. Pop Needs Prot sequence. Star is just at cluster turnoff, and is in the weird non-close population.'
     ]
 
     for s, c in zip(sourceids, comments):
