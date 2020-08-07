@@ -31,20 +31,20 @@ import astropy.units as u
 from astroquery.nasa_exoplanet_archive import NasaExoplanetArchive
 
 from cdips.utils import today_YYYYMMDD
-
-def arr(x):
-    return np.array(x)
+from numpy import array as arr
+from aesthetic.plot import set_style
 
 def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
-                           ismanualsubset=0):
+                           ismanualsubset=0, isvalidated=0, ispublictalk=0):
 
     #
     # columns described at
     # https://exoplanetarchive.ipac.caltech.edu/docs/API_exoplanet_columns.html
     #
-    ea_tab = NasaExoplanetArchive.get_confirmed_planets_table(
-        all_columns=True, show_progress=True
+    ea_tab = NasaExoplanetArchive.query_criteria(
+        table="exoplanets", select="*", cache=True
     )
+
 
     #
     # get systems with finite ages (has a value, and +/- error bar)
@@ -83,6 +83,7 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
     # plot age vs rp. (age is on y axis b/c it has the error bars, and I at
     # least skimmed the footnotes of Hogg 2010)
     #
+    set_style()
     f,ax = plt.subplots(figsize=(4,3))
 
     label = (
@@ -90,14 +91,19 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
         r"$\langle \sigma_{{\mathrm{{age}}}} \rangle$ = "+
         "{:.1f} Gyr".format(np.median(age_errs))
     )
+    color = 'C1'
     if hjs_only:
         label = (
             'Known hot Jupiters'
         )
         rp /= 11.2089 # used jupiter radii
+        color = 'C1'
+    if ispublictalk:
+        label = 'Known'
+        color = 'lightgray'
 
     ax.scatter(age, rp,
-               color='C1', s=3, zorder=1, marker='o', linewidth=0,
+               color=color, s=3, zorder=1, marker='o', linewidth=0,
                label=label, alpha=1)
 
     #
@@ -111,46 +117,41 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
         sep='|'
     )
 
+    if isvalidated:
+        valsourceids = [
+            "5251470948229949568", # TOI837
+        ]
+        val_df = pd.DataFrame(valsourceids, columns=['source_id'])
+        cdf.source_id = cdf.source_id.astype(str)
+        mdf = val_df.merge(cdf, on='source_id')
+        vdf = deepcopy(mdf)
+        assert len(vdf) == len(valsourceids)
+
     if ismanualsubset:
         manualsourceids = [
-            "5523449717870971776",
+            # "5523449717870971776", # probable EB
             "5489726768531119616",
-            "5256717749007641344",
-            "5596735638203997824",
             "5510676828723793920",
             "1835201042675810688",
             "6598814657249555328",
             "5557593814516968960",
             "5952590785523816960",
             "5514577414951631488",
-            "5251470948229949568",
             "4844691297067063424",
             "5525188767305211904",
             "5838450865699668736",
             "5765748511163751936",
-            "6113920619134019456",
+            # "6113920619134019456", # Rizzuto+20 thyme2
             "6042883578050870912",
-            "5974331982990013696",
+            # "5974331982990013696", # suggestive, not good enough for PC
             "5519619186857962112",
-            "5838183443852841216"
+            "5838183443852841216",
+            "5239758155778687360",
+            "5254512781523942912"
         ]
-        # manualsourceids = [
-        #     "4844691297067063424",
-        #     "5251470948229949568",
-        #     "5838450865699668736",
-        #     "5510676828723793920",
-        #     "5489726768531119616",
-        #     "5765748511163751936",
-        #     "6113920619134019456",
-        #     "6598814657249555328",
-        #     "5952590785523816960",
-        #     "5974331982990013696",
-        # ]
         source_df = pd.DataFrame(manualsourceids, columns=['source_id'])
         cdf.source_id = cdf.source_id.astype(str)
-
         mdf = source_df.merge(cdf, on='source_id')
-
         sdf = deepcopy(mdf)
         assert len(sdf) == len(manualsourceids)
 
@@ -250,10 +251,28 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
                 zorder=3, marker='*', linewidth=0, label=label
             )
         else:
-            ax.scatter(
-                target_age, target_rp, color='C0', s=25,
-                zorder=3, marker='*', linewidth=0, label=label
-            )
+            if isvalidated:
+                if len(vdf) > 1:
+                    raise NotImplementedError('might want to just assign ages')
+                val_age = 4e7/1e9
+                val_rp = np.array(vdf.rp)
+
+                ax.plot(
+                    val_age, val_rp, mew=0.5, markerfacecolor='yellow',
+                    markersize=12, marker='*', color='k', lw=0,
+                    label='Validated', zorder=4
+                )
+
+                ax.scatter(
+                    target_age, target_rp, s=40, color='C0',
+                    zorder=3, marker='*', linewidth=0, label="Potential"
+                )
+
+            else:
+                ax.scatter(
+                    target_age, target_rp, color='C0', s=25,
+                    zorder=3, marker='*', linewidth=0, label=label
+                )
 
         sel = (~pd.isnull(target_age)) & (~pd.isnull(target_rp))
         print('{} targets w/ finite ages and radii'.
@@ -286,10 +305,11 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
             #            linewidth=0, fmt='*', ms=0, zorder=2, color='black',
             #            alpha=0.5)
         else:
-            ax.errorbar(target_age, target_rp, yerr=target_rp_unc,
-                        elinewidth=0.3, ecolor='k', capsize=0, capthick=0,
-                        linewidth=0, fmt='*', ms=0, zorder=2, color='black',
-                        alpha=0.5)
+            if not ispublictalk:
+                ax.errorbar(target_age, target_rp, yerr=target_rp_unc,
+                            elinewidth=0.3, ecolor='k', capsize=0, capthick=0,
+                            linewidth=0, fmt='*', ms=0, zorder=2, color='black',
+                            alpha=0.5)
 
     # flip default legend order
     handles, labels = ax.get_legend_handles_labels()
@@ -304,15 +324,12 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
 
     leg.get_frame().set_linewidth(0.5)
 
-    ax.set_xlabel('Age [billion years]')
+    ax.set_xlabel('Planet age [billion years]')
     ax.set_ylabel('Planet size [Earth radii]')
     if hjs_only:
         ax.set_ylabel('Planet size [Jupiter radii]')
 
     ax.set_xlim([6e-3, 17])
-
-    ax.get_yaxis().set_tick_params(which='both', direction='in')
-    ax.get_xaxis().set_tick_params(which='both', direction='in')
 
     if not hjs_only:
         ax.set_ylim([0.13, 85])
@@ -322,7 +339,6 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
         ax.set_yscale('linear')
 
     ax.set_xscale('log')
-    ax.tick_params(top=True, bottom=True, left=True, right=True, which='both')
 
     if hjs_only:
         ax.xaxis.set_major_formatter(StrMethodFormatter('{x:.2g}'))
@@ -336,6 +352,10 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
         savstr += '_split_ctoi'
     if hjs_only:
         savstr += '_onlyhjs'
+    if ispublictalk:
+        savstr += '_ispublic'
+    if isvalidated:
+        savstr += '_hasvalidated'
 
     outpath = (
         '../results/rp_vs_age_scatter/rp_vs_age_scatter_{}{}.png'.
@@ -348,12 +368,16 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
 
 if __name__=='__main__':
 
-    plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0, ismanualsubset=1)
+    active_targets = 1  # show current follow-up targets.
+    ismanualsubset = 1  # if false, will show all current follow-up targets.
+    isvalidated = 1     # whether to include CDIPS paper as their own thing.
+    split_toi_ctoi = 0  # whether to split based on TOI/CTOI
+    hjs_only = 0        # changes units to jupiter radii
+    ispublictalk = 1    # changes labels and units
 
-    # plot_rp_vs_age_scatter(active_targets=0)
-    #plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0)
-
-    # plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=1)
-    # plot_rp_vs_age_scatter(active_targets=0, hjs_only=1)
-    # plot_rp_vs_age_scatter(active_targets=1, split_toi_ctoi=0, hjs_only=1)
-
+    plot_rp_vs_age_scatter(active_targets=active_targets,
+                           split_toi_ctoi=split_toi_ctoi,
+                           ismanualsubset=ismanualsubset,
+                           hjs_only=hjs_only,
+                           ispublictalk=ispublictalk,
+                           isvalidated=isvalidated)
