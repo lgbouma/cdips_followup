@@ -34,8 +34,9 @@ def main():
     args.do_vsini = 0           # measure vsini
     args.do_ca_hk = 0           # get Ca HK emission properties
 
-    args.is_pfs = 1
+    args.is_pfs = 0
     args.is_veloce = 0
+    args.is_fies = 1
 
     if args.is_pfs:
 
@@ -64,6 +65,9 @@ def main():
 
     elif args.is_veloce:
         main_veloce(args)
+
+    elif args.is_fies:
+        main_fies(args)
 
 
 def main_pfs(args):
@@ -124,6 +128,24 @@ def main_pfs(args):
                                    wvsol_path=wvsol_path)
         specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region='Mgb1',
                           outdir=outdir, idstring=args.idstring)
+
+
+def main_fies(args):
+
+    specname = 'F4_TOI-1000_FICj170127_2019-10-18T05-51-50.779.spec.fits'
+    spectrum_path = os.path.join(
+        DATADIR, 'FIES', 'toi_1000', specname
+    )
+    idstring = 'toi1000'
+
+    if args.do_orders:
+        outdir = '../results/spec_analysis/FIES/spec_viz_orders/'
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+
+    else:
+        raise NotImplementedError
 
 
 def main_veloce(args):

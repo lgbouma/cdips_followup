@@ -46,8 +46,8 @@ line_d = {
     'Ca_K': 3933.66,
     'Ca_H': 3968.47,
     'H$\delta$': 4101.75,
-    'H$\gamma$': 4340.47
-    r'H$\beta$': 4861.35
+    'H$\gamma$': 4340.47,
+    r'H$\beta$': 4861.35,
     'FeI': 5169.00, #rough
     'Mgb1': 5183.62,
     'Mgb2': 5172.70,
@@ -144,6 +144,27 @@ def read_veloce(spectrum_path, start=0, end=None, return_err=False):
         return flux, wav, flux_err
     else:
         return flux, wav
+
+
+def read_fies(spectrum_path, start=0, end=None, return_err=False):
+    """
+    Read FIES FITS file.
+    Return (90x2062) arrays of flux and wavelength.
+    90 orders, 2062 pixels in the cross-dispersion direction.
+    """
+
+    hdul = fits.open(spectrum_path)
+
+    # optionally "pre-clean" the data. edge-pixels are, generally, wonky
+    flux = hdul[0].data[0, :, start:end]
+    wav = hdul[0].data[1, :, start:end]
+    flux_err = hdul[0].data[2, :, start:end]
+
+    if return_err:
+        return flux, wav, flux_err
+    else:
+        return flux, wav
+
 
 
 def read_hires(spectrum_path, start=0, end=None, is_registered=1, return_err=1):
@@ -333,8 +354,13 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
     if "PFS" in spectrum_path:
         flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
                                   is_template=is_template)
+
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path)
+
+    elif "FIES" in spectrum_path:
+        flx_2d, wav_2d = read_fies(spectrum_path)
+
     elif 'hires' in spectrum_path.lower():
         if 'registered' in spectrum_path:
             flx_2d, wav_2d = read_hires(spectrum_path, is_registered=1,
@@ -350,6 +376,9 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
     for order in range(wav_2d.shape[0]):
 
         if 'PFS' in spectrum_path:
+            start = 10
+            end = -10
+        elif 'FIES' in spectrum_path:
             start = 10
             end = -10
         elif 'Veloce' in spectrum_path:
@@ -368,9 +397,7 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
         if isinstance(xshift, (float, int)):
             wav = deepcopy(wav) - xshift
 
-        outname = '{}_order{}.png'.format(
-            idstring, str(order).zfill(2),
-        )
+        outname = f'{idstring}_order{str(order).zfill(2)}.png'
 
         outpath = os.path.join(outdir, outname)
 
