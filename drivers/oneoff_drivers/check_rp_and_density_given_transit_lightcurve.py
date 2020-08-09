@@ -15,6 +15,13 @@ Tdur = (9e-2 * P)
 rstar = 1.39*u.Rsun # TIC8
 mstar = 0.39*u.Msun # TIC8
 
+name = '390252502'
+rp_rs = 0.114  # measured Rp/Rstar
+P =  5.437*u.day
+Tdur = (0.05 * P)
+# Teff 6500K... F5V
+rstar = 1.46*u.Rsun # mamajek + Teff + HRD
+mstar = 1.33*u.Msun # mamajek + Teff + HRD
 
 
 rp = (rp_rs * rstar).to(u.Rjup)

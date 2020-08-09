@@ -114,18 +114,18 @@ def manual_insert_many():
 
 if __name__ == "__main__":
 
-    insert_single = 0
-    insert_many = 1
+    insert_single = 1
+    insert_many = 0
 
     if insert_single:
 
         insert_single_candidate(
-            ticid = '62483237',
-            comment = 'Whopping Ca HK.',
+            ticid = '105840719',
+            comment = 'John Livingston noted ~150 Myr field star.',
             nbhd_rating = 0,
             init_priority = 0,
-            pending_photometry_observations = 'SG1 has lost',
-            pending_spectroscopic_observations = 'Veloce17'
+            pending_photometry_observations = '[todo]PP0. Get [gp]. ip has been done.',
+            pending_spectroscopic_observations = 'SP1, pending phot.'
         )
 
     if insert_many:
