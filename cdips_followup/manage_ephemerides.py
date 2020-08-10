@@ -63,7 +63,7 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
     """
 
     valid_types = ['cdipspipeline', 'exofoptess_toi',
-                   'exofoptess_ctoi','hartmanupdate', 'toiplus']
+                   'exofoptess_ctoi','hartmanupdate', 'toiplus', 'sg1_update']
 
     if ephemeris_type not in valid_types:
         errmsg = (
@@ -100,6 +100,18 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
 
     elif ephemeris_type == 'cdipspipeline':
         df = pd.read_csv(ephemsourcefile, sep="|")
+        sdf = df[df.target == targetid]
+        selcol = ['period', 'epoch', 'duration', 'period_unc', 'epoch_unc',
+                  'duration_unc', 'depth', 'depth_unc']
+        e_dict = sdf[selcol].to_dict('index')
+        keys = ['period_val', 'epoch_val', 'duration_val', 'period_unc',
+                'epoch_unc', 'duration_unc', 'depth_val', 'depth_unc']
+        ephem_dict = {}
+        for k, c in zip(keys, selcol):
+            ephem_dict[k] = e_dict[list(e_dict.keys())[0]][c]
+
+    elif ephemeris_type == 'sg1_update':
+        df = pd.read_csv(ephemsourcefile, sep=';')
         sdf = df[df.target == targetid]
         selcol = ['period', 'epoch', 'duration', 'period_unc', 'epoch_unc',
                   'duration_unc', 'depth', 'depth_unc']
@@ -158,7 +170,22 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
         ticid = targetid.replace('TIC','').replace('.01','')
         source_id = str(sdf.source_id.iloc[0])
         targetid = targetid
-        ephemeris_origin = ephemsourcefile
+        ephemeris_origin = os.path.abspath(ephemsourcefile)
+
+    elif ephemeris_type == 'sg1_update':
+
+        toidf = get_exofop_toi_catalog()
+
+        if targetid.startswith('TIC'):
+            # CTOI
+            ticid = targetid.replace('TIC','').replace('.01','')
+        else:
+            # TOI
+            ticid = str(toidf[toidf.TOI.astype(str) == targetid]['TIC ID'].iloc[0])
+
+        source_id = tic_to_gaiadr2(str(ticid))
+        targetid = targetid
+        ephemeris_origin = os.path.abspath(ephemsourcefile)
 
     else:
         raise NotImplementedError
@@ -178,6 +205,16 @@ def insert_ephemeris(ephemeris_type=None, targetid=None, ephemsourcefile=None):
         'depth_unc': ephem_dict['depth_unc'],
         'ephemeris_origin': ephemeris_origin
     }, index=[0])
+
+    if np.any(
+        [new_row.period.isnull().bool(),
+         new_row.epoch.isnull().bool(),
+         new_row.duration.isnull().bool()]
+    ):
+        print(42*'-')
+        print(f'WRN! Skipping {ticid} because got null period / epoch / durn.')
+        print(42*'-')
+        return
 
     ephem_df = pd.read_csv(EPHEM_PATH)
 
