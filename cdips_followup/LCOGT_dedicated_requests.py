@@ -22,8 +22,7 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
                           min_search_time=Time(dt.datetime.today().isoformat()),
                           max_search_time=None, filtermode='ip',
                           telescope_class='1m0',
-                          sites=['Cerro Tololo', 'Siding Spring Observatory',
-                                 'SAAO', 'McDonald Observatory']
+                          sites=None
                          ):
     #
     # savstr: e.g., request_2m_tc_secondary. "ephemupdate" if it is one...

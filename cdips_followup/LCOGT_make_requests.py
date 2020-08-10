@@ -72,7 +72,7 @@ MAXTIMEDICT = {
 SITEDICT = {
     'at_site': ['SAAO', 'Siding Spring Observatory',
                 'McDonald Observatory', 'Cerro Tololo'],
-    'of_address': ['Wise Observatory']
+    'of_address': ['Wise Observatory'] # for NRES
 }
 
 from cdips_followup import __path__
@@ -260,7 +260,7 @@ def get_requests_given_ephem(
     oot_duration=45*u.minute,
     eventclass='OIBEO',
     sites=['SAAO', 'Siding Spring Observatory', 'McDonald Observatory',
-           'Cerro Tololo', 'Wise Observatory'],
+           'Cerro Tololo'],
     schedule_oot_duration=60*u.minute,
     semesterstr='20B',
     filtermode='ip',
@@ -507,7 +507,7 @@ def make_single_request_from_row(
         sites = ['Siding Spring Observatory', 'Haleakala Observatories']
     elif telescope_class == '1m0':
         sites = ['SAAO', 'Siding Spring Observatory', 'Cerro Tololo',
-                 'McDonald Observatory', 'Wise Observatory']
+                 'McDonald Observatory']
     elif telescope_class == 'special':
         assert len(sites) >= 1
         pass
