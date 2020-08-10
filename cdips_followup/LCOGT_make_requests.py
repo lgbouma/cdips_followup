@@ -18,14 +18,16 @@ from cdips_followup.utils import ticid_to_toiid
 
 import datetime as dt
 from astropy.time import Time
-from astropy.coordinates import get_body, get_sun, get_moon, SkyCoord
+from astropy.coordinates import (
+    get_body, get_sun, get_moon, SkyCoord, EarthLocation
+)
 import astropy.units as u
 
-from astroplan import (FixedTarget, Observer, EclipsingSystem,
-                       PrimaryEclipseConstraint, is_event_observable,
-                       AtNightConstraint, AltitudeConstraint,
-                       LocalTimeConstraint, MoonSeparationConstraint,
-                       moon)
+from astroplan import (
+    FixedTarget, Observer, EclipsingSystem, PrimaryEclipseConstraint,
+    is_event_observable, AtNightConstraint, AltitudeConstraint,
+    LocalTimeConstraint, MoonSeparationConstraint, moon
+)
 
 from astroquery.gaia import Gaia
 
@@ -47,11 +49,11 @@ with open(API_FILE, 'r') as f:
 token = str(l[0].replace('\n',''))
 
 ACCEPTABILITY_DICT = {
-    'OIBEO':60,
-    'IBEO':70,
-    'OIBE':70,
-    'OIB':80,
-    'BEO':80,
+    'OIBEO':70,
+    'IBEO':80,
+    'OIBE':80,
+    'OIB':90,
+    'BEO':90,
     'OI':90,
     'EO':90
 }
@@ -67,6 +69,12 @@ MAXTIMEDICT = {
     '22B': Time('2021-11-30 23:59:00')
 }
 
+SITEDICT = {
+    'at_site': ['SAAO', 'Siding Spring Observatory',
+                'McDonald Observatory', 'Cerro Tololo'],
+    'of_address': ['Wise Observatory']
+}
+
 from cdips_followup import __path__
 DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data')
 RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
@@ -77,13 +85,13 @@ RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
 
 def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
     """
-    this table was reverse-engineered by looking at the exptime and defocuses
+    This table was reverse-engineered by looking at the exptime and defocuses
     used by Dan Bayliss in the HATS requests for the same proposal.
 
-    it imposes a minimum time 10 second exposures, or a bright limit of Gaia G
+    It imposes a minimum time 10 second exposures, or a bright limit of Gaia G
     mag of G=9.
 
-    (any brighter and we might encounter smear issues -- need to test).
+    (Any brighter and we encounter smear issues -- need to test).
     """
     if telescope_class == '1m0':
         df = pd.read_csv(os.path.join(DATADIR,'LCOGT_reverse_eng_exptime.csv'))
@@ -119,7 +127,7 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
         return -1
 
     API_TOKEN = token  # API token obtained from https://observe.lco.global/accounts/profile/
-    PROPOSAL_ID = 'NOAO2020A-005'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
+    PROPOSAL_ID = 'NOAO2020B-013'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
 
     # starttime e.g., '2019-05-02 00:00:00'
     _starttime = starttime.iso[0:19]
@@ -227,7 +235,7 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
     requestgroup = {
         'name': requestname,  # The title
         'proposal': PROPOSAL_ID,
-        'ipp_value': 1.0,
+        'ipp_value': 1.0, # NOTE: might manually override
         'operator': 'SINGLE',
         'observation_type': 'NORMAL',
         'requests': [{
@@ -246,22 +254,21 @@ def get_requests_given_ephem(
     epoch_unc, depth, depth_unc, duration, duration_unc,
     min_search_time=Time(dt.datetime.today().isoformat()),
     max_search_time=None,
-    max_airmass_sched=1.8,
+    max_airmass_sched=2.0,
     max_airmass_submit=2.5,
-    min_lunar_distance=20, oot_duration=45*u.minute,
+    min_lunar_distance=20,
+    oot_duration=45*u.minute,
     eventclass='OIBEO',
-    sites=['Cerro Tololo', 'Siding Spring Observatory', 'SAAO',
-           'McDonald Observatory'],
+    sites=['SAAO', 'Siding Spring Observatory', 'McDonald Observatory',
+           'Cerro Tololo', 'Wise Observatory'],
     schedule_oot_duration=60*u.minute,
-    semesterstr='20A',
+    semesterstr='20B',
     filtermode='ip',
     telescope_class='1m0'):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
     requests for any available transits at the given sites, between
     min_search_time and max_search_time.
-
-    Allowed sites include Siding Spring Observator and CTIO.
 
     Args:
 
@@ -312,7 +319,13 @@ def get_requests_given_ephem(
 
     for site in sites:
 
-        _site = Observer.at_site(site)
+        if site in SITEDICT['at_site']:
+            _site = Observer.at_site(site)
+        elif site in SITEDICT['of_address']:
+            _loc = EarthLocation.of_address(site)
+            _site = Observer(location=_loc, name=site)
+        else:
+            raise NotImplementedError
 
         (event_ind, oibeo,
          ing_tmid_egr, target_window,
@@ -321,7 +334,7 @@ def get_requests_given_ephem(
             get_event_observability(
                 eventclass,
                 _site, ra*u.deg, dec*u.deg, targetname, epoch, period*u.day,
-                duration*u.hour, n_transits=100,
+                duration*u.hour, n_transits=200,
                 obs_start_time=min_search_time,
                 oot_duration=oot_duration,
                 minokmoonsep=min_lunar_distance*u.deg,
@@ -493,8 +506,8 @@ def make_single_request_from_row(
     if telescope_class == '2m0':
         sites = ['Siding Spring Observatory', 'Haleakala Observatories']
     elif telescope_class == '1m0':
-        sites = ['Cerro Tololo', 'Siding Spring Observatory', 'SAAO',
-                 'McDonald Observatory']
+        sites = ['SAAO', 'Siding Spring Observatory', 'Cerro Tololo',
+                 'McDonald Observatory', 'Wise Observatory']
     elif telescope_class == 'special':
         assert len(sites) >= 1
         pass
@@ -526,89 +539,8 @@ def make_single_request_from_row(
 
 
 
-def get_targets(savstr, verbose=True):
-
-    raise AssertionError('deprecated!!')
-
-    df = pd.read_csv(os.path.join(
-        DATADIR,'ephemerides/20190912_19B20A_LCOGT_1m_2m.csv')
-    )
-
-    if savstr in ['all_requests_19B_easyones']:
-        sel = (
-            (df['phot_g_mean_mag'] < 15.4)
-            &
-            (df['phot_g_mean_mag'] > 9)
-            &
-            (df['depth'] > 500) # 500 ppm = 0.05% = 0.5 mmag
-        )
-    elif 'request_19B_2m_faint' in savstr:
-        ids = ['TIC29786532.01', 'TIC53682439.01', 'TIC200516835.01'] # faint
-    elif savstr == 'request_TIC29786532_19B':
-        ids = ['TIC29786532.01'] # faint
-    elif 'request_19B_59859387' in savstr:
-        ids = ['TIC59859387.01']
-    elif 'toppartials_19B' in savstr:
-        # * CDIPS targets with zero or one totals (no TOIs)
-        ids = ['TIC238611475.01',
-               'TIC125192758.01',
-               'TIC154671430.01',
-               'TIC110718787.01', # these 4 have no OIBEO transits
-               'TIC308538095.01' # only 1 OIBEO
-              ]
-    elif 'midpartials_19B' in savstr:
-        # * CDIPS targets with only two OIBEO total (and no extras)
-        # * and TOIs with <=1
-        ids = ['TIC349118653.01',
-               'TIC134528212.01',
-               '1034.01',
-               '520.01',
-               '837.01',
-               '581.01',
-               '451.01' # only TOI with a total
-              ]
-    elif 'bright_shallow_19B' in savstr:
-        ids = ['580.01',
-               '861.01',
-               '1097.01'
-              ]
-    elif 'ephemupdate' in savstr:
-        sel = (
-            (df['phot_g_mean_mag'] < 99)
-            &
-            (df['phot_g_mean_mag'] > 0)
-        )
-
-        sel &= df['toi_or_ticid'].str.contains(savstr.split('_')[0])
-
-    else:
-        raise NotImplementedError
-
-    if (savstr in
-        ['request_19B_2m_faint_v2', 'request_TIC29786532_19B']
-        or 'request_19B_59859387' in savstr
-        or 'request_19B_2m_faint' in savstr
-        or 'toppartials_19B' in savstr
-        or 'midpartials_19B' in savstr
-        or 'bright_shallow_19B' in savstr
-    ):
-        sel = df['toi_or_ticid'].isin(ids)
-
-    newdf = df[sel]
-
-    if verbose:
-        print(42*'-')
-        print('WRN: REQUEST WAS {}'.format(savstr))
-        print('WRN: DROPPING THE FOLLOWING TARGETS B/C OUTSIDE DESIRED REQUEST')
-        print(df[~sel][['source_id', 'toi_or_ticid']])
-        print(42*'-')
-
-    return newdf
-
-
-
 def make_all_request_files(savstr=None, overwrite=None, eventclass=None,
-                           ephem_dict=None, semesterstr='20A'):
+                           ephem_dict=None, semesterstr='20B'):
     """
     savstr:
         "_2m_" should be in it, if it's a request on the 2m. Else, by default

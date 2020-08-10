@@ -13,30 +13,32 @@ from cdips_followup.LCOGT_dedicated_requests import (
 def main():
 
     ####################
-    savstr = '20200321_tic268_requests' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20200810_20B_init' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
-    validate = 0
+    validate = 1
     submit = 0
 
-    source_id = '5489726768531119616'
-    max_n_events = 20 # else None. n_events is per eventclass.
+    source_id = '5952590785523816960'
+    max_n_events = 10 # else None. n_events is per eventclass.
 
-    filtermode = 'zs' # 'zs', 'gp', 'ip'
+    filtermode = 'ip' # 'zs', 'gp', 'ip'
     telescope_class = '1m0'
 
     create_eventclasses = ['OIBEO']
+    # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
     # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
     # create_eventclasses = ['IBEO', 'OIBE']
     # create_eventclasses = ['OIB', 'BEO']
 
     submit_eventclasses = ['OIBEO']
+    # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
     # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
     # submit_eventclasses = ['IBEO', 'OIBE']
     # submit_eventclasses = ['OIB', 'BEO']
 
     raise_error = True
-    max_duration_error = 20
-    max_search_time = Time('2020-05-30 23:59:00')
+    max_duration_error = 30
+    max_search_time = Time('2020-11-30 23:59:00')
     manual_ephemeris = False
 
     ####################

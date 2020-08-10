@@ -239,7 +239,7 @@ def query_ephemeris(source_id=None, ticid=None):
         try:
             seldf = df[df.source_id == source_id].iloc[-1]
         except IndexError as e:
-            msg = 'Failed to get ephemeris for {}'
+            msg = f'Failed to get ephemeris for {source_id}'
             print(msg)
             raise IndexError(msg)
 

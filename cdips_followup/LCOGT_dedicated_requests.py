@@ -18,7 +18,7 @@ DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data')
 RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
 
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
-                          eventclasses, overwrite=0, semesterstr='20A',
+                          eventclasses, overwrite=0, semesterstr='20B',
                           min_search_time=Time(dt.datetime.today().isoformat()),
                           max_search_time=None, filtermode='ip',
                           telescope_class='1m0',
@@ -45,6 +45,8 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
         resultsdir = (
             os.path.join(RESULTSDIR,'LCOGT_{}_updated_requests/'.format(semesterstr))
         )
+    if not os.path.exists(resultsdir):
+        os.mkdir(resultsdir)
 
     pkl_savpath = (
         os.path.join(resultsdir, '{}.pkl'.format(init_savstr))
