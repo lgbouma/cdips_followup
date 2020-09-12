@@ -21,7 +21,6 @@ from matplotlib.ticker import StrMethodFormatter
 
 import pandas as pd, numpy as np
 import os
-from copy import deepcopy
 
 from astropy.table import Table
 from astropy.io import ascii
@@ -109,118 +108,12 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
     #
     # targets
     #
-    cdf = pd.read_csv(
-        os.path.join(
-            os.path.expanduser("~"),
-            'Dropbox/proj/cdips_followup/data/candidate_database/candidates.csv'
-        ),
-        sep='|'
+    from cdips_followup.manage_candidates import get_candidate_params
+
+    vdf, sdf, target_age, target_rp, target_rp_unc, target_period = (
+        get_candidate_params(isvalidated=isvalidated,
+                             ismanualsubset=ismanualsubset)
     )
-
-    if isvalidated:
-        valsourceids = [
-            "5251470948229949568", # TOI837
-        ]
-        val_df = pd.DataFrame(valsourceids, columns=['source_id'])
-        cdf.source_id = cdf.source_id.astype(str)
-        mdf = val_df.merge(cdf, on='source_id')
-        vdf = deepcopy(mdf)
-        assert len(vdf) == len(valsourceids)
-
-    if ismanualsubset:
-        manualsourceids = [
-            # "5523449717870971776", # probable EB
-            "5489726768531119616",
-            "5510676828723793920",
-            "1835201042675810688",
-            "6598814657249555328",
-            "5557593814516968960",
-            "5952590785523816960",
-            "5514577414951631488",
-            "4844691297067063424",
-            "5525188767305211904",
-            "5838450865699668736",
-            "5765748511163751936",
-            # "6113920619134019456", # Rizzuto+20 thyme2
-            "6042883578050870912",
-            # "5974331982990013696", # suggestive, not good enough for PC
-            "5519619186857962112",
-            "5838183443852841216",
-            "5239758155778687360",
-            "5254512781523942912"
-        ]
-        source_df = pd.DataFrame(manualsourceids, columns=['source_id'])
-        cdf.source_id = cdf.source_id.astype(str)
-        mdf = source_df.merge(cdf, on='source_id')
-        sdf = deepcopy(mdf)
-        assert len(sdf) == len(manualsourceids)
-
-    else:
-        # standard selection
-        sel = (
-            ~cdf.isretired
-            &
-            (cdf.current_priority <= 1)
-            &
-            ~pd.isnull(cdf.rp)
-            &
-            cdf.iscdipstarget
-        )
-
-        sdf = cdf[sel]
-
-    target_age = np.array(sdf.age)
-    target_rp = np.array(sdf.rp)
-    target_rp_unc = np.array(sdf.rp_unc)
-
-    temp_ages = []
-    for a in target_age:
-
-        if a == '--':
-            temp_ages.append('--')
-            continue
-
-        temp_ages.append(
-            np.mean(np.array(a.split(',')).astype(float))
-        )
-
-    target_age = np.array(temp_ages)
-
-    #
-    # fix non-assigned ages.
-    # 1) "PMS" star with no age -> 500 Myr upper bound.
-    # 2) Vela OB2 subgroups get ages according to Cantat-Gaudin2019, Figure 6.
-    #    (Use the "name" column and match the "cg19velaOB2_pop[N]" pattern).
-    #
-    is_pms = (sdf.reference == 'Zari_2018_PMS') & (sdf.age == '--')
-    target_age[is_pms] = np.log10(5e8)
-
-    vela_ob2_age_dict = {
-        '1': np.log10(5e7),
-        '2': np.log10(4e7),
-        '3': np.log10(4e7),
-        '4': np.log10(3e7),
-        '5': np.log10(3e7),
-        '6': np.log10(2.5e7),
-        '7': np.log10(1.5e7)
-    }
-
-    popn_inds = np.array(
-        sdf.name.str.extract(pat='cg19velaOB2_pop(\d)')
-    ).flatten()
-
-    cg19_ages = []
-    for k in popn_inds:
-        if pd.isnull(k):
-            cg19_ages.append(np.nan)
-        else:
-            cg19_ages.append(vela_ob2_age_dict[k[0]])
-
-    target_age[~pd.isnull(cg19_ages)] = np.array(cg19_ages)[~pd.isnull(cg19_ages)]
-
-    target_age = target_age.astype(float)
-
-    target_age = 10**(np.array(target_age))/(1e9)
 
     if active_targets:
 
