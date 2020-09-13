@@ -1,5 +1,5 @@
 """
-Given spectrum from PFS / Veloce / CHIRON / FEROS:
+Given spectrum from PFS / Veloce / CHIRON / FEROS / TRES:
 
 * Plot all orders
 * Measure Li EW at 6708A.
@@ -26,17 +26,18 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 1          # plot all orders
+    args.do_orders = 0          # plot all orders
     args.do_sm_analysis = 0     # get Teff, Rstar + compare spectra
     args.do_sm_viz = 0          # specmatch-emp check
     args.do_inspect = 0         # inspect to figure out require rest-frame shift
-    args.do_li_ew = 0           # once rest-frame shift is known
+    args.do_li_ew = 1           # once rest-frame shift is known
     args.do_vsini = 0           # measure vsini
     args.do_ca_hk = 0           # get Ca HK emission properties
 
     args.is_pfs = 0
     args.is_veloce = 0
-    args.is_fies = 1
+    args.is_fies = 0
+    args.is_tres = 1
 
     if args.is_pfs:
 
@@ -68,6 +69,9 @@ def main():
 
     elif args.is_fies:
         main_fies(args)
+
+    elif args.is_tres:
+        main_tres(args)
 
 
 def main_pfs(args):
@@ -146,6 +150,46 @@ def main_fies(args):
 
     else:
         raise NotImplementedError
+
+
+def main_tres(args):
+
+    # nb. any of these are good
+    # specname = '269-003518_2016-01-03_03h36m58s_cb.spec.fits'
+    # specname = '269-003518_2016-12-12_05h30m47s_cb.spec.fits'
+    # specname = '269-003518_2015-10-01_08h35m20s_cb.spec.fits'
+    # specname = '269-003518_2015-10-02_08h09m59s_cb.spec.fits'
+    specname = '269-003518_2017-01-19_04h03m24s_cb.spec.fits'
+
+    spectrum_path = os.path.join(
+        DATADIR, 'TRES', 'QATAR_4', specname
+    )
+    idstring = 'QATAR_4_2017-01-19'
+
+    if args.do_orders:
+        outdir = os.path.join(OUTDIR, 'TRES', 'spec_viz_orders')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+
+    if args.do_li_ew:
+        outdir = os.path.join(OUTDIR, 'TRES', 'Li_EW')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        args.xshift = 0
+        args.idstring = idstring
+        outpath = os.path.join(
+            outdir,
+            '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
+        )
+        get_Li_6708_EW(spectrum_path, wvsol_path=None,
+                       xshift=args.xshift, outpath=outpath)
+
+    else:
+        raise NotImplementedError
+
+
+
 
 
 def main_veloce(args):

@@ -166,6 +166,32 @@ def read_fies(spectrum_path, start=0, end=None, return_err=False):
         return flux, wav
 
 
+def read_tres(spectrum_path, start=0, end=None, return_err=False):
+    """
+    Read TRES FITS file containing the individual orders, extracted and
+    rectified (intensity corrected for the blaze and with a wavelength
+    solution).
+
+    Return (51x2304) arrays of flux and wavelength.
+    51 orders, 2304 pixels in the cross-dispersion direction.
+    """
+
+    from cdips_followup.readmultispec import readmultispec
+
+    d = readmultispec(spectrum_path)
+
+    # optionally "pre-clean" the data. edge-pixels are, generally, wonky
+    flux = d['flux'][:, start:end]
+    wav = d['wavelen'][:, start:end]
+
+    if return_err:
+        raise NotImplementedError
+    else:
+        return flux, wav
+
+
+
+
 
 def read_hires(spectrum_path, start=0, end=None, is_registered=1, return_err=1):
     """
@@ -370,21 +396,17 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
                                         return_err=0)
         else:
             raise NotImplementedError
+    elif 'TRES' in spectrum_path:
+        flx_2d, wav_2d = read_tres(spectrum_path)
     else:
         raise NotImplementedError
 
     for order in range(wav_2d.shape[0]):
 
-        if 'PFS' in spectrum_path:
-            start = 10
-            end = -10
-        elif 'FIES' in spectrum_path:
-            start = 10
-            end = -10
-        elif 'Veloce' in spectrum_path:
+        if 'Veloce' in spectrum_path:
             start = 200
             end = -200
-        elif 'hires' in spectrum_path:
+        else:
             start = 10
             end = -10
 
@@ -882,7 +904,7 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
                    outpath=None):
     """
-    spectrum_path: path to PFS or Veloce spectrum
+    spectrum_path: path to PFS, Veloce, or TRES spectrum
 
     wvsol_path: path to PFS wavelength solution (optional)
 
@@ -902,6 +924,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
         instrument = 'Veloce'
+    elif "TRES" in spectrum_path:
+        flx_2d, wav_2d = read_tres(spectrum_path)
+        instrument = 'TRES'
     else:
         raise NotImplementedError
 
