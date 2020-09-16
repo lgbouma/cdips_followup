@@ -120,12 +120,12 @@ if __name__ == "__main__":
     if insert_single:
 
         insert_single_candidate(
-            ticid = '105840719',
-            comment = 'John Livingston noted ~150 Myr field star.',
+            ticid = '123755508',
+            comment = 'PATHOS 38. P=15.3d, 1.6Rjup based on four transits, VelaOB2 (10 Myr). Best PATHOS-III object. Tdur 3.5h. Bp-Rp=1.5, no reddening corr. Would imply 4500K. T=12.6. 1.1Msun reported by Nardiello+20 after reddening corr. Prot=1.6 days, amplitude 10%. CG19velaOB2 pop7. And PMS from Zari18.',
             nbhd_rating = 0,
             init_priority = 0,
-            pending_photometry_observations = '[todo]PP0. Get [gp]. ip has been done.',
-            pending_spectroscopic_observations = 'SP1, pending phot.'
+            pending_photometry_observations = 'PP0. Need FU.',
+            pending_spectroscopic_observations = 'SP0. Need FU.'
         )
 
     if insert_many:
