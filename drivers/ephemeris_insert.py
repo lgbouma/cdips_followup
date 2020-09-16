@@ -68,7 +68,8 @@ if pipe_insert:
 ###########################################################################
 # if you want to update a set of targets based on the SG1 ephemeris table #
 ###########################################################################
-ephemsourcefile = '../data/updated_ephemerides/20200810_sg1_ephem_update.csv'
+# ephemsourcefile = '../data/updated_ephemerides/20200810_sg1_ephem_update.csv'
+ephemsourcefile = '../data/updated_ephemerides/20200916_pathos_ephem_update.csv'
 
 if sg1_insert:
 
