@@ -120,12 +120,12 @@ if __name__ == "__main__":
     if insert_single:
 
         insert_single_candidate(
-            ticid = '123755508',
-            comment = 'PATHOS 38. P=15.3d, 1.6Rjup based on four transits, VelaOB2 (10 Myr). Best PATHOS-III object. Tdur 3.5h. Bp-Rp=1.5, no reddening corr. Would imply 4500K. T=12.6. 1.1Msun reported by Nardiello+20 after reddening corr. Prot=1.6 days, amplitude 10%. CG19velaOB2 pop7. And PMS from Zari18.',
+            ticid = '410214986',
+            comment = 'TOI 200 = DS Tuc Ab (Newton+2019). Tuc Hor, 45 Myr. 8.1d period, 5.7Re, V=8.5 enables RV mass.',
             nbhd_rating = 0,
             init_priority = 0,
-            pending_photometry_observations = 'PP0. Need FU.',
-            pending_spectroscopic_observations = 'SP0. Need FU.'
+            pending_photometry_observations = 'PP2.',
+            pending_spectroscopic_observations = 'SP0. Could do mass.'
         )
 
     if insert_many:
