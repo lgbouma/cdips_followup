@@ -29,13 +29,13 @@ def main():
         # * Mp_pred (astropy quantity).
 
         update_candidate_rot_params(
-            ticid='146520535',
+            ticid='123755508',
             rot_quality='0',
-            Prot=3.41*u.day,#None,#7.0*u.day,
-            vsini=None, # 54*u.km/u.s,  # quantity, None, or '--'
-            rot_amp=3.1e-2,
-            Mp_pred=0.1*u.Mjup,
-            Tdur=0.143*u.day
+            Prot=1.54*u.day,#None
+            vsini=None,#9*u.km/u.s,  # quantity, None, or '--'
+            rot_amp=8e-2,
+            Mp_pred=1*u.Mjup,#*u.Mearth,
+            Tdur=3.5*u.hour
         )
 
     if update_many:
