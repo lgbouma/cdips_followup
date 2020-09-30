@@ -54,7 +54,7 @@ xoparams = {
     'log_Q0':log_Q0, 'log_deltaQ':log_deltaQ, 'mix':mix
 }
 
-sigma_obs = 10 # m/s
+sigma_obs = 20 # m/s
 N_obs = 60 # really, asking for 45, but why not.
 
 start_time = Time('2021-04-28 23:59:00')

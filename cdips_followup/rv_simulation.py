@@ -131,10 +131,25 @@ def get_simulated_rvs(sigma_obs, N_obs, start_time, end_time, xoparams, xo_df,
         axs[2].plot(t_true-t0, rv_true, c='C2', lw=1)
         axs[2].plot(t_true-t0, rv_true_kep, c='C1', lw=1)
 
-        axs[0].set_ylabel('RV spot')
-        axs[1].set_ylabel('RV planet')
-        axs[2].set_ylabel('Sum [m/s]')
+        props = dict(boxstyle='square', facecolor='white', alpha=0.95, pad=0.1,
+                     linewidth=0)
+        axs[0].text(0.03, 0.05, 'Star', ha='left', va='bottom',
+                    transform=axs[0].transAxes, bbox=props, zorder=2,
+                    color='C0')
+        axs[1].text(0.03, 0.05, 'Planet', ha='left', va='bottom',
+                    transform=axs[1].transAxes, bbox=props, zorder=2,
+                    color='C1')
+        axs[2].text(0.03, 0.05, 'Sum', ha='left', va='bottom',
+                    transform=axs[2].transAxes, bbox=props, zorder=15,
+                    color='C2')
+
         axs[2].set_xlabel('Days from 2021-Apr-28')
+
+        axs[0].set_ylim([-600, 600])
+        axs[1].set_ylim([-120, 120])
+        axs[2].set_ylim([-600, 600])
+        f.text(-0.02,0.5, 'Radial velocity [m/s]', va='center', rotation=90)
+
 
         figpath = os.path.join(RESULTSDIR, 'HIP_67522', f'sim_spot_Nobs{N_obs}.png')
         savefig(f, figpath, writepdf=0)
@@ -206,11 +221,11 @@ def plot_korbpost(outpath, truth=None,
     if truth is not None:
         ymin, ymax = ax.get_ylim()
         ax.vlines(
-            truth, ymin, ymax, colors='C0', alpha=0.5,
-            linestyles='--', zorder=-2, linewidths=0.5
+            truth, ymin, ymax, colors='k', alpha=0.8,
+            linestyles='--', zorder=-2, linewidths=1
         )
         ax.set_ylim((ymin, ymax))
 
-    ax.set_ylabel('Relative probability')
+    ax.set_ylabel('Posterior probability')
 
     savefig(f, outpath, writepdf=0)
