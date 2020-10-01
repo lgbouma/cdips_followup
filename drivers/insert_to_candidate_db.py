@@ -120,12 +120,12 @@ if __name__ == "__main__":
     if insert_single:
 
         insert_single_candidate(
-            ticid = '410214986',
-            comment = 'TOI 200 = DS Tuc Ab (Newton+2019). Tuc Hor, 45 Myr. 8.1d period, 5.7Re, V=8.5 enables RV mass.',
+            ticid = '464646604',
+            comment = 'ABDor MG member (50 Myr). Identified by George Zhou. Not yet a TOI. 500 or 600 ppm depth. V=8.3, perhaps good for RM.',
             nbhd_rating = 0,
             init_priority = 0,
-            pending_photometry_observations = 'PP2.',
-            pending_spectroscopic_observations = 'SP0. Could do mass.'
+            pending_photometry_observations = 'PP0.',
+            pending_spectroscopic_observations = 'SP2.'
         )
 
     if insert_many:

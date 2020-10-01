@@ -515,20 +515,31 @@ def main():
     # ticid = '11286209' # sigma Ori E
     ticid = '411614400' # weirdo from s11
     ticid = '11893637' # GJ 1151
+    ticid = '281582156'
+    ticid = '12359079'
+    ticid = '283410775' # V374 Peg -- 0.44d M dwarf, cited in Stauffer+17
+    ticid = '302773669' # HD 17156 b
+    ticid = '158385467' # KIC 7740983
+    ticid = '434567277' # weirdo
+    ticid = '296206104' # dip 0.04mag
+    ticid = '440113053' # qatar-4
+    ticid = '123755508' # pathos-38
+    ticid = '374732772' # pathos-42
+    ticid = '438790187' # from Montet and Elsa
     # optional #
     period = None
     epoch = None
 
-    cdips = 0
-    spoc = 1
+    cdips = 1
+    spoc = 0
     eleanor = 0
     cdipspre = 0
 
     detrend = 0
 
-    do_mag_lcs = 0
+    do_mag_lcs = 1
     do_eleanor_lcs = 0
-    do_flux_lcs = 1
+    do_flux_lcs = 0
 
     do_periodogram = 0
     do_pf = 0
