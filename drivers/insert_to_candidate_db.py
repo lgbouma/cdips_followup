@@ -120,11 +120,11 @@ if __name__ == "__main__":
     if insert_single:
 
         insert_single_candidate(
-            ticid = '464646604',
-            comment = 'ABDor MG member (50 Myr). Identified by George Zhou. Not yet a TOI. 500 or 600 ppm depth. V=8.3, perhaps good for RM.',
+            ticid = '438790187',
+            comment = 'Found by Ben Montet & Elsa. 15 Myr PC with extra dips (disintegrating? unclear).',
             nbhd_rating = 0,
             init_priority = 0,
-            pending_photometry_observations = 'PP0.',
+            pending_photometry_observations = 'PP1. try gp.',
             pending_spectroscopic_observations = 'SP2.'
         )
 
