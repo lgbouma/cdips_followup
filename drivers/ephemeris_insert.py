@@ -72,7 +72,8 @@ if pipe_insert:
 # ephemsourcefile = '../data/updated_ephemerides/20200916_pathos_ephem_update.csv'
 # ephemsourcefile = '../data/updated_ephemerides/20200921_noao_update.csv'
 # ephemsourcefile = '../data/updated_ephemerides/20201004_manual.csv'
-ephemsourcefile = '../data/updated_ephemerides/20201006_manual.csv'
+# ephemsourcefile = '../data/updated_ephemerides/20201006_manual.csv'
+ephemsourcefile = '../data/updated_ephemerides/20201008_manual.csv'
 
 if sg1_insert:
 
