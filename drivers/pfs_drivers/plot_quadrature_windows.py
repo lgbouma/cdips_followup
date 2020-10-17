@@ -21,7 +21,9 @@ from matplotlib.ticker import AutoMinorLocator
 
 import datetime as dt
 
-
+OUTDIR = '../../results/followup_planning/202008_pfs_quadrature/'
+if not os.path.exists(OUTDIR):
+    os.mkdir(OUTDIR)
 
 def main():
 
@@ -33,15 +35,15 @@ def main():
     period = 0.94667643*u.day
 
     site = Observer.at_site('Cerro Tololo')
-    start_time = Time('2020-03-02 22:00:00')
-    end_time = Time('2020-03-17 07:00:00')
+    start_time = Time('2020-10-24 22:00:00')
+    end_time = Time('2020-11-02 07:00:00')
 
     # axvspan windows
     obs_per_night = [(
-        Time('2020-03-{}'.format(str(d).zfill(2)) + ' 00:00:00'),
-        Time('2020-03-{}'.format(str(d).zfill(2)) + ' 04:00:00')
+        Time('2020-10-{}'.format(str(d).zfill(2)) + ' 06:00:00'),
+        Time('2020-10-{}'.format(str(d).zfill(2)) + ' 10:00:00')
         )
-        for d in range(2, 18)
+        for d in range(24, 32)
     ]
 
     plot_quadrature_windows(ra, dec, ticid, t0, period, start_time, end_time,
@@ -89,7 +91,7 @@ def plot_quadrature_windows(ra, dec, ticid, t0, period, start_time, end_time, si
             if ix == 0:
                 ax.plot_date([o[0].plot_date, o[1].plot_date], [1.01, 1.01],
                              c='C2', alpha=0.5, zorder=2, fmt='-', lw=10,
-                             label='00 to 04 UT')
+                             label='06 to 10 UT')
             else:
                 ax.plot_date([o[0].plot_date, o[1].plot_date], [1.01, 1.01],
                              c='C2', alpha=0.5, zorder=2, fmt='-', lw=10)
@@ -110,8 +112,7 @@ def plot_quadrature_windows(ra, dec, ticid, t0, period, start_time, end_time, si
     ax2.set_ylabel('RV', color='C1')
 
     outpath = (
-        '../../results/followup_planning/202002_pfs_quadrature/TIC{}.png'.
-        format(ticid)
+        os.path.join(OUTDIR, 'TIC{}.png'.format(ticid))
     )
     fig.savefig(outpath, bbox_inches='tight')
     print('made {}'.format(outpath))
