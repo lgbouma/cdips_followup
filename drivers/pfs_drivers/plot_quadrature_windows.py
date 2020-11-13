@@ -21,7 +21,7 @@ from matplotlib.ticker import AutoMinorLocator
 
 import datetime as dt
 
-OUTDIR = '../../results/followup_planning/202008_pfs_quadrature/'
+OUTDIR = '../../results/followup_planning/202010_pfs_quadrature/'
 if not os.path.exists(OUTDIR):
     os.mkdir(OUTDIR)
 
@@ -36,7 +36,7 @@ def main():
 
     site = Observer.at_site('Cerro Tololo')
     start_time = Time('2020-10-24 22:00:00')
-    end_time = Time('2020-11-02 07:00:00')
+    end_time = Time('2020-11-06 07:00:00')
 
     # axvspan windows
     obs_per_night = [(
@@ -45,6 +45,11 @@ def main():
         )
         for d in range(24, 32)
     ]
+    for d in range(1, 6):
+        obs_per_night.append((
+        Time('2020-11-{}'.format(str(d).zfill(2)) + ' 06:00:00'),
+        Time('2020-11-{}'.format(str(d).zfill(2)) + ' 10:00:00')
+        ))
 
     plot_quadrature_windows(ra, dec, ticid, t0, period, start_time, end_time,
                             site, obs_per_night=obs_per_night, N_points=500)
