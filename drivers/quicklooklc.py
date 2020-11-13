@@ -17,6 +17,7 @@ from copy import deepcopy
 from cdips.plotting import vetting_pdf as vp
 from cdips.lcproc import mask_orbit_edges as moe
 from cdips.lcproc import detrend as dtr
+from cdips.utils.lcutils import _given_mag_get_flux
 
 from numpy.polynomial.legendre import Legendre
 
@@ -305,20 +306,23 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
     print('made {}'.format(savpath))
 
 
-def make_periodogram(data, ticid, period_min=0.1, period_max=2.0,
-                     manual_peak=0.43064574):
+def make_periodogram(data, ticid, pipeline, period_min=1, period_max=2,
+                     manual_peak=None, samples_per_peak=50):
 
-    data = data[0]
-
-    time = data['TIME']
-    flux = data['PDCSAP_FLUX']
-    err = data['PDCSAP_FLUX_ERR']
-    qual = data['QUALITY']
-    sel = np.isfinite(time) & np.isfinite(flux) & np.isfinite(err) # (qual == 0)
-    time, flux, err = time[sel], flux[sel], err[sel]
-    med_flux = np.nanmedian(flux)
-    flux /= med_flux
-    err /= med_flux
+    if pipeline == 'spoc':
+        time = data['TIME']
+        flux = data['PDCSAP_FLUX']
+        err = data['PDCSAP_FLUX_ERR']
+        qual = data['QUALITY']
+        sel = np.isfinite(time) & np.isfinite(flux) & np.isfinite(err) # (qual == 0)
+        time, flux, err = time[sel], flux[sel], err[sel]
+        med_flux = np.nanmedian(flux)
+        flux /= med_flux
+        err /= med_flux
+    elif pipeline == 'cdips':
+        time = data['time']
+        flux = data['flux']
+        err = data['err']
 
     ##########################################
 
@@ -332,7 +336,8 @@ def make_periodogram(data, ticid, period_min=0.1, period_max=2.0,
     nterms_0=6
     ls = LombScargle(time, flux, err, nterms=nterms_0)
     freq, power = ls.autopower(minimum_frequency=1/period_max,
-                               maximum_frequency=1/period_min)
+                               maximum_frequency=1/period_min,
+                               samples_per_peak=samples_per_peak)
 
     period = 1/freq
     ax.plot(period, power)
@@ -526,19 +531,25 @@ def main():
     ticid = '123755508' # pathos-38
     ticid = '374732772' # pathos-42
     ticid = '438790187' # from Montet and Elsa
+    ticid = '411614400' # by urs truly
+    ticid = '264593815' # CVSO 17
+    ticid = '264593828' # CVSO 17 neighbor
+    ticid = '264593828' # CVSO 17 neighbor
+    ticid = '324101484' # SV Centauri
+    ticid = '286347420' # looks like planet?
     # optional #
     period = None
     epoch = None
 
-    cdips = 1
+    cdips = 0
     spoc = 0
-    eleanor = 0
+    eleanor = 1
     cdipspre = 0
 
     detrend = 0
 
-    do_mag_lcs = 1
-    do_eleanor_lcs = 0
+    do_mag_lcs = 0
+    do_eleanor_lcs = 1
     do_flux_lcs = 0
 
     do_periodogram = 0
@@ -562,9 +573,21 @@ def main():
                                      epoch=epoch, detrend=detrend)
 
     if do_periodogram:
-        if not spoc:
+        if cdips:
+            time = data[0]['TMID_BJD']
+            flux, err = _given_mag_get_flux(data[0]['IRM1'], data[0]['IRE1'])
+            _data = {
+                'time': time,
+                'flux': flux,
+                'err': err
+            }
+            pipeline = 'cdips'
+        elif spoc:
+            _data = data[0]
+            pipeline = 'spoc'
+        else:
             raise NotImplementedError
-        make_periodogram(data, ticid)
+        make_periodogram(_data, ticid, pipeline)
 
     if do_pf:
         do_phasefolds(data)
