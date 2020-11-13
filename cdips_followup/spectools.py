@@ -53,6 +53,12 @@ line_d = {
     'Mgb2': 5172.70,
     'Feb3': 5168.91,
     'Mgb4': 5167.33,
+    'CaI+FeI': 5269,
+    'Fe_E2': 5270.39,
+    'Hg_e': 5460.73,
+    'He': 5875.618,
+    'NaI_D2': 5889.95,
+    'NaI_D1': 5895.92,
     'FeI_a': 6703.58,
     'FeI_b': 6705.1,
     'FeI_c': 6707.44,
@@ -1266,11 +1272,30 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     if not os.path.exists(outdir):
         os.mkdir(outdir)
 
+    if "PFS" in spectrum_path:
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
+                                  is_template=is_template)
+    elif "Veloce" in spectrum_path:
+        flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
+    else:
+        raise NotImplementedError
+
+    #
+    # define target region
+    #
+
     if region == 'Mgb1' and instrument=='PFS':
         target_wav = 5183.62
         wavlim = [5160,5210]
     elif region == 'Mgb1' and instrument!='PFS':
         raise NotImplementedError('veloce doesnt cover Mg b1')
+
+    if 'order' in region and instrument=='PFS':
+        ix = int(region.split('order')[-1])
+        target_wav = np.nanmedian(wav_2d[ix, :])
+        wavlim = [target_wav-21, target_wav+21]
+    elif 'order' in region and instrument!='PFS':
+        raise NotImplementedError()
 
     if region == '6300' and instrument=='Veloce':
         target_wav = 6300
@@ -1279,14 +1304,6 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
         raise NotImplementedError(
             'does this region work on {}?'.format(instrument)
         )
-
-    if "PFS" in spectrum_path:
-        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
-                                  is_template=is_template)
-    elif "Veloce" in spectrum_path:
-        flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
-    else:
-        raise NotImplementedError
 
     #
     # first, find orders that contain the target wavelength. select the best
@@ -1333,7 +1350,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
 
     cont_norm_spec = spec / cont_flx
 
-    outpath = os.path.join(outdir, '{}_cont_norm_check.png'.format(idstring))
+    outpath = os.path.join(outdir, f'{idstring}_{region}_cont_norm_check.png')
 
     f,axs = plt.subplots(nrows=2, ncols=1, figsize=(6,4))
     axs[0].plot(wav, flx, c='k', zorder=3, lw=0.5)
@@ -1346,7 +1363,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     axs[-1].set_xlabel('wavelength [angstrom]')
     for ax in axs:
         format_ax(ax)
-    savefig(f, outpath)
+    savefig(f, outpath, writepdf=0)
     plt.close('all')
 
     flx = cont_norm_spec.flux
@@ -1371,7 +1388,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     except IndexError:
         match_name = sm_res.shift_ref.name
 
-    outpath = os.path.join(outdir, '{}_shift_check.png'.format(idstring))
+    outpath = os.path.join(outdir, f'{idstring}_{region}_shift_check.png')
     fig = plt.figure(figsize=(10,5))
     sm_res.target_unshifted.plot(normalize=True, plt_kw={'color':'forestgreen'}, text='Target (unshifted)')
     sm_res.target.plot(offset=1.0, plt_kw={'color':'royalblue'}, text='Target (shifted): {}'.format(idstring))
@@ -1380,32 +1397,31 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     plt.ylim(0,3.0)
     ax = plt.gca()
     format_ax(ax)
-    savefig(fig, outpath)
+    savefig(fig, outpath, writepdf=0)
     plt.close('all')
 
     wavlimshifted = (min(sm_res.target.w), max(sm_res.target.w))
-    # wavlimnormal = (wavlim[0],wavlim[1])
 
     #
     # cross-correlate against the templates to fit for vsini, Rstar, FeH.
     #
-    # sm_res.match(wavlim=wavlimnorm) # NOTE: old
     sm_res.match(wavlim=wavlimshifted)
 
     # Plot chi-squared surfaces
-    outpath =  os.path.join(outdir, '{}_chisq.png'.format(idstring))
+    outpath =  os.path.join(outdir, f'{idstring}_{region}_chisq.png')
     fig = plt.figure(figsize=(12, 8))
     sm_res.plot_chi_squared_surface()
     ax = plt.gca()
     format_ax(ax)
-    savefig(fig, outpath)
+    savefig(fig, outpath, writepdf=0)
     plt.close('all')
 
     sm_res.lincomb()
 
     print('Derived Parameters: ')
     print('Teff: {0:.0f}, Radius: {1:.2f}, [Fe/H]: {2:.2f}'.format(
-        sm_res.results['Teff'], sm_res.results['radius'], sm_res.results['feh']))
+        sm_res.results['Teff'], sm_res.results['radius'], sm_res.results['feh'])
+    )
 
     #
     # make a plot comparing you spectrum to dwarf star spectra of comparable
@@ -1415,6 +1431,6 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
         wavlim,
         sm_res.results['Teff'],
         outdir,
-        idstring,
+        f'{idstring}_{region}',
         sm_res=sm_res
     )

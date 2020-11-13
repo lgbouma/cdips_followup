@@ -130,9 +130,13 @@ def main_pfs(args):
                                    args.idstring, spectrum_path=spectrum_path,
                                    wvsol_path=wvsol_path,
                                    is_template=args.is_template)
-        specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region='Mgb1',
-                          outdir=outdir, idstring=args.idstring,
-                          is_template=args.is_template)
+        # r'H$\beta$' outside of HIRES region, 4990 - 6409 A.
+        regions = ['Mgb1']
+        regions = [f'order{ix}' for ix in range(35, 53)]
+        for r in regions:
+            specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region=r,
+                              outdir=outdir, idstring=args.idstring,
+                              is_template=args.is_template)
 
 
 def main_fies(args):
