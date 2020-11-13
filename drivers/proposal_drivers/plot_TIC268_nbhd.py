@@ -52,7 +52,7 @@ def rainbow_text(x, y, strings, colors, orientation='horizontal',
         text.draw(canvas.get_renderer())
         ex = text.get_window_extent()
         t = transforms.offset_copy(
-            text.get_transform(), y=0.7*ex.height, units='dots'
+            text.get_transform(), y=0.75*ex.height, units='dots'
         )
 
 
@@ -114,12 +114,13 @@ def plot_TIC268_nbhd_small(outdir=RESULTSDIR):
 
     xv, yv = 'ra', 'dec'
     axs[0].scatter(
-        nbhd_df[xv], nbhd_df[yv], c='gray', alpha=0.9, zorder=2, s=7,
+        nbhd_df[xv], nbhd_df[yv], c='gray', alpha=0.5, zorder=2, s=7,
         rasterized=True, linewidths=0, label='Field', marker='.'
     )
     axs[0].scatter(
-        kc19_df[xv], kc19_df[yv], c='C0', alpha=0.9, zorder=3, s=7,
-        rasterized=True, linewidths=0, label='Corona', marker='.'
+        kc19_df[xv], kc19_df[yv], c='lightskyblue', alpha=0.9, zorder=3, s=7,
+        rasterized=True, linewidths=0.15, label='Corona', marker='.',
+        edgecolors='k'
     )
     axs[0].scatter(
         cg18_df[xv], cg18_df[yv], c='k', alpha=0.9, zorder=4, s=7,
@@ -150,12 +151,13 @@ def plot_TIC268_nbhd_small(outdir=RESULTSDIR):
     )
 
     axs[1].scatter(
-        get_xval(nbhd_df), get_yval(nbhd_df), c='gray', alpha=0.9, zorder=2,
+        get_xval(nbhd_df), get_yval(nbhd_df), c='gray', alpha=0.8, zorder=2,
         s=7, rasterized=True, linewidths=0, label='Field', marker='.'
     )
     axs[1].scatter(
-        get_xval(kc19_df), get_yval(kc19_df), c='C0', alpha=1, zorder=3,
-        s=7, rasterized=True, linewidths=0, label='Corona', marker='.'
+        get_xval(kc19_df), get_yval(kc19_df), c='lightskyblue', alpha=1,
+        zorder=3, s=7, rasterized=True, linewidths=0.15, label='Corona',
+        marker='.', edgecolors='k'
     )
     axs[1].scatter(
         get_xval(cg18_df), get_yval(cg18_df), c='k', alpha=0.9,
@@ -175,7 +177,7 @@ def plot_TIC268_nbhd_small(outdir=RESULTSDIR):
     ##########
 
     words = ['Field', 'Corona', 'Core', 'TOI1937'][::-1]
-    colors = ['gray', 'C0', 'k', 'lightskyblue'][::-1]
+    colors = ['gray', 'lightskyblue', 'k', 'lightskyblue'][::-1]
     rainbow_text(0.98, 0.02, words, colors, size='medium', ax=axs[0])
 
     f.tight_layout(w_pad=2)
