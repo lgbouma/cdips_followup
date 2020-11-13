@@ -548,7 +548,8 @@ def specmatch_viz_compare(wavlim=[5160,5210]):
 
 
 def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
-                               spectrum_path=None, wvsol_path=None):
+                               spectrum_path=None, wvsol_path=None,
+                               is_template=False):
 
     lib = specmatchemp.library.read_hdf(wavlim=wavlim)
     if teff < 6500:
@@ -598,7 +599,9 @@ def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
         if 'Veloce' in spectrum_path:
             flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
         elif 'PFS' in spectrum_path:
-            flx_2d, wav_2d = flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+            flx_2d, wav_2d = flx_2d, wav_2d = read_pfs(
+                spectrum_path, wvsol_path, is_template=is_template
+            )
         else:
             raise NotImplementedError
         target_wav = np.mean(wavlim)
@@ -1248,7 +1251,7 @@ def measure_veloce_vsini(specname, targetname, teff, outdir):
 ######################
 
 def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
-                      idstring=None):
+                      idstring=None, is_template=False):
 
     if 'PFS' in spectrum_path:
         instrument = 'PFS'
@@ -1278,7 +1281,8 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
         )
 
     if "PFS" in spectrum_path:
-        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
+                                  is_template=is_template)
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
     else:
@@ -1379,11 +1383,14 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     savefig(fig, outpath)
     plt.close('all')
 
+    wavlimshifted = (min(sm_res.target.w), max(sm_res.target.w))
+    # wavlimnormal = (wavlim[0],wavlim[1])
 
     #
     # cross-correlate against the templates to fit for vsini, Rstar, FeH.
     #
-    sm_res.match(wavlim=(wavlim[0],wavlim[1]))
+    # sm_res.match(wavlim=wavlimnorm) # NOTE: old
+    sm_res.match(wavlim=wavlimshifted)
 
     # Plot chi-squared surfaces
     outpath =  os.path.join(outdir, '{}_chisq.png'.format(idstring))

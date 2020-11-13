@@ -27,17 +27,17 @@ def main():
     args = argclass()
 
     args.do_orders = 0          # plot all orders
-    args.do_sm_analysis = 0     # get Teff, Rstar + compare spectra
+    args.do_sm_analysis = 1     # get Teff, Rstar + compare spectra
     args.do_sm_viz = 0          # specmatch-emp check
     args.do_inspect = 0         # inspect to figure out require rest-frame shift
-    args.do_li_ew = 1           # once rest-frame shift is known
+    args.do_li_ew = 0           # once rest-frame shift is known
     args.do_vsini = 0           # measure vsini
     args.do_ca_hk = 0           # get Ca HK emission properties
 
-    args.is_pfs = 0
+    args.is_pfs = 1
     args.is_veloce = 0
     args.is_fies = 0
-    args.is_tres = 1
+    args.is_tres = 0
 
     if args.is_pfs:
 
@@ -49,18 +49,17 @@ def main():
         args.is_template = False
 
         # Template quicklooks
-        args.spectrum_name = 'TIC268301217.dat'
+        args.spectrum_name = 'TIC268301217_template_spectrum_v20201111.dat'
         args.wvsol_name = None
-        args.idstring = 'TIC268301217_20200225_template'
+        args.idstring = 'TIC268301217_20201111_template'
         args.is_template = True
 
         if args.do_sm_analysis:
             args.teff = 5700
         if args.do_li_ew or args.do_ca_hk or args.do_orders:
             args.xshift = 1.6 # set 
-
-        if args.is_template:
-            args.idstring += '_shift{:.2f}'.format(args.xshift)
+            if args.is_template:
+                args.idstring += '_shift{:.2f}'.format(args.xshift)
 
         main_pfs(args)
 
@@ -129,9 +128,11 @@ def main_pfs(args):
         outdir = os.path.join(OUTDIR, 'PFS', 'specmatch')
         plot_spec_vs_dwarf_library([5160, 5210], args.teff, outdir,
                                    args.idstring, spectrum_path=spectrum_path,
-                                   wvsol_path=wvsol_path)
+                                   wvsol_path=wvsol_path,
+                                   is_template=args.is_template)
         specmatch_analyze(spectrum_path, wvsol_path=wvsol_path, region='Mgb1',
-                          outdir=outdir, idstring=args.idstring)
+                          outdir=outdir, idstring=args.idstring,
+                          is_template=args.is_template)
 
 
 def main_fies(args):
@@ -218,9 +219,10 @@ def main_veloce(args):
     if args.do_sm_analysis:
         outdir = '../results/spec_analysis/Veloce/specmatch/'
         plot_spec_vs_dwarf_library([6280,6350], teff, outdir, idstring,
-                                   spectrum_path=spectrum_path)
+                                   spectrum_path=spectrum_path,
+                                   is_template=args.is_template)
         specmatch_analyze(spectrum_path, region='6300', outdir=outdir,
-                          idstring=idstring)
+                          idstring=idstring, is_template=args.is_template)
     if args.do_sm_viz:
         #specmatch_viz_compare(wavlim=[5160,5210])
         specmatch_viz_compare(wavlim=[6270,6350])
