@@ -27,10 +27,10 @@ def main():
     args = argclass()
 
     args.do_orders = 0          # plot all orders
-    args.do_sm_analysis = 1     # get Teff, Rstar + compare spectra
+    args.do_sm_analysis = 0     # get Teff, Rstar + compare spectra
     args.do_sm_viz = 0          # specmatch-emp check
     args.do_inspect = 0         # inspect to figure out require rest-frame shift
-    args.do_li_ew = 0           # once rest-frame shift is known
+    args.do_li_ew = 1           # once rest-frame shift is known
     args.do_vsini = 0           # measure vsini
     args.do_ca_hk = 0           # get Ca HK emission properties
 
@@ -109,7 +109,8 @@ def main_pfs(args):
             '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
         )
         get_Li_6708_EW(spectrum_path, wvsol_path=wvsol_path,
-                       xshift=args.xshift, outpath=outpath)
+                       xshift=args.xshift, outpath=outpath,
+                       is_template=args.is_template)
 
     if args.do_ca_hk:
         outdir = os.path.join(OUTDIR, 'PFS', 'Ca_HK')

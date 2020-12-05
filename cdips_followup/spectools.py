@@ -911,7 +911,7 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
 
 
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
-                   outpath=None):
+                   outpath=None, is_template=False):
     """
     spectrum_path: path to PFS, Veloce, or TRES spectrum
 
@@ -928,7 +928,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
         raise ValueError
 
     if "PFS" in spectrum_path:
-        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path)
+        flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
+                                  is_template=is_template)
         instrument = 'PFS'
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path, start=200, end=-200)
