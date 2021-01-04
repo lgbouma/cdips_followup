@@ -1,3 +1,34 @@
+"""
+READ:
+    read_nextgen: Read NextGen Model Atmosphere Grid from Hauschildt et al 1999.
+    read_veloce: Read Veloce FITS file.
+    read_fies: Read FIES FITS file.
+    read_tres: Read TRES FITS file.
+    read_hires: Read HIRES FITS file.
+    read_pfs: Read PFS IDL SAV file.
+    read_feros: Read FEROS FITS file.
+
+SPECMATCH WRAPPERS:
+    specmatch_analyze: shift+cross-correlate to get vsini, Rstar, FeH w/ SME.
+    specmatchsyn_analyze: ditto, but using specmatch-synth.
+
+CALCULATE:
+    fit_continuum: fits a quadratic polynomial across the order.
+    get_Li_6708_EW: measure Li EW.
+    measure_veloce_vsini: wraps below.
+        measure_vsini: compares target spectrum to broadend NextGen spectra
+    given_deltawvlen_get_vsys: convert Δλ to velocity.
+
+VISUALIZE:
+    viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
+    plot_orders
+    inspect_pfs
+    specmatch_viz_compare: SME comparison of target and HIRES library spectra.
+    plot_spec_vs_dwarf_library: SME ditto.
+
+WIP:
+    get_Ca_HK_emission: in theory, for CaHK emission line widths.
+"""
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from numpy import array as nparr
 from matplotlib.transforms import blended_transform_factory
