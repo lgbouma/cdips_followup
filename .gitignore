@@ -53,3 +53,5 @@ drivers/oneoff*/mann*
 results/LCOGT_20B*
 results/TOI_942_neighborhood/*
 *HIP_67522*
+results/fpscenarios*
+results/phot_analysis*
