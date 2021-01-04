@@ -55,7 +55,7 @@ from specmatchemp.specmatch import SpecMatch
 import specmatchemp.library
 import specmatchemp.plots as smplot
 
-from stringcheese.plotutils import savefig, format_ax
+from aesthetic.plot import savefig, format_ax
 
 from cdips_followup import __path__
 
@@ -159,7 +159,6 @@ def read_nextgen(teff=5500, vsini=5, logg=4.5, vturb=2):
     return 10*nparr(df.wav), nparr(df.residual_flux)
 
 
-
 def read_veloce(spectrum_path, start=0, end=None, return_err=False):
     """
     Read Veloce FITS file.
@@ -227,9 +226,6 @@ def read_tres(spectrum_path, start=0, end=None, return_err=False):
         return flux, wav
 
 
-
-
-
 def read_hires(spectrum_path, start=0, end=None, is_registered=1, return_err=1):
     """
     Read HIRES FITS file. Assume was "registered" (blaze-corrected, and then
@@ -267,16 +263,12 @@ def read_pfs(spectrum_path, wvlen_soln, verbose=False, is_template=False):
     """
 
     if not is_template:
-
         sp = readsav(spectrum_path, python_dict=True, verbose=verbose)
         wvlen = readsav(wvlen_soln, python_dict=True, verbose=verbose)
-
         return sp['sp'], wvlen['w']
 
     else:
-
         s = readsav(spectrum_path, python_dict=True, verbose=verbose)
-
         return s['star'], s['w']
 
 
@@ -286,7 +278,6 @@ def read_feros(spectrum_path):
     d = hdul[0].data
     wav = d[0,0]
     flx = d[3,0]
-
     return wav, flx
 
 
@@ -407,7 +398,7 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
 
 
 def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
-                is_template=False, xshift=0):
+                is_template=False, xshift=0, flat_path=None):
 
     if not isinstance(outdir, str):
         raise ValueError
@@ -417,6 +408,10 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
     if "PFS" in spectrum_path:
         flx_2d, wav_2d = read_pfs(spectrum_path, wvsol_path,
                                   is_template=is_template)
+
+        if isinstance(flat_path, str):
+            _f = readsav(flat_path, python_dict=True, verbose=True)
+            flat_2d = _f['nf']
 
     elif "Veloce" in spectrum_path:
         flx_2d, wav_2d = read_veloce(spectrum_path)
@@ -448,19 +443,26 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
             end = -10
 
         flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
+        if isinstance(flat_path, str):
+            flat = flat_2d[order, start:end]
 
         if 'PFS' in spectrum_path:
             sel = (flx > 0)
             flx, wav = flx[sel], wav[sel]
+            if isinstance(flat_path, str):
+                flat = flat[sel]
 
         if isinstance(xshift, (float, int)):
             wav = deepcopy(wav) - xshift
 
         outname = f'{idstring}_order{str(order).zfill(2)}.png'
-
         outpath = os.path.join(outdir, outname)
-
         viz_1d_spectrum(flx, wav, outpath)
+
+        if isinstance(flat_path, str):
+            outname = f'{idstring}_order{str(order).zfill(2)}_flat.png'
+            outpath = os.path.join(outdir, outname)
+            viz_1d_spectrum(flat, wav, outpath)
 
 
 def inspect_pfs(nightstr, targetline, xlim=None):
@@ -1441,6 +1443,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
 
     # Plot chi-squared surfaces
     outpath =  os.path.join(outdir, f'{idstring}_{region}_chisq.png')
+
     fig = plt.figure(figsize=(12, 8))
     sm_res.plot_chi_squared_surface()
     ax = plt.gca()
