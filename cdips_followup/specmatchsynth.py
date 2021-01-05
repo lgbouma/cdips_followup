@@ -2,16 +2,43 @@
 Tools for working with specmatch-syn (note: you need to be using a py27
 environment for it to work)
 """
-import os
+import os, sys
+if not sys.version_info[0] == 2:
+    raise AssertionError(
+        'specmatch-syn depends on python2.7, and deprecated scipy routines.'
+    )
+
 import numpy as np
 from scipy.io import readsav
 
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from numpy import array as nparr
-from matplotlib.transforms import blended_transform_factory
+from datetime import datetime
 
 LOCALDIR = os.path.join(os.path.expanduser('~'), 'local', 'specmatch-syn')
 COELHO05_PATH = os.path.join(LOCALDIR, 'coelho.h5')
+
+def format_ax(ax):
+    ax.yaxis.set_ticks_position('both')
+    ax.xaxis.set_ticks_position('both')
+    ax.get_yaxis().set_tick_params(which='both', direction='in')
+    ax.get_xaxis().set_tick_params(which='both', direction='in')
+    for tick in ax.xaxis.get_major_ticks():
+        tick.label.set_fontsize('small')
+    for tick in ax.yaxis.get_major_ticks():
+        tick.label.set_fontsize('small')
+
+def savefig(fig, figpath, writepdf=True, dpi=450):
+    fig.savefig(figpath, dpi=dpi, bbox_inches='tight')
+    print('{}: made {}'.format(datetime.utcnow().isoformat(), figpath))
+
+    if writepdf:
+        pdffigpath = figpath.replace('.png','.pdf')
+        fig.savefig(pdffigpath, bbox_inches='tight', dpi=dpi)
+        print('{}: made {}'.format(datetime.utcnow().isoformat(), pdffigpath))
+
+    plt.close('all')
+
 
 def read_pfs(spectrum_path, wvlen_soln, verbose=False, is_template=False):
     """
@@ -117,7 +144,7 @@ def specmatchsyn_analyze(
 
         flx = cont_norm_flx
 
-        _f2d.append(flx.value)
+        _f2d.append(flx)
         _w2d.append(wav)
         _n2d.append(flat)
         _u2d.append(u_flx)
@@ -176,6 +203,7 @@ def specmatchsyn_analyze(
 
     import IPython; IPython.embed()
     assert 0
+    #FIXME FIXME
 
     if return_velocities:
         return flux_shift, uflux_shift, dvel

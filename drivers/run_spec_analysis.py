@@ -13,7 +13,7 @@ import os
 from cdips_followup import __path__
 from cdips_followup.spectools import (
     get_Li_6708_EW, inspect_pfs, specmatch_viz_compare, specmatch_analyze,
-    specmatchsyn_analyze, plot_orders, plot_spec_vs_dwarf_library,
+    plot_orders, plot_spec_vs_dwarf_library,
     measure_veloce_vsini, get_Ca_HK_emission
 )
 
@@ -148,16 +148,9 @@ def main_pfs(args):
                               is_template=args.is_template)
 
     if args.do_sms_analysis:
-        outdir = os.path.join(OUTDIR, 'PFS', 'synthetic_specmatch')
-        # pick regions...
-        regions = ['order{}'.format(ix) for ix in range(35, 53)]
-        for r in regions:
-            specmatchsyn_analyze(spectrum_path, wvsol_path=wvsol_path,
-                                 regions=regions, outdir=outdir,
-                                 idstring=args.idstring,
-                                 is_template=args.is_template,
-                                 flat_path=flat_path)
-
+        raise NotImplementedError(
+            'use drivers.run_specmatchsynth (py27 compatability)'
+        )
 
 
 def main_fies(args):
