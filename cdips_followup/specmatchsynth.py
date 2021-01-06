@@ -1,6 +1,12 @@
 """
 Tools for working with specmatch-syn (note: you need to be using a py27
 environment for it to work)
+
+    specmatchsyn_analyze: main driver
+
+plotting:
+    plot_data_model_comparison
+    plot_chisq
 """
 import os, sys
 if not sys.version_info[0] == 2:
@@ -59,8 +65,7 @@ def specmatchsyn_analyze(
     spectrum_path, wvsol_path=None, regions=None, outdir=None, idstring=None,
     is_template=False, flat_path=None, START=200, END=-200,
     init_starparam_dict = {'teff': 5850, 'logg': 4.4, 'fe': 0.1, 'vsini': 9,
-                           'psf': None, 'rot_method': 'rotmacro'}
-):
+                           'psf': None, 'rot_method': 'rotmacro'}):
 
     if 'PFS' in spectrum_path:
         instrument = 'PFS'
@@ -110,17 +115,15 @@ def specmatchsyn_analyze(
         flx, wav = flx[sel], wav[sel]
         if isinstance(flat_path, str):
             flat = flat[sel]
-        u_flx = np.sqrt(flx)
+        #u_flx = 1/np.sqrt(flx)
 
         flx_norm = np.nanpercentile(flx, 95)
         flat_norm = np.nanpercentile(flat, 95)
         flx /= flx_norm
-        u_flx /= flx_norm
         flat /= flat_norm
 
-        # spec = Spectrum1D(spectral_axis=wav*u.AA,
-        #                   flux=flx*u.dimensionless_unscaled)
-        # cont_norm_spec = spec / flat
+        unc_prefactor = 1e-2
+        u_flx = np.ones_like(flx)*unc_prefactor
 
         cont_norm_flx = flx / flat
 
@@ -128,19 +131,21 @@ def specmatchsyn_analyze(
             outdir, '{}_{}_cont_norm_check.png'.format(idstring, region)
         )
 
-        f,axs = plt.subplots(nrows=2, ncols=1, figsize=(6,4))
-        axs[0].plot(wav, flx, c='k', zorder=3, lw=0.5)
-        axs[0].plot(wav, flat, c='r', zorder=2, lw=0.5)
-        axs[1].plot(wav, cont_norm_flx, c='k', lw=0.5)
+        if not os.path.exists(outpath):
 
-        axs[0].set_ylabel('flux')
-        axs[1].set_ylabel('contnorm flux')
+            f,axs = plt.subplots(nrows=2, ncols=1, figsize=(6,4))
+            axs[0].plot(wav, flx, c='k', zorder=3, lw=0.5)
+            axs[0].plot(wav, flat, c='r', zorder=2, lw=0.5)
+            axs[1].plot(wav, cont_norm_flx, c='k', lw=0.5)
 
-        axs[-1].set_xlabel('wavelength [angstrom]')
-        for ax in axs:
-            format_ax(ax)
-        savefig(f, outpath, writepdf=0)
-        plt.close('all')
+            axs[0].set_ylabel('flux')
+            axs[1].set_ylabel('contnorm flux')
+
+            axs[-1].set_xlabel('wavelength [angstrom]')
+            for ax in axs:
+                format_ax(ax)
+            savefig(f, outpath, writepdf=0)
+            plt.close('all')
 
         flx = cont_norm_flx
 
@@ -193,90 +198,241 @@ def specmatchsyn_analyze(
     spec.to_fits(smspecpath)
 
     # now run the SpecMatch algorithm
-    from smsyn.inst.hires.pipeline import Pipeline, grid_search, lincomb
+    from smsyn.inst.hires.pipeline import (
+        Pipeline, grid_search, lincomb, polish, read_pickle
+    )
     segfile = os.path.join(smsyn.__path__[0], 'inst', 'pfs', 'segments.csv')
     pipe = Pipeline(smspecpath, COELHO05_PATH, segfile)
-    grid_search(pipe, debug=False)
-    lincomb(pipe)
 
+    pklpath = pipe.smfile.replace('.fits', '.pkl')
 
+    out = None
+    if not os.path.exists(pklpath):
+        grid_search(pipe, debug=False)
+        lincomb(pipe)
+        polish(pipe)
+        pipe.to_pickle()
+    else:
+        pipe, out = read_pickle(pklpath, name=name, obs=obs)
 
-    import IPython; IPython.embed()
-    assert 0
-    #FIXME FIXME
+    if out is None:
+        out = pd.concat(
+            [pd.DataFrame(pipe.polish_output[k]['params_out'], index=[k])
+             for k in pipe.polish_output.keys()]
+        )
 
-    if return_velocities:
-        return flux_shift, uflux_shift, dvel
+    print(out.describe())
 
-
-    #FIXME: ok great. now from here SHIFT.
-
-    flux_shift, uflux_shift = smsyn.inst.hires.shift.shift(
-        wav, flux, uflux, ref_wav, ref_flux
-    )
-
-    spec = smsyn.io.spectrum.Spectrum(
-        ref_wav, flux_shift, uflux_shift, header=dict(name=name,obs=obs)
-    )
-    spec.to_fits(outfile) 
-
-    import IPython; IPython.embed()
-
-    #
-    # shift and cross-correlate w/ specmatch
-    #
-    lib = specmatchemp.library.read_hdf(wavlim=wavlim)
-
-    s_spectrum = Spectrum(wav, flx)
-    s_spectrum.name = idstring
-
-    sm_res = SpecMatch(s_spectrum, lib)
-    sm_res.shift()
-
-    try:
-        match_row = lib.library_params[
-            (lib.library_params.cps_name == sm_res.shift_ref.name)
-        ]
-        print(match_row)
-        match_name = match_row.source_name.iloc[0]
-    except IndexError:
-        match_name = sm_res.shift_ref.name
-
-    outpath = os.path.join(outdir, '{}_{}_shift_check.png'.
-                           format(idstring, region))
-    fig = plt.figure(figsize=(10,5))
-    sm_res.target_unshifted.plot(normalize=True, plt_kw={'color':'forestgreen'}, text='Target (unshifted)')
-    sm_res.target.plot(offset=1.0, plt_kw={'color':'royalblue'}, text='Target (shifted): {}'.format(idstring))
-    sm_res.shift_ref.plot(offset=2.0, plt_kw={'color':'firebrick'}, text='Reference: '+match_name)
-    plt.xlim((wavlim[0],wavlim[1]))
-    plt.ylim(0,3.0)
-    ax = plt.gca()
-    format_ax(ax)
-    savefig(fig, outpath, writepdf=0)
+    # chisq plot
     plt.close('all')
-
-    wavlimshifted = (min(sm_res.target.w), max(sm_res.target.w))
-
-    #
-    # cross-correlate against the templates to fit for vsini, Rstar, FeH.
-    #
-    sm_res.match(wavlim=wavlimshifted)
-
-    # Plot chi-squared surfaces
-    outpath =  os.path.join(outdir,
-                            '{}_{}_chisq.png'.format(idstring, region))
-    fig = plt.figure(figsize=(12, 8))
-    sm_res.plot_chi_squared_surface()
-    ax = plt.gca()
-    format_ax(ax)
-    savefig(fig, outpath, writepdf=0)
-    plt.close('all')
-
-    sm_res.lincomb()
-
-    print('Derived Parameters: ')
-    print('Teff: {0:.0f}, Radius: {1:.2f}, [Fe/H]: {2:.2f}'.format(
-        sm_res.results['Teff'], sm_res.results['radius'], sm_res.results['feh'])
+    fig = plot_chisq(out, columns=['teff','logg','fe','vsini'])
+    outpath = os.path.join(
+        outdir, '{}_chisq.png'.format(idstring)
     )
+    savefig(fig, outpath)
+
+    # data vs model comparison
+
+    # ignore botched orders for best-fit params
+    sel = (
+        (out.logg != 3.5)
+        &
+        (out.logg != 5.0)
+    )
+    cols = ['teff','logg','fe','vsini','psf','rchisq1','rchisq0']
+    s_out = out[sel][cols]
+    bestpars = s_out.mean()
+    bestparuncs = s_out.std()
+
+    plt.close('all')
+    plot_data_model_comparison(
+        pipe, bestpars, out, regions, idstring, outdir, fulldata=1,
+        feh_references=1
+    )
+    plt.close('all')
+    plot_data_model_comparison(
+        pipe, bestpars, out, regions, idstring, outdir
+    )
+    plt.close('all')
+    plot_data_model_comparison(
+        pipe, bestpars, out, regions, idstring, outdir, fulldata=1
+    )
+
+    # print params
+    for n, p, u in zip(cols, bestpars, bestparuncs):
+        print('{}: {:.2f} +/- {:.2f}'.format(n, p, u))
+
+    return
+
+
+def plot_data_model_comparison(pipe, bestpars, out, regions, idstring, outdir,
+                               fulldata=0, feh_references=0):
+    """
+    pieces poached from smsyn.plotting.output
+    """
+
+    teff = bestpars['teff']
+    logg = bestpars['logg']
+    feh = bestpars['fe']
+    vsini = bestpars['vsini']
+    psf = bestpars['psf']
+
+    segs = pipe.segments
+
+    import smsyn.library, smsyn.io
+    lib = smsyn.library.read_hdf(pipe.libfile, wavlim=(segs[0][0], segs[-1][-1]))
+    spec = smsyn.io.spectrum.read_fits(pipe.smfile)
+
+    fitwav = []
+    fitflux = []
+    fitres = []
+    fitmod = []
+    for s in pipe.segments:
+        segment0 = s[0]
+        output = pipe.polish_output[segment0]
+        wav = output['wav']
+        flux = output['flux']
+        resid = output['resid']
+        model = flux - resid
+
+        fitwav.append(wav)
+        fitflux.append(flux)
+        fitres.append(resid)
+        fitmod.append(model)
+
+    wav = np.hstack(fitwav).flatten()
+    flux = np.hstack(fitflux).flatten()
+    resid = np.hstack(fitres).flatten()
+    model = np.hstack(fitmod).flatten()
+
+    fullwav = spec.wav
+    # fullmod = lib.synth(lib.wav, teff, logg, feh, vsini, psf, rot_method='rotmacro')
+    fullmod = lib.synth(spec.wav, teff, logg, feh, vsini, psf, rot_method='rotmacro')
+    if feh_references:
+        feh_metlo, feh_methi = 0.0, 0.3
+        fullmod_metlo = lib.synth(spec.wav, teff, logg, feh_metlo, vsini, psf, rot_method='rotmacro')
+        fullmod_methi = lib.synth(spec.wav, teff, logg, feh_methi, vsini, psf, rot_method='rotmacro')
+
+    fullspec = spec.flux
+    allres = spec.flux - fullmod
+    if feh_references:
+        allres_metlo = spec.flux - fullmod_metlo
+        allres_methi = spec.flux - fullmod_methi
+    wavmask = pipe.wav_exclude
+
+    #
+    # make the by-order plot!
+    #
+    for r, seg in zip(regions, segs):
+
+        _s = '' if not fulldata else '_fulldata'
+        if feh_references:
+            _s += '_fehreferences'
+        outpath = os.path.join(outdir, '{}_{}_modelresid{}.png'.
+                               format(idstring, r, _s))
+
+        plt.close('all')
+        f, axs = plt.subplots(nrows=2, figsize=(8,4), sharex=True)
+
+        crop = (wav >= seg[0]) & (wav <= seg[1])
+        pltflux = flux[crop]
+        pltwav = wav[crop]
+        pltmod = model[crop]
+
+        if fulldata:
+            crop = (fullwav >= seg[0]) & (fullwav <= seg[1])
+            pltwav = fullwav[crop]
+            pltflux = fullspec[crop]
+            pltmod = fullmod[crop]
+            pltflux *= (np.mean(pltmod)/np.mean(pltflux))
+
+        if feh_references:
+            pltmod_metlo = fullmod_metlo[crop]
+            pltmod_methi = fullmod_methi[crop]
+
+        o = np.argsort(pltwav)
+        mstr = (
+            'Model (teff {:d}, logg {:.2f}, feh {:.2f} vsini {:.2f} psf {:.2f})'
+            .format(int(teff), logg, feh, vsini, psf)
+        )
+
+        axs[0].plot(pltwav[o], pltflux[o], color='k', linewidth=0.7,
+                    label='Data', zorder=2)
+        axs[0].plot(pltwav[o], pltmod[o], color='C0', linewidth=0.7,
+                    label=mstr, zorder=1)
+        if feh_references:
+            mstr = (
+                'Model (teff {:d}, logg {:.2f}, feh {:.2f} vsini {:.2f} psf {:.2f})'
+                .format(int(teff), logg, feh_metlo, vsini, psf)
+            )
+            axs[0].plot(pltwav[o], pltmod_metlo[o], color='C1', linewidth=0.7,
+                        label=mstr, zorder=1)
+            # mstr = (
+            #     'Model (teff {:d}, logg {:.2f}, feh {:.2f} vsini {:.2f} psf {:.2f})'
+            #     .format(int(teff), logg, feh_methi, vsini, psf)
+            # )
+            # axs[0].plot(pltwav[o], pltmod_methi[o], color='C2', linewidth=0.7,
+            #             label=mstr, zorder=1)
+
+        axs[1].axhline(0, color='r', linewidth=2)
+        if feh_references:
+            axs[1].plot(pltwav[o], pltflux[o] - pltmod[o], color='C0',
+                        linewidth=0.7)
+            axs[1].plot(pltwav[o], pltflux[o] - pltmod_metlo[o], color='C1',
+                        linewidth=0.7)
+            #axs[1].plot(pltwav[o], pltflux[o] - pltmod_methi[o], color='C2',
+            #            linewidth=0.7)
+
+        else:
+            axs[1].plot(pltwav[o], pltflux[o] - pltmod[o], color='k',
+                        linewidth=0.7)
+
+
+        for w0,w1 in wavmask:
+            if w0 > seg[0] or w1 < seg[1]:
+                for a in axs:
+                    a.axvspan(w0,w1, color='LightGray', zorder=0)
+
+        axs[0].set_ylim(-0.2, 1.2)
+        axs[1].set_ylim(-0.2, 0.2)
+        for a in axs:
+            a.set_xlim(seg[0], seg[1])
+            format_ax(a)
+
+        axs[0].legend(loc='lower left', fontsize='xx-small')
+
+        axs[1].set_xlabel('Wavelength [$\\AA$]')
+        axs[1].set_ylabel('Residual')
+        axs[0].set_ylabel('Flux')
+        f.tight_layout()
+
+        savefig(f, outpath, writepdf=0)
+
+    return
+
+
+def plot_chisq(df, fig=None, columns=['teff','logg','fe'], **kwargs):
+    """
+    Make a multi-panel plot of chisq
+    Poached from smsyn.plotting.output
+    """
+    ncols = len(columns)
+    if fig is None:
+        fig,axL = plt.subplots(ncols=ncols, figsize=(4,3), sharey=True)
+    else:
+        axL = fig.get_axes()
+
+    i = 0
+    for col in columns:
+        plt.sca(axL[i])
+        plt.semilogy()
+        plt.scatter(df[col],df['rchisq1'],**kwargs)
+        plt.xlabel(col)
+        i+=1
+    plt.ylabel('rchisq1')
+    return fig
+
+
+
 
 

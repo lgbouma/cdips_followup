@@ -30,9 +30,7 @@ if isinstance(args.flat_name, str):
 outdir = os.path.join(OUTDIR, 'PFS', 'synthetic_specmatch')
 # pick regions...
 regions = ['order{}'.format(ix) for ix in range(35, 53)]
-for r in regions:
-    specmatchsyn_analyze(spectrum_path, wvsol_path=wvsol_path,
-                         regions=regions, outdir=outdir,
-                         idstring=args.idstring,
-                         is_template=args.is_template,
-                         flat_path=flat_path)
+
+specmatchsyn_analyze(spectrum_path, wvsol_path=wvsol_path, regions=regions,
+                     outdir=outdir, idstring=args.idstring,
+                     is_template=args.is_template, flat_path=flat_path)
