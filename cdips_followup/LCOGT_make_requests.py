@@ -69,6 +69,37 @@ MAXTIMEDICT = {
     '22B': Time('2021-11-30 23:59:00')
 }
 
+# ['', '', '', 'ALMA', 'ATST', 'Anglo-Australian Observatory', 'Apache Point',
+#  'Apache Point Observatory', 'Atacama Large Millimeter Array', 'BAO', 'BBSO',
+#  'Beijing XingLong Observatory', 'Black Moshannon Observatory', 'CHARA',
+#  'Canada-France-Hawaii Telescope', 'Catalina Observatory', 'Cerro Pachon',
+#  'Cerro Paranal', 'Cerro Tololo', 'Cerro Tololo Interamerican Observatory',
+#  'DCT', 'DKIST', 'Discovery Channel Telescope', 'Dominion Astrophysical
+#  Observatory', 'GBT', 'Gemini South', 'Green Bank Telescope', 'Hale Telescope',
+#  'Haleakala Observatories', 'Happy Jack', 'IAO', 'JCMT', 'James Clerk Maxwell
+#  Telescope', 'Jansky Very Large Array', 'Keck Observatory', 'Kitt Peak', 'Kitt
+#  Peak National Observatory', 'La Silla Observatory', 'Large Binocular
+#  Telescope', 'Las Campanas Observatory', 'Lick Observatory', 'Lowell
+#  Observatory', 'MWA', 'Manastash Ridge Observatory', 'McDonald Observatory',
+#  'Medicina', 'Medicina Dish', 'Michigan-Dartmouth-MIT Observatory', 'Mount
+#  Graham International Observatory', 'Mt Graham', 'Mt. Ekar 182 cm. Telescope',
+#  'Mt. Stromlo Observatory', 'Multiple Mirror Telescope', 'Murchison Widefield
+#  Array', 'NOV', 'NST', 'National Observatory of Venezuela', 'Noto',
+#  'Observatorio Astronomico Nacional, San Pedro Martir', 'Observatorio
+#  Astronomico Nacional, Tonantzintla', 'Palomar', 'Paranal Observatory', 'Roque
+#  de los Muchachos', 'SAAO', 'SALT', 'SPO', 'SRT', 'Sac Peak', 'Sacramento
+#  Peak', 'Siding Spring Observatory', 'Southern African Large Telescope',
+#  'Subaru', 'Subaru Telescope', 'Sunspot', 'Sutherland', 'TUG', 'UKIRT', 'United
+#  Kingdom Infrared Telescope', 'Vainu Bappu Observatory', 'Very Large Array',
+#  'W. M. Keck Observatory', 'Whipple', 'Whipple Observatory', 'aao', 'alma',
+#  'apo', 'bbso', 'bmo', 'cfht', 'ctio', 'dao', 'dct', 'dkist', 'ekar',
+#  'example_site', 'flwo', 'gbt', 'gemini_north', 'gemini_south', 'gemn', 'gems',
+#  'greenwich', 'haleakala', 'iao', 'irtf', 'jcmt', 'keck', 'kpno', 'lapalma',
+#  'lasilla', 'lbt', 'lco', 'lick', 'lowell', 'mcdonald', 'mdm', 'medicina',
+#  'mmt', 'mro', 'mso', 'mtbigelow', 'mwa', 'mwo', 'noto', 'ohp', 'paranal',
+#  'salt', 'sirene', 'spm', 'spo', 'srt', 'sso', 'tona', 'tug', 'ukirt', 'vbo',
+#  'vla']
+
 SITEDICT = {
     'at_site': ['SAAO', 'Siding Spring Observatory',
                 'McDonald Observatory', 'Cerro Tololo'],
