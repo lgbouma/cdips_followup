@@ -374,7 +374,8 @@ def plot_data_model_comparison(pipe, bestpars, out, regions, idstring, outdir,
             # axs[0].plot(pltwav[o], pltmod_methi[o], color='C2', linewidth=0.7,
             #             label=mstr, zorder=1)
 
-        axs[1].axhline(0, color='r', linewidth=2)
+        axs[0].axhline(1, color='gray', linewidth=0.7, zorder=-2)
+        axs[1].axhline(0, color='gray', linewidth=0.7, zorder=-2)
         if feh_references:
             axs[1].plot(pltwav[o], pltflux[o] - pltmod[o], color='C0',
                         linewidth=0.7)
