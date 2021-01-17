@@ -2,7 +2,7 @@ import numpy as np, pandas as pd, matplotlib.pyplot as plt
 import os
 from glob import glob
 
-from cdips.plotting import savefig
+from aesthetic.plot import savefig, format_ax, set_style
 
 def plot_dilution_histogram(ap=None):
     '''
@@ -18,15 +18,16 @@ def plot_dilution_histogram(ap=None):
     dil_n_px = np.array(df['dilution_ap{:.2f}'.format(ap)]) # y
     dil_n_px[dil_n_px > 0.999 ] = 0.999
 
+    set_style()
     plt.close('all')
-    fig, ax = plt.subplots(figsize=(4,4))
+    fig, ax = plt.subplots(figsize=(3,3))
 
     ax.set_xscale('log')
     ax.set_xlabel(
-        '(target flux)/(total flux in {:.2f}px TESS aperture)'.
+        '(Target flux)/(Total flux in aperture)'.
         format(ap)
     )
-    ax.set_ylabel('probability density')
+    ax.set_ylabel('Relative probability')
 
     ax.set_xlim((10**(-2.05), 1.1))
     ax.tick_params(which='both', direction='in', zorder=0)
@@ -50,22 +51,23 @@ def plot_dilution_histogram(ap=None):
             int(round(100*(1-frac_not_ok))))
 
     t = ax.text(10**(-0.5), 11500, recov_str,
-            verticalalignment='center',horizontalalignment='center',fontsize='large')
+            verticalalignment='center',horizontalalignment='center',fontsize='medium')
     t.set_bbox(dict(facecolor='white', alpha=1, edgecolor='gray'))
     t= ax.text(10**(-1.5), 11500, nonrecov_str,
-            verticalalignment='center',horizontalalignment='center',fontsize='large')
+            verticalalignment='center',horizontalalignment='center',fontsize='medium')
     t.set_bbox(dict(facecolor='white', alpha=1, edgecolor='gray'))
 
     #ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.yaxis.set_major_locator(plt.MaxNLocator(5))
 
-    ax.yaxis.set_ticks_position('both')
-    ax.xaxis.set_ticks_position('both')
-    ax.get_yaxis().set_tick_params(which='both', direction='in')
-    ax.get_xaxis().set_tick_params(which='both', direction='in')
-    ax.xaxis.set_tick_params(labelsize='small')
-    ax.yaxis.set_tick_params(labelsize='small')
+    format_ax(ax)
+    # ax.yaxis.set_ticks_position('both')
+    # ax.xaxis.set_ticks_position('both')
+    # ax.get_yaxis().set_tick_params(which='both', direction='in')
+    # ax.get_xaxis().set_tick_params(which='both', direction='in')
+    # ax.xaxis.set_tick_params(labelsize='small')
+    # ax.yaxis.set_tick_params(labelsize='small')
 
     # ax.tick_params(which='both', direction='in', zorder=0)
     # ax.spines['right'].set_visible(False)
