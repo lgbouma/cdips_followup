@@ -1,3 +1,11 @@
+"""
+Contents:
+    ticid_to_toiid
+    ticid_and_toiid_to_targetid
+    get_cdips_candidates
+    given_sourceid_get_radec
+    given_sourceid_get_gaiarow
+"""
 import os
 import pandas as pd, numpy as np
 
