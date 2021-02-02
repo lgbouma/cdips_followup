@@ -56,3 +56,5 @@ results/TOI_942_neighborhood/*
 results/fpscenarios*
 results/phot_analysis*
 results/tic2179*
+doc/*observing_run_planning*
+results/tic*
