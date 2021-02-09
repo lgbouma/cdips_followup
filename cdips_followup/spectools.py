@@ -7,6 +7,7 @@ READ:
     read_hires: Read HIRES FITS file.
     read_pfs: Read PFS IDL SAV file.
     read_feros: Read FEROS FITS file.
+    read_galah: Read GALAH (DR3) spectrum FITS file.
 
 SPECMATCH WRAPPERS:
     specmatch_analyze: shift+cross-correlate to get vsini, Rstar, FeH w/ SME.
@@ -29,6 +30,7 @@ VISUALIZE:
 WIP:
     get_Ca_HK_emission: in theory, for CaHK emission line widths.
 """
+import os, re
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from numpy import array as nparr
 from matplotlib.transforms import blended_transform_factory
@@ -42,7 +44,6 @@ from astropy.modeling.fitting import LevMarLSQFitter
 from scipy.io import readsav
 from scipy.interpolate import interp1d
 
-import os
 from copy import deepcopy
 
 from specutils import Spectrum1D, SpectralRegion
@@ -281,6 +282,189 @@ def read_feros(spectrum_path):
     wav = d[0,0]
     flx = d[3,0]
     return wav, flx
+
+
+def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
+                                requirefind=True, single_ccd=None):
+    """
+    Read in all available GALAH DR3 CCDs and return a dictionary.
+
+    Cite Buder+2021 if you use this, since it was based on Sven Buder's GALAH
+    DR3 tutorial notebooks:
+        https://github.com/svenbuder/GALAH_DR3/blob/master/tutorials/tutorial3_plotting_reduced_spectra.ipynb
+
+    Args:
+        sobject_id (np.int64): GALAH DR3 identifier. The most useful way to
+        find and work with these is using the GALAH_DR3_main_allstar_v1
+        catalog.
+
+        working_directory (str): directory to which the GALAH DR3 spectra have
+        already been downloaded.
+
+        requirefind (bool): if True, will raise ValueError if the spectra are
+        not found.
+
+        single_ccd (int or None): if passed, will return a single CCD. E.g.,
+        for Li 6708, we only need CCD 3.
+
+    Returns:
+        specdict (dict): dictionary with the spectra read in, if single_ccd is
+        None. Else standard `wav, flx` tuple.
+    """
+
+    from glob import glob
+
+    # Check if FITS files already available in working directory
+    fits_files = [[], [], [], []]
+    for each_ccd in [1,2,3,4]:
+        globstr = os.path.join(
+                working_directory, str(sobject_id)+str(each_ccd)+'.fits'
+        )
+        fits_files[each_ccd-1] = glob(globstr)
+
+    # If not already available, try to download
+    for each_ccd in [1,2,3,4]:
+        if fits_files[each_ccd-1] == []:
+            globstr = os.path.join(
+                    working_directory, str(sobject_id)+str(each_ccd)+'.fits'
+            )
+            msg = f'Did not find {globstr}'
+            raise ValueError(msg)
+
+    spectrum = dict()
+    for each_ccd in [1,2,3,4]:
+        if fits_files[each_ccd-1]!=[]:
+            hdul = fits.open(fits_files[each_ccd-1][0])
+
+            # Extension 0: Reduced spectrum
+            # Extension 1: Relative error spectrum
+            # Extension 4: Normalised spectrum, NB: cut for CCD4
+
+            # Extract wavelength grid for the reduced spectrum
+            start_wavelength = hdul[0].header["CRVAL1"]
+            dispersion       = hdul[0].header["CDELT1"]
+            nr_pixels        = hdul[0].header["NAXIS1"]
+            reference_pixel  = hdul[0].header["CRPIX1"]
+            if reference_pixel == 0:
+                reference_pixel = 1
+            spectrum['wave_red_'+str(each_ccd)] = ((np.arange(0,nr_pixels)--reference_pixel+1)*dispersion+start_wavelength)
+
+            # Extract wavelength grid for the normalised spectrum
+            start_wavelength = hdul[4].header["CRVAL1"]
+            dispersion       = hdul[4].header["CDELT1"]
+            nr_pixels        = hdul[4].header["NAXIS1"]
+            reference_pixel  = hdul[4].header["CRPIX1"]
+            if reference_pixel == 0:
+                reference_pixel=1
+            spectrum['wave_norm_'+str(each_ccd)] = ((np.arange(0,nr_pixels)--reference_pixel+1)*dispersion+start_wavelength)
+
+            # Extract flux and flux error of reduced spectrum
+            spectrum['sob_red_'+str(each_ccd)]  = np.array(hdul[0].data)
+            spectrum['uob_red_'+str(each_ccd)]  = np.array(hdul[0].data * hdul[1].data)
+
+            # Extract flux and flux error of reduced spectrum
+            spectrum['sob_norm_'+str(each_ccd)] = np.array(hdul[4].data)
+            if each_ccd != 4:
+                spectrum['uob_norm_'+str(each_ccd)] = np.array(hdul[4].data * hdul[1].data)
+            else:
+                # for normalised error of CCD4, only used appropriate parts of error spectrum
+                spectrum['uob_norm_4'] = np.array(hdul[4].data * (hdul[1].data)[-len(spectrum['sob_norm_4']):])
+
+            hdul.close()
+        else:
+            spectrum['wave_red_'+str(each_ccd)] = []
+            spectrum['wave_norm_'+str(each_ccd)] = []
+            spectrum['sob_red_'+str(each_ccd)] = []
+            spectrum['sob_norm_'+str(each_ccd)] = []
+            spectrum['uob_red_'+str(each_ccd)] = []
+            spectrum['uob_norm_'+str(each_ccd)] = []
+
+    spectrum['wave_red'] = np.concatenate(([spectrum['wave_red_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
+    spectrum['wave_norm'] = np.concatenate(([spectrum['wave_norm_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
+    spectrum['sob_red'] = np.concatenate(([spectrum['sob_red_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
+    spectrum['sob_norm'] = np.concatenate(([spectrum['sob_norm_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
+    spectrum['uob_red'] = np.concatenate(([spectrum['uob_red_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
+    spectrum['uob_norm'] = np.concatenate(([spectrum['uob_norm_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
+
+    if verbose:
+        outstr = """
+        VERBOSE:
+        The spectra of the 4 CCDs are now read in and saved in a dictionary.
+        For convenience, the wavelength (wave_*), observed signal (sob_*), and
+        uncertainties of the observed signal (uob_*) for both reduced (*red*)
+        and normalised (*norm*) are saved both for each CCD (*_1/*_2/*_3/*_4)
+        as well as concatenated.
+        The dictionary therefore has the keywords
+        """
+        outstr = re.sub("(?m)^\s+", "", outstr) # fancier than textwrap.dedent
+        print(outstr)
+        print(spectrum.keys())
+
+    if single_ccd is None:
+        return spectrum
+
+    else:
+        wav = spectrum[f'wave_red_{single_ccd}']
+        flx = spectrum[f'sob_norm_{single_ccd}']
+        return flx, wav
+
+
+def read_galah(spectrum_path, single_ccd, verbose=True):
+    """
+    Read in GALAH DR3 spectrum from a single CCD.
+
+    Args:
+        spectrum_path (str): GALAH DR3 spectrum apth.
+
+        single_ccd (int): GALAH DR3 CCD number. CCD 4 has some specifics.
+        Default for Li measurements is 3.
+
+    Returns:
+        flx, wav
+    """
+
+    hdul = fits.open(spectrum_path)
+
+    # Extension 0: Reduced spectrum
+    # Extension 1: Relative error spectrum
+    # Extension 4: Normalised spectrum, NB: cut for CCD4
+
+    spectrum = dict()
+    each_ccd = single_ccd
+
+    # Extract wavelength grid for the reduced spectrum
+    start_wavelength = hdul[0].header["CRVAL1"]
+    dispersion       = hdul[0].header["CDELT1"]
+    nr_pixels        = hdul[0].header["NAXIS1"]
+    reference_pixel  = hdul[0].header["CRPIX1"]
+    if reference_pixel == 0:
+        reference_pixel = 1
+    spectrum['wave_red_'+str(each_ccd)] = ((np.arange(0,nr_pixels)--reference_pixel+1)*dispersion+start_wavelength)
+
+    # Extract wavelength grid for the normalised spectrum
+    start_wavelength = hdul[4].header["CRVAL1"]
+    dispersion       = hdul[4].header["CDELT1"]
+    nr_pixels        = hdul[4].header["NAXIS1"]
+    reference_pixel  = hdul[4].header["CRPIX1"]
+    if reference_pixel == 0:
+        reference_pixel=1
+    spectrum['wave_norm_'+str(each_ccd)] = ((np.arange(0,nr_pixels)--reference_pixel+1)*dispersion+start_wavelength)
+
+    # Extract flux and flux error of reduced spectrum
+    spectrum['sob_red_'+str(each_ccd)]  = np.array(hdul[0].data)
+    spectrum['uob_red_'+str(each_ccd)]  = np.array(hdul[0].data * hdul[1].data)
+
+    # Extract flux and flux error of reduced spectrum
+    spectrum['sob_norm_'+str(each_ccd)] = np.array(hdul[4].data)
+    if each_ccd != 4:
+        spectrum['uob_norm_'+str(each_ccd)] = np.array(hdul[4].data * hdul[1].data)
+    else:
+        # for normalised error of CCD4, only used appropriate parts of error spectrum
+        spectrum['uob_norm_4'] = np.array(hdul[4].data * (hdul[1].data)[-len(spectrum['sob_norm_4']):])
+
+    wav = spectrum[f'wave_red_{single_ccd}']
+    flx = spectrum[f'sob_norm_{single_ccd}']
+    return flx, wav
 
 
 ##########
@@ -948,7 +1132,7 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
                    outpath=None, is_template=False):
     """
-    spectrum_path: path to PFS, Veloce, or TRES spectrum
+    spectrum_path: path to PFS, Veloce, TRES, or GALAH spectrum
 
     wvsol_path: path to PFS wavelength solution (optional)
 
@@ -972,6 +1156,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     elif "TRES" in spectrum_path:
         flx_2d, wav_2d = read_tres(spectrum_path)
         instrument = 'TRES'
+    elif "galah" in spectrum_path.lower():
+        single_ccd = 3 # since we're doing Li measurements
+        flx, wav = read_galah(spectrum_path, single_ccd)
+        instrument = 'HERMES'
     else:
         raise NotImplementedError
 
@@ -984,21 +1172,22 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     names = ['FeI', 'FeI', 'FeI', 'Li', '', 'CaI$\lambda$']
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
 
-    #
-    # retrieve the order corresponding to target wavelength.
-    # then shift the wavelength solution to source frame, if needed.
-    #
-    _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
-    viable_orders = np.argwhere(
-        (_preorder != wav_2d.shape[1]-1) & (_preorder != 0)
-    )
-    order = int(
-        viable_orders[np.argmin(
-            np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
-        )]
-    )
+    if instrument in ['Veloce', 'TRES', 'PFS']:
+        #
+        # retrieve the order corresponding to target wavelength.
+        # then shift the wavelength solution to source frame, if needed.
+        #
+        _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
+        viable_orders = np.argwhere(
+            (_preorder != wav_2d.shape[1]-1) & (_preorder != 0)
+        )
+        order = int(
+            viable_orders[np.argmin(
+                np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
+            )]
+        )
 
-    flx, wav = flx_2d[order, :], wav_2d[order, :]
+        flx, wav = flx_2d[order, :], wav_2d[order, :]
 
     if instrument == 'Veloce':
         wav = wav[::-1]
