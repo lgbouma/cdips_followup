@@ -316,14 +316,15 @@ def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
 
     # Check if FITS files already available in working directory
     fits_files = [[], [], [], []]
-    for each_ccd in [1,2,3,4]:
+    ccdlist = [1,2,3,4] if single_ccd is None else [single_ccd]
+    for each_ccd in ccdlist:
         globstr = os.path.join(
                 working_directory, str(sobject_id)+str(each_ccd)+'.fits'
         )
         fits_files[each_ccd-1] = glob(globstr)
 
     # If not already available, try to download
-    for each_ccd in [1,2,3,4]:
+    for each_ccd in ccdlist:
         if fits_files[each_ccd-1] == []:
             globstr = os.path.join(
                     working_directory, str(sobject_id)+str(each_ccd)+'.fits'
@@ -332,7 +333,7 @@ def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
             raise ValueError(msg)
 
     spectrum = dict()
-    for each_ccd in [1,2,3,4]:
+    for each_ccd in ccdlist:
         if fits_files[each_ccd-1]!=[]:
             hdul = fits.open(fits_files[each_ccd-1][0])
 
@@ -379,12 +380,24 @@ def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
             spectrum['uob_red_'+str(each_ccd)] = []
             spectrum['uob_norm_'+str(each_ccd)] = []
 
-    spectrum['wave_red'] = np.concatenate(([spectrum['wave_red_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
-    spectrum['wave_norm'] = np.concatenate(([spectrum['wave_norm_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
-    spectrum['sob_red'] = np.concatenate(([spectrum['sob_red_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
-    spectrum['sob_norm'] = np.concatenate(([spectrum['sob_norm_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
-    spectrum['uob_red'] = np.concatenate(([spectrum['uob_red_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
-    spectrum['uob_norm'] = np.concatenate(([spectrum['uob_norm_'+str(each_ccd)] for each_ccd in [1,2,3,4]]))
+    spectrum['wave_red'] = np.concatenate(
+        ([spectrum['wave_red_'+str(each_ccd)] for each_ccd in ccdlist])
+    )
+    spectrum['wave_norm'] = np.concatenate(
+        ([spectrum['wave_norm_'+str(each_ccd)] for each_ccd in ccdlist])
+    )
+    spectrum['sob_red'] = np.concatenate(
+        ([spectrum['sob_red_'+str(each_ccd)] for each_ccd in ccdlist])
+    )
+    spectrum['sob_norm'] = np.concatenate(
+        ([spectrum['sob_norm_'+str(each_ccd)] for each_ccd in ccdlist])
+    )
+    spectrum['uob_red'] = np.concatenate(
+        ([spectrum['uob_red_'+str(each_ccd)] for each_ccd in ccdlist])
+    )
+    spectrum['uob_norm'] = np.concatenate(
+        ([spectrum['uob_norm_'+str(each_ccd)] for each_ccd in ccdlist])
+    )
 
     if verbose:
         outstr = """
