@@ -1141,9 +1141,8 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
 
 
 
-
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
-                   outpath=None, is_template=False):
+                   outpath=None, is_template=False, writecsvresults=True):
     """
     spectrum_path: path to PFS, Veloce, TRES, or GALAH spectrum
 
@@ -1178,9 +1177,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
 
     # FeI at 6703.58 and 6705.1 (Berger+18 Fig3).
     # FeI at 6707.44
-    # Li I doublet at 6707.76, 6707.91
+    # Li I doublet at 6707.76, 6707.91 -> avg 6707.
     # CaI lambda at ~6718.
-    target_wav = 6707.85
+    target_wav = 6707.835
     vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6718]
     names = ['FeI', 'FeI', 'FeI', 'Li', '', 'CaI$\lambda$']
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
@@ -1254,9 +1253,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
                            flux=(1-cont_norm_spec.flux))
 
     #
-    # get the Li EW
+    # get the Li EW, assuming it has been correctly centered within a 1A
+    # region.
     #
-    region = SpectralRegion((target_wav-0.5)*u.AA, (target_wav+0.5)*u.AA)
+    region = SpectralRegion((target_wav-1.0)*u.AA, (target_wav+1.0)*u.AA)
     li_equiv_width = equivalent_width(cont_norm_spec, regions=region)
     li_centroid = centroid(full_spec, region)
 
@@ -1299,11 +1299,12 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     axs[3].plot(full_spec.wavelength, y_fit, c='g')
 
     txt = (
-        'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nEW:{:.3f}'.
+        'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nGaussFitEW:{:.1f}mA\nEW:{:.1f}mA'.
         format(g_fit.amplitude.value,
                g_fit.mean.value,
                g_fit.stddev.value,
-               fitted_li_equiv_width)
+               (fitted_li_equiv_width*1e3).value,
+               (li_equiv_width*1e3).value)
     )
     axs[3].text(
         0.95, 0.95, txt, ha='right', va='top', transform=axs[3].transAxes,
@@ -1319,14 +1320,28 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
         for ax in axs:
             ax.set_xlim(xlim)
 
-    axs[2].set_xlim([target_wav-1, target_wav+1])
-    axs[3].set_xlim([target_wav-1, target_wav+1])
+    axs[2].set_xlim([target_wav-1.5, target_wav+1.5])
+    axs[3].set_xlim([target_wav-1.5, target_wav+1.5])
     axs[-1].set_xlabel('wavelength [angstrom]')
 
     for ax in axs:
         format_ax(ax)
 
-    savefig(f, outpath)
+    savefig(f, outpath, writepdf=False)
+
+    if writecsvresults:
+        outpath = outpath.replace('.png','_results.csv')
+        outdict = {
+            'LiEW_mA': np.round(li_equiv_width*1e3, 3),
+            'Fitted_Li_EW_mA': np.round(fitted_li_equiv_width*1e3, 3),
+            'Li_centroid_A': np.round(li_centroid, 3),
+            'gaussian_fit_amplitude': np.round(g_fit.amplitude.value, 4),
+            'gaussian_fit_mean': np.round(g_fit.mean.value, 4),
+            'gaussian_fit_stddev': np.round(g_fit.stddev.value, 4)
+        }
+        outdf = pd.DataFrame(outdict, index=[0])
+        outdf.to_csv(outpath, index=False)
+        print(f'Made {outpath}')
 
 
 def measure_vsini(wav, flx, flxerr=None, teff=6000, logg=4.5, vturb=2, outdir=None,
