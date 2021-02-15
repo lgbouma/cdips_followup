@@ -1,6 +1,10 @@
 """
 Environment: py37_emcee2
 Given RV vs time, does it phase up?
+
+Contents:
+    "manualmain" and "automain" modes for producing radvel_drivers that then
+    run the Keplerian fit.
 """
 
 import os
@@ -87,10 +91,10 @@ def main():
 def manual_main():
     # If you manually wrote the driver file (rather than automatically
     # producing it). E.g., right now, this is for multi-instrument fitting.
-    driver_path = '/home/luke/Dropbox/proj/cdips_followup/drivers/radvel_drivers/20200305/TIC59859387.py'
+    driver_path = '/home/luke/Dropbox/proj/cdips_followup/drivers/radvel_drivers/20210214/TIC411614400.py'
 
     RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
-                               'spec_analysis', 'multi_instrument', 'phased_RVs')
+                               'spec_analysis', 'CHIRON', 'phased_RVs')
     if not os.path.exists(RVRESULTDIR):
         os.mkdir(RVRESULTDIR)
 
@@ -98,8 +102,8 @@ def manual_main():
 
 
 if __name__ == "__main__":
-    automain = 1
-    manualmain = 0
+    automain = 0
+    manualmain = 1
 
     if automain:
         main()
