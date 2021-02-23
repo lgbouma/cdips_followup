@@ -6,25 +6,26 @@ Contents:
 
     Config / Data:
 
-    ACCEPTABILITY_DICT
-    MAXTIMEDICT
-    SITEDICT
+        ACCEPTABILITY_DICT
+        MAXTIMEDICT
+        SITEDICT
 
     Functions:
 
-    _given_Gmag_get_exptime_defocus: LCOGT exptime calculator.
+        _given_Gmag_get_exptime_defocus: LCOGT exptime calculator.
 
-    make_request_group: for a single target, make the requestgroup object that
-        is passed to the LCOGT API.
+        make_request_group: for a single target, make the requestgroup object
+            that is passed to the LCOGT API.
 
-    get_requests_given_ephem: Given an ephemeris, and the basic details of a
-        target, generate LCOGT requests for any available transits at the given
-        sites, between min_search_time and max_search_time.
+        get_requests_given_ephem: Given an ephemeris, and the basic details of
+            a target, generate LCOGT requests for any available transits at the
+            given sites, between min_search_time and max_search_time.
 
-    DEPRECATED(?):
-    make_single_request_from_row
+        DEPRECATED(?):
 
-    make_all_request_files
+        make_single_request_from_row
+
+        make_all_request_files
 """
 
 ###########
