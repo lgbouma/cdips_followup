@@ -5,11 +5,14 @@ Contents:
     get_cdips_candidates
     given_sourceid_get_radec
     given_sourceid_get_gaiarow
+    get_ephemeris_uncertainty
 """
 import os
 import pandas as pd, numpy as np
 
 from astroquery.gaia import Gaia
+from astropy.time import Time
+import datetime as dt
 
 from cdips.utils.catalogs import ticid_to_toiid as cdips_ticid_to_toiid
 from cdips_followup import __path__
@@ -85,3 +88,30 @@ def given_sourceid_get_gaiarow(source_id):
         raise AssertionError('gaia match failed')
 
     return gaia_r
+
+
+def get_ephemeris_uncertainty(epoch, epoch_unc, period, period_unc, epoch_obs='today'):
+    """
+    Given a transit epoch, its uncertainty, and the uncertainty on the period,
+    calculate the uncertainty at some future epoch.
+
+    Implements e.g., Equation 4 of Dragomir et al 2019.
+
+    Assumes epoch and period are both in the same units (e.g., days).
+
+    epoch_obs (str or float): "today" or BJD_TDB (really could be JD, UTC, etc
+    too. The scaling would not be affected).
+    """
+
+    if epoch_obs == 'today':
+        epoch_obs = Time(dt.datetime.today().isoformat()).jd
+    else:
+        assert isinstance(epoch_obs, float)
+
+    # coarse estimate of the transit number relative to the initial epoch
+    # ("epoch")
+    n_transit = np.floor((epoch_obs - epoch)/period)
+
+    delta_t_tra_obs = n_transit*period_unc + epoch_unc
+
+    return delta_t_tra_obs
