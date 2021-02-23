@@ -1,6 +1,30 @@
 """
 Given targets, their ephemerides, and positions, create requests to LCOGT to
 get imaging follow-up with the 1m and 2m.
+
+Contents:
+
+    Config / Data:
+
+    ACCEPTABILITY_DICT
+    MAXTIMEDICT
+    SITEDICT
+
+    Functions:
+
+    _given_Gmag_get_exptime_defocus: LCOGT exptime calculator.
+
+    make_request_group: for a single target, make the requestgroup object that
+        is passed to the LCOGT API.
+
+    get_requests_given_ephem: Given an ephemeris, and the basic details of a
+        target, generate LCOGT requests for any available transits at the given
+        sites, between min_search_time and max_search_time.
+
+    DEPRECATED(?):
+    make_single_request_from_row
+
+    make_all_request_files
 """
 
 ###########
@@ -58,15 +82,16 @@ ACCEPTABILITY_DICT = {
     'EO':90
 }
 
+# https://lco.global/observatory/process/
 MAXTIMEDICT = {
     '19A': Time('2019-05-30 23:59:00'),
     '19B': Time('2019-11-30 23:59:00'),
     '20A': Time('2020-05-30 23:59:00'),
     '20B': Time('2020-11-30 23:59:00'),
-    '21A': Time('2021-05-30 23:59:00'),
-    '21B': Time('2021-11-30 23:59:00'),
-    '22A': Time('2021-05-30 23:59:00'),
-    '22B': Time('2021-11-30 23:59:00')
+    '21A': Time('2021-07-31 23:59:00'),
+    '21B': Time('2022-01-31 23:59:00'),
+    '22A': Time('2022-07-31 23:59:00'),
+    '22B': Time('2023-01-31 23:59:00')
 }
 
 # ['', '', '', 'ALMA', 'ATST', 'Anglo-Australian Observatory', 'Apache Point',
@@ -113,6 +138,21 @@ RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
 #############
 # functions #
 #############
+
+def get_current_semester_str():
+    """
+    Returns a string like "21A" if that is the current semester.
+    """
+
+    today = Time(dt.datetime.today().isoformat())
+
+    for k, v in MAXTIMEDICT.items():
+        if v > today:
+            semesterstr = k
+            break
+
+    return semesterstr
+
 
 def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
     """

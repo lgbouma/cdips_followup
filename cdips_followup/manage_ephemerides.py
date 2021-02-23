@@ -5,14 +5,13 @@ Each row in this CSV file is an ephemeris entry. Each target will typically
 have multiple ephemeris entries, as knowledge improves with photometric
 followup.
 
-Tools:
-* Insert new ephemerides.
-    * From CDIPS pipeline.
-    * From ExoFOP-TESS.
-    * From Joel Hartman's .updateephem.txt files.
-* Get latest ephemeris given target source_id, or ticid.
-* Export to google sheets (?).
-* Validate the spreadsheet, and save it.
+Contents:
+* insert_ephemeris.
+    ...From CDIPS pipeline: read_exofoptess_ctoi_ephem
+    ...From ExoFOP-TESS: read_exofoptess_toi_ephem.
+    ...From Joel Hartman .updateephem.txt files: read_hartman_updateephem_file
+* query_ephemeris, given target source_id, or ticid.
+* save_ephemerides_csv_file (ephemerides_{YYYYMMDD}.csv, and ephemerides.csv).
 """
 
 ######################
@@ -412,8 +411,6 @@ def read_exofoptess_ctoi_ephem(targetid):
         ephem_dict[k] = result
 
     return ephem_dict
-
-
 
 
 

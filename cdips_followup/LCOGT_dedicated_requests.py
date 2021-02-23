@@ -1,10 +1,21 @@
+"""
+LCOGT_dedicated_requests.py
+Luke Bouma, 2018-2020
+
+Contents:
+    get_dedicated_request
+    given_dedicated_requests_validate_submit
+"""
 import pandas as pd, numpy as np
 import datetime as dt
 from astropy.time import Time
 import pickle, os
 from copy import deepcopy
 
-from cdips_followup.LCOGT_make_requests import make_single_request_from_row
+from cdips_followup.LCOGT_make_requests import (
+    make_single_request_from_row,
+    get_current_semester_str
+)
 
 from cdips_followup.LCOGT_submit_requests import (
     validate_single_request,
@@ -18,37 +29,42 @@ DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data')
 RESULTSDIR = os.path.join(os.path.dirname(__path__[0]), 'results')
 
 def get_dedicated_request(savstr, source_id, period, epoch, duration,
-                          eventclasses, overwrite=0, semesterstr='20B',
+                          eventclasses, overwrite=0, semesterstr=None,
                           min_search_time=Time(dt.datetime.today().isoformat()),
                           max_search_time=None, filtermode='ip',
                           telescope_class='1m0',
                           sites=None
                          ):
+    """
     #
     # savstr: e.g., request_2m_tc_secondary. "ephemupdate" if it is one...
     #
+    """
 
     assert isinstance(source_id, str)
+
+    if semesterstr is None:
+        semesterstr = get_current_semester_str()
 
     r = {'source_id': source_id, 'period': period,
          'epoch': epoch, 'duration': duration}
 
-    init_savstr = '{}_all_classes'.format(savstr)
+    init_savstr = f'{savstr}_all_classes'
     _savstr = deepcopy(savstr)
 
     if not 'ephemupdate' in init_savstr:
         resultsdir = (
-            os.path.join(RESULTSDIR,'LCOGT_{}_observability/'.format(semesterstr))
+            os.path.join(RESULTSDIR, f'LCOGT_{semesterstr}_observability/')
         )
     else:
         resultsdir = (
-            os.path.join(RESULTSDIR,'LCOGT_{}_updated_requests/'.format(semesterstr))
+            os.path.join(RESULTSDIR, f'LCOGT_{semesterstr}_updated_requests/')
         )
     if not os.path.exists(resultsdir):
         os.mkdir(resultsdir)
 
     pkl_savpath = (
-        os.path.join(resultsdir, '{}.pkl'.format(init_savstr))
+        os.path.join(resultsdir, f'{init_savstr}.pkl')
     )
 
     if not overwrite and os.path.exists(pkl_savpath):
@@ -72,6 +88,7 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
             print('saved {:s}'.format(pkl_savpath))
 
     return requests
+
 
 def given_dedicated_requests_validate_submit(requests,
                                              submit_eventclasses=None,
