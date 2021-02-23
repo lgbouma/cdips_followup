@@ -11,7 +11,7 @@ from astropy.io import fits
 from astrobase import lcmath
 from astrobase.periodbase import kbls
 from astrobase.checkplot.png import _make_phased_magseries_plot
-from astrobase.lcmath import phase_bin_magseries
+from astrobase.lcmath import sigclip_magseries, phase_magseries, phase_bin_magseries
 from copy import deepcopy
 
 from cdips.plotting import vetting_pdf as vp
@@ -45,7 +45,9 @@ def get_data(ticid, cdips=1, spoc=0, eleanor=0, cdipspre=0):
                                            download_dir=outdir, verbose=True)
 
     if spoc:
-        lcfiles = get_two_minute_spoc_lightcurves(ticid, download_dir=outdir)
+        lcfiles = glob(os.path.join(outdir,'mastDownload','TESS','*','tess*fits'))
+        if len(lcfiles) == 0:
+            lcfiles = get_two_minute_spoc_lightcurves(ticid, download_dir=outdir)
 
     if eleanor:
         lcfiles = glob(os.path.join(outdir,'hlsp_eleanor*fits'))
@@ -63,7 +65,7 @@ def get_data(ticid, cdips=1, spoc=0, eleanor=0, cdipspre=0):
     return data
 
 
-def explore_mag_lightcurves(data, ticid):
+def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
 
     for yval in ['TFA1','TFA2','TFA3','IRM1','IRM2','IRM3','PCA1','PCA2','PCA3']:
 
@@ -75,8 +77,7 @@ def explore_mag_lightcurves(data, ticid):
                 format(ticid, yval, ix)
             )
             if os.path.exists(savpath):
-                print('found {}, continue'.format(savpath))
-                continue
+                print('found {}, rewriting'.format(savpath))
 
             plt.close('all')
             f,ax = plt.subplots(figsize=(16,4))
@@ -89,6 +90,22 @@ def explore_mag_lightcurves(data, ticid):
             ax.set_ylabel(yval)
             ylim = ax.get_ylim()
             ax.set_ylim((max(ylim), min(ylim)))
+
+            if not epoch is None:
+                if np.min(d['TMID_BJD']) < 2450000 and epoch > 2450000:
+                    epoch -= 2457000
+                if np.min(d['TMID_BJD']) > 2450000 and epoch < 2450000:
+                    epoch += 2457000
+
+                tra_times = epoch + np.arange(-1000,1000,1)*period
+
+                xlim = ax.get_xlim()
+                ylim = ax.get_ylim()
+
+                ax.vlines(tra_times, max(ylim), min(ylim), color='orangered',
+                          linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+                ax.set_ylim((max(ylim), min(ylim)))
+                ax.set_xlim(xlim)
 
             ax.set_title(ix)
 
@@ -107,26 +124,31 @@ def explore_mag_lightcurves(data, ticid):
             format(ticid, yval)
         )
         if os.path.exists(savpath):
-            print('found {}, continue'.format(savpath))
-            continue
+            print('found {}, rewriting'.format(savpath))
 
         plt.close('all')
         f,ax = plt.subplots(figsize=(16,4))
 
         ax.scatter(stimes, smags, c='k', s=5)
 
-        # period = 11.69201165
-        # epoch = 2458642.44550000
-        # tra_times = epoch + np.arange(-100,100,1)*period
-
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
 
-        # ax.set_ylim((min(ylim), max(ylim)))
-        # ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
-        #           linestyle='--', zorder=-2, lw=2, alpha=0.3)
-        # ax.set_ylim((min(ylim), max(ylim)))
-        # ax.set_xlim(xlim)
+        if not epoch is None:
+            if np.min(d['TMID_BJD']) < 2450000 and epoch > 2450000:
+                epoch -= 2457000
+            if np.min(d['TMID_BJD']) > 2450000 and epoch < 2450000:
+                epoch += 2457000
+
+            tra_times = epoch + np.arange(-1000,1000,1)*period
+
+            xlim = ax.get_xlim()
+            ylim = ax.get_ylim()
+
+            ax.vlines(tra_times, max(ylim), min(ylim), color='orangered',
+                      linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+            ax.set_ylim((max(ylim), min(ylim)))
+            ax.set_xlim(xlim)
 
         ax.set_xlabel('time [bjdtdb]')
         ax.set_ylabel('relative '+yval)
@@ -205,8 +227,20 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
     print('made {}'.format(savpath))
 
 
+def _get_ylim(y_obs):
+    iqr = (np.nanpercentile(y_obs, 75) -
+           np.nanpercentile(y_obs, 25))
+    ylower = np.nanmedian(y_obs) - 2.5*iqr
+    yupper = np.nanmedian(y_obs) + 2.5*iqr
+    return (ylower, yupper)
+
+
 def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
-                            detrend=False, window_length=None):
+                             detrend=False, window_length=None, do_phasefold=0,
+                             badtimewindows=None):
+    """
+    badtimewindows = [(1656, 1658), (1662, 1663)], for instance.
+    """
 
     if not isspoc:
         raise NotImplementedError
@@ -225,14 +259,29 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
         f,ax = plt.subplots(figsize=(16*2,4*1.5))
 
         sel = (d['QUALITY'] == 0) & (d[yval] > 0)
+        print(42*'.')
+        print('WRN!: omitting all non-zero quality flags. throws out good data!')
+        print(42*'.')
+        #sel = (d[yval] > 0)
+        if badtimewindows is not None:
+            for w in badtimewindows:
+                sel &= ~(
+                    (d['TIME'] > w[0])
+                    &
+                    (d['TIME'] < w[1])
+                )
 
         x_obs = d['TIME'][sel]
         y_obs = d[yval][sel] / np.nanmedian(d[yval][sel])
 
         if detrend:
-            y_obs, _ = dtr.detrend_flux(x_obs, y_obs)
+            ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
+            y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs)
 
-        ax.scatter(x_obs, y_obs, c='k', s=4)
+        if detrend:
+            ax.plot(x_obs, y_trend, c='r', lw=0.5, zorder=3)
+        else:
+            ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
         times.append( x_obs )
         fluxs.append( y_obs )
@@ -243,14 +292,15 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
 
         ax.set_title(ix)
 
-        iqr = (np.nanpercentile(y_obs, 75) -
-               np.nanpercentile(y_obs, 25))
-        ylower = np.nanmedian(y_obs) - 2.5*iqr
-        yupper = np.nanmedian(y_obs) + 2.5*iqr
-        ax.set_ylim((ylower, yupper))
+        if detrend:
+            _ylim = _get_ylim(y_trend)
+        else:
+            _ylim = _get_ylim(y_obs)
+
+        ax.set_ylim(_ylim)
 
         if not epoch is None:
-            tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
+            tra_times = epoch + np.arange(-1000,1000,1)*period
 
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
@@ -304,6 +354,51 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
 
     f.savefig(savpath, dpi=400, bbox_inches='tight')
     print('made {}'.format(savpath))
+
+    if do_phasefold:
+
+        assert isinstance(period, float) and isinstance(epoch, float)
+
+        # use times and fluxs, instead of the sigma clipped thing.
+
+        plt.close('all')
+        fig, ax = plt.subplots(figsize=(4,3))
+
+        #
+        # ax: primary transit
+        #
+        tdur_guess = 7
+        phasebin = 6e-3
+        minbinelems = 2
+        tdur_by_period = (tdur_guess/24)/period
+        plotxlim = (-0.5, 0.5)
+        plotylim = (0.989, 1.004)
+
+        _make_phased_magseries_plot(ax, 0, times, fluxs,
+                                    np.ones_like(fluxs)/1e4, period, epoch,
+                                    True, True, phasebin, minbinelems,
+                                    plotxlim, 'tls', xliminsetmode=False,
+                                    magsarefluxes=True, phasems=0.8,
+                                    phasebinms=4.0, verbose=True)
+        ax.set_ylim(plotylim)
+
+        ax.vlines(1/6, min(plotylim), max(plotylim), color='orangered',
+                  linestyle='--', zorder=-2, lw=1, alpha=0.8)
+        ax.set_ylim(plotylim)
+
+        savpath = os.path.join(
+            outdir, 'spoc_lightcurve_detrended_{}_allsector_phasefold.png'.format(yval)
+        )
+
+        fig.savefig(savpath, dpi=400, bbox_inches='tight')
+        print(f'made {savpath}')
+
+        csvpath = savpath.replace('png','csv')
+        pd.DataFrame({
+            'time': times, 'flux': fluxs
+        }).to_csv(csvpath, index=False)
+        print(f'made {csvpath}')
+
 
 
 def make_periodogram(data, ticid, pipeline, period_min=1, period_max=2,
@@ -537,23 +632,38 @@ def main():
     ticid = '264593828' # CVSO 17 neighbor
     ticid = '324101484' # SV Centauri
     ticid = '286347420' # looks like planet?
+    ticid = '340486476' # EB + dips?
+    ticid = '268301217' # TOI 1937b
+    ticid = '360156606' # TOI 1227
+    ticid = '96533063' # Hillenbrand weirdo
+    ticid = '53682439' # CTOI from CDIPS, need S33
+    ticid = '268431671' # manual
+    ticid = '438790187' # CD-48 8201
+    ticid = '339308290' # similar to CD-48
+
     # optional #
-    period = None
-    epoch = None
+    period = 1.395733 # None
+    epoch = 2458597.22243 - 2457000 + 0.23*1.395733 #None
+    badtimewindows = None
+
+    # CD-48 8201
+    # period = 2.099291 # None
+    # epoch = 2458622.89036 - 2457000 #None
+    # badtimewindows = [(1616.75,1617.0),(1617.6,1617.8)]
 
     cdips = 0
-    spoc = 0
-    eleanor = 1
+    spoc = 1
+    eleanor = 0
     cdipspre = 0
 
-    detrend = 0
+    detrend = 1
 
     do_mag_lcs = 0
-    do_eleanor_lcs = 1
-    do_flux_lcs = 0
+    do_eleanor_lcs = 0
+    do_flux_lcs = 1
 
-    do_periodogram = 0
-    do_pf = 0
+    do_periodogram = 1
+    do_pf = 1
     do_riverplot = 0
 
     data = get_data(ticid, cdips=cdips, spoc=spoc, cdipspre=cdipspre,
@@ -563,24 +673,22 @@ def main():
         explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch)
 
     if do_mag_lcs:
-        explore_mag_lightcurves(data, ticid)
+        explore_mag_lightcurves(data, ticid, period=period, epoch=epoch)
 
     if do_flux_lcs:
         explore_flux_lightcurves(data, ticid, isspoc=spoc, period=period,
                                  epoch=epoch)
         if detrend:
             explore_flux_lightcurves(data, ticid, isspoc=spoc, period=period,
-                                     epoch=epoch, detrend=detrend)
+                                     epoch=epoch, detrend=detrend,
+                                     do_phasefold=do_pf,
+                                     badtimewindows=badtimewindows)
 
     if do_periodogram:
         if cdips:
             time = data[0]['TMID_BJD']
             flux, err = _given_mag_get_flux(data[0]['IRM1'], data[0]['IRE1'])
-            _data = {
-                'time': time,
-                'flux': flux,
-                'err': err
-            }
+            _data = {'time': time, 'flux': flux, 'err': err}
             pipeline = 'cdips'
         elif spoc:
             _data = data[0]
@@ -588,9 +696,6 @@ def main():
         else:
             raise NotImplementedError
         make_periodogram(_data, ticid, pipeline)
-
-    if do_pf:
-        do_phasefolds(data)
 
     if do_riverplot:
         make_riverplot(data)
