@@ -6,6 +6,7 @@ have multiple ephemeris entries, as knowledge improves with photometric
 followup.
 
 Contents:
+* get_ephemeris_uncertainty
 * insert_ephemeris.
     ...From CDIPS pipeline: read_exofoptess_ctoi_ephem
     ...From ExoFOP-TESS: read_exofoptess_toi_ephem.
@@ -24,6 +25,9 @@ from datetime import datetime
 from parse import search
 
 from astrobase.services.identifiers import tic_to_gaiadr2
+
+from astropy.time import Time
+import datetime as dt
 
 from cdips.utils import today_YYYYMMDD
 from cdips.utils.catalogs import (
@@ -413,48 +417,28 @@ def read_exofoptess_ctoi_ephem(targetid):
     return ephem_dict
 
 
+def get_ephemeris_uncertainty(epoch, epoch_unc, period, period_unc, epoch_obs='today'):
+    """
+    Given a transit epoch, its uncertainty, and the uncertainty on the period,
+    calculate the uncertainty at some future epoch.
 
-def read_mitqlp_ephem(targetid):
-    # NOTE: WIP
-    raise NotImplementedError
+    Implements e.g., Equation 4 of Dragomir et al 2019.
 
-    toidf = get_exofop_toi_catalog()
+    Assumes epoch and period are both in the same units (e.g., days).
 
-    if targetid.startswith('TIC'):
-        raise NotImplementedError
+    epoch_obs (str or float): "today" or BJD_TDB (really could be JD, UTC, etc
+    too. The scaling would not be affected).
+    """
 
+    if epoch_obs == 'today':
+        epoch_obs = Time(dt.datetime.today().isoformat()).jd
     else:
-        # targetid is Full TOI ID
-        sel = toidf['Full TOI ID'].astype(str) == targetid
-        targetrow = toidf[sel]
+        assert isinstance(epoch_obs, float)
 
-        if not len(targetrow) == 1:
-            raise AssertionError(
-                'failed to get ID match for {}'.format(targetid)
-            )
+    # coarse estimate of the transit number relative to the initial epoch
+    # ("epoch")
+    n_transit = np.floor((epoch_obs - epoch)/period)
 
-    keymatchdict = {
-        'period_val': 'Orbital Period Value',
-        'epoch_val': 'Orbital Epoch Value',
-        'duration_val': 'Transit Duration Value',
-        'period_unc': 'Orbital Period Error',
-        'epoch_unc': 'Orbital Epoch Error',
-        'duration_unc': 'Transit Duration Error',
-        'depth_val': 'Transit Depth Value',
-        'depth_unc': 'Transit Depth Error'
-    }
+    delta_t_tra_obs = n_transit*period_unc + epoch_unc
 
-    ephem_dict  = {}
-    for k,v in keymatchdict.items():
-
-        if k == 'epoch_val':
-            # BTJD := BJD - 2457000
-            result = 2457000 + np.float64(targetrow[v])
-        else:
-            result = np.float64(targetrow[v])
-
-        ephem_dict[k] = result
-
-    import IPython; IPython.embed()
-
-    return ephem_dict
+    return delta_t_tra_obs
