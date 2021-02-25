@@ -13,41 +13,45 @@ from cdips_followup.LCOGT_dedicated_requests import (
 )
 from astrobase.services.identifiers import tic_to_gaiadr2
 
+TRANSITTYPEDICT = {
+    'all': ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO'],
+    'partials': ['OIB', 'BEO'],
+    'totals': ['OIBEO', 'IBEO', 'OIBE'],
+    'fulltotals': ['OIBEO']
+}
+
 def main():
 
-    ####################
+    ##########################################
+    # CHANGE BELOW
     savstr = '20210223_21A_thruMay1' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
-    validate = 0
-    submit = 0
+    validate = 1
+    submit = 1
 
-    tic_id = '217933560' #'457939414'
-    max_n_events = 30 # else None. n_events is per eventclass.
-
-    filtermode = 'zs'# 'zs', 'gp', 'ip'
-    telescope_class = '1m0'
-
+    tic_id = '238597883'
     source_id = None # '6113920619134019456' # can use instead of TIC
+
+    filtermode = 'ip'# 'zs', 'gp', 'ip'
+    telescope_class = '1m0'
+    ipp_value = 0.8 # usually 1
     max_search_time = Time('2021-05-01 23:59:00')
 
-    # create_eventclasses = ['OIBEO']
-    create_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
-    # create_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
-    # create_eventclasses = ['IBEO', 'OIBE']
-    # create_eventclasses = ['OIB', 'BEO']
+    verify_ephemeris_uncertainty = 1 # require t_tra uncertainty < 2 hours
+    inflate_duration = 1 # if t_tra uncertainty > 1 hour, inflate transit duration by +/- 45 minutes per side
 
-    # submit_eventclasses = ['OIBEO']
-    submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE']
-    # submit_eventclasses = ['OIBEO', 'IBEO', 'OIBE', 'OIB', 'BEO']
-    # submit_eventclasses = ['IBEO', 'OIBE']
-    # submit_eventclasses = ['OIB', 'BEO']
+    transit_type = 'totals' # ['OIBEO', 'IBEO', 'OIBE']
+    max_n_events = 8 # else None. n_events is per eventclass.
 
-    verify_ephemeris_uncertainty = True
-    raise_error = False
-    max_duration_error = 30
+    raise_error = False # raise an error if max_duration_error flag raised.
+    max_duration_error = 30 # the submitted LCOGT request must match requested durn to within this difference [minutes]
+
+    # CHANGE ABOVE
+    ##########################################
+
     manual_ephemeris = False
-
-    ####################
+    create_eventclasses = TRANSITTYPEDICT[transit_type]
+    submit_eventclasses = TRANSITTYPEDICT[transit_type]
 
     if source_id is None:
         assert isinstance(tic_id, str)
@@ -82,12 +86,20 @@ def main():
             msg = f'WRN! Got ephem unc of {delta_t_tra_today*24:.1f} hr. This is risky.'
             print(msg)
 
+    if inflate_duration:
+        assert verify_ephemeris_uncertainty
+        if delta_t_tra_today*24 > 1:
+            msg = f'... inflating transit duration for scheduling pursposes by 1.5 hours.'
+            print(msg)
+            duration += 1.5 # add
+
     # "requests" is a list of lists. Higher level is each eventclass. Level
     # below is each event, in that eventclass.
     requests = get_dedicated_request(
         savstr, source_id, period, epoch, duration, create_eventclasses,
         overwrite=overwrite, max_search_time=max_search_time,
-        filtermode=filtermode, telescope_class=telescope_class
+        filtermode=filtermode, telescope_class=telescope_class,
+        ipp_value=ipp_value
     )
 
     # if a maximum number of events is set, impose it!
