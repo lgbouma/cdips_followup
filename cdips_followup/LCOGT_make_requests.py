@@ -21,9 +21,10 @@ Contents:
             a target, generate LCOGT requests for any available transits at the
             given sites, between min_search_time and max_search_time.
 
-        DEPRECATED(?):
+        make_single_request_from_row: Worker function used to make a single
+        LCOGT request object.
 
-        make_single_request_from_row
+        DEPRECATED(?):
 
         make_all_request_files
 """
@@ -128,7 +129,8 @@ MAXTIMEDICT = {
 
 SITEDICT = {
     'at_site': ['SAAO', 'Siding Spring Observatory',
-                'McDonald Observatory', 'Cerro Tololo'],
+                'McDonald Observatory', 'Cerro Tololo',
+                'Haleakala Observatories'],
     'of_address': ['Wise Observatory'] # for NRES
 }
 
@@ -173,9 +175,9 @@ def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
         return 0, 0
 
     if Gmag > df.G.max():
-        raise AssertionError('target too faint')
+        raise AssertionError(f'Got G={Gmag:.2f}. Target too faint.')
     elif Gmag < df.G.min():
-        raise AssertionError('target too bright')
+        raise AssertionError(f'Got G={Gmag:.2f}. Target too bright.')
 
     temp = df.iloc[(df['G']-Gmag).abs().argsort()[0]]
 
@@ -188,7 +190,8 @@ def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
 def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
                        endtime, eventclass='OIBEO', max_airmass=2.5,
                        min_lunar_distance=20, filtermode="ip",
-                       telescope_class="1m0", acceptability_threshold=90):
+                       telescope_class="1m0", acceptability_threshold=90,
+                       ipp_value=1.0):
 
     try:
         exptime, defocus = _given_Gmag_get_exptime_defocus(
@@ -199,7 +202,7 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
         return -1
 
     API_TOKEN = token  # API token obtained from https://observe.lco.global/accounts/profile/
-    PROPOSAL_ID = 'NOAO2020B-013'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
+    PROPOSAL_ID = 'NOAO2021A-009'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
 
     # starttime e.g., '2019-05-02 00:00:00'
     _starttime = starttime.iso[0:19]
@@ -307,7 +310,7 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
     requestgroup = {
         'name': requestname,  # The title
         'proposal': PROPOSAL_ID,
-        'ipp_value': 1.0, # NOTE: might manually override
+        'ipp_value': ipp_value, # NOTE: might manually override
         'operator': 'SINGLE',
         'observation_type': 'NORMAL',
         'requests': [{
@@ -331,12 +334,12 @@ def get_requests_given_ephem(
     min_lunar_distance=20,
     oot_duration=45*u.minute,
     eventclass='OIBEO',
-    sites=['SAAO', 'Siding Spring Observatory', 'McDonald Observatory',
-           'Cerro Tololo'],
+    sites=None,
     schedule_oot_duration=60*u.minute,
     semesterstr='20B',
     filtermode='ip',
-    telescope_class='1m0'):
+    telescope_class='1m0',
+    ipp_value=1.0):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
     requests for any available transits at the given sites, between
@@ -397,7 +400,8 @@ def get_requests_given_ephem(
             _loc = EarthLocation.of_address(site)
             _site = Observer(location=_loc, name=site)
         else:
-            raise NotImplementedError
+            msg = f'Did not find site {site} in SITEDICT'
+            raise NotImplementedError(msg)
 
         (event_ind, oibeo,
          ing_tmid_egr, target_window,
@@ -458,6 +462,7 @@ def get_requests_given_ephem(
                     max_airmass=max_airmass_submit,
                     min_lunar_distance=min_lunar_distance,
                     acceptability_threshold=acceptability_threshold,
+                    ipp_value=ipp_value
                 )
 
                 if g == -1:
@@ -491,7 +496,7 @@ def make_single_request_from_row(
         r, savstr, eventclass, ephem_dict=None,
         min_search_time=Time(dt.datetime.today().isoformat()),
         max_search_time=None, filtermode='ip', telescope_class=None,
-        sites=None
+        sites=None, ipp_value=1.0
     ):
     #
     # require the passed dataframe row has the right format.
@@ -572,14 +577,11 @@ def make_single_request_from_row(
     ra = use_coord.ra.value
     dec = use_coord.dec.value
 
-    #
-    #
-    #
     if telescope_class == '2m0':
         sites = ['Siding Spring Observatory', 'Haleakala Observatories']
     elif telescope_class == '1m0':
         sites = ['SAAO', 'Siding Spring Observatory', 'Cerro Tololo',
-                 'McDonald Observatory']
+                 'McDonald Observatory', 'Wise Observatory']
     elif telescope_class == 'special':
         assert len(sites) >= 1
         pass
@@ -604,7 +606,8 @@ def make_single_request_from_row(
                                     max_search_time=max_search_time,
                                     eventclass=eventclass,
                                     filtermode=filtermode,
-                                    telescope_class=telescope_class)
+                                    telescope_class=telescope_class,
+                                    ipp_value=ipp_value)
 
     return this
 

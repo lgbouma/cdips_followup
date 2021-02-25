@@ -33,7 +33,8 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
                           min_search_time=Time(dt.datetime.today().isoformat()),
                           max_search_time=None, filtermode='ip',
                           telescope_class='1m0',
-                          sites=None
+                          sites=None,
+                          ipp_value=1.0
                          ):
     """
     #
@@ -79,7 +80,8 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
                 req = make_single_request_from_row(
                     row, savstr, eventclass, min_search_time=min_search_time,
                     max_search_time=max_search_time, filtermode=filtermode,
-                    telescope_class=telescope_class, sites=sites
+                    telescope_class=telescope_class, sites=sites,
+                    ipp_value=ipp_value
                 )
             requests.append(req)
 
