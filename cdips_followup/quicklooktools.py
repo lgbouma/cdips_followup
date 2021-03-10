@@ -32,7 +32,7 @@ from astrobase.services.tesslightcurves import (
 
 from cdips_followup.paths import RESULTSDIR
 
-def get_tess_data(ticid, outdir=None, cdips=1, spoc=0, eleanor=0, cdipspre=0):
+def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0):
     """
     High-level wrapper to download available TESS data for `ticid` to `outdir`.
     A few different formats are implemented.  If nothing is found, returns
@@ -49,6 +49,11 @@ def get_tess_data(ticid, outdir=None, cdips=1, spoc=0, eleanor=0, cdipspre=0):
         outdir = os.path.join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
+
+    if (not cdips) and (not spoc) and (not eleanor) and (not cdipspre):
+        raise ValueError(
+            'Expected at least one format of TESS LC to be requested.'
+        )
 
     if cdipspre:
         # e.g., 5996151172781298304_llc.fits
@@ -251,11 +256,36 @@ def _get_ylim(y_obs):
     return (ylower, yupper)
 
 
-def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
-                             detrend=False, window_length=None, do_phasefold=0,
-                             badtimewindows=None):
+def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
+                             isspoc=True, detrend=False, window_length=None,
+                             do_phasefold=0, badtimewindows=None, get_lc=False,
+                             require_quality_zero=1):
     """
-    badtimewindows = [(1656, 1658), (1662, 1663)], for instance.
+    Given a list of SPOC 2 minute data FITS tables, stitch them across sectors
+    and make diagnostic plots.
+
+    Args:
+
+        data (list): from `get_tess_data`.
+
+        ticid (str): TIC ID.
+
+        outdir (str): diagnostic plots are written here. If None, goes to
+        cdips_followup results directory.
+
+    Optional kwargs:
+
+        period, epoch (float): optional
+
+        detrend (bool): optional, will apply standard wotan rotation-flattening.
+
+        badtimewindows (list): to manually mask out, [(1656, 1658), (1662,
+            1663)], for instance.
+
+        get_lc (bool): if True, returns time and flux arrays.
+
+        require_quality_zero (bool): if True, sets QUALITY==0, throwing out
+        lots of data.
     """
 
     if not isspoc:
@@ -263,22 +293,26 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
 
     yval = 'PDCSAP_FLUX'
 
+    if outdir is None:
+        outdir = os.path.join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
+
     times, fluxs= [], []
     for ix, d in enumerate(data):
 
-        outdir = '../results/quicklooklc/TIC{}'.format(ticid)
-        savpath = os.path.join(outdir, 'spoc_lightcurve_{}.png'.format(ix))
+        savpath = os.path.join(outdir, f'spoc_lightcurve_{ix}.png')
         if detrend:
-            savpath = os.path.join(outdir, 'spoc_lightcurve_detrended_{}.png'.format(ix))
+            savpath = os.path.join(outdir, f'spoc_lightcurve_detrended_{ix}.png')
 
         plt.close('all')
         f,ax = plt.subplots(figsize=(16*2,4*1.5))
 
-        sel = (d['QUALITY'] == 0) & (d[yval] > 0)
-        print(42*'.')
-        print('WRN!: omitting all non-zero quality flags. throws out good data!')
-        print(42*'.')
-        #sel = (d[yval] > 0)
+        if require_quality_zero:
+            sel = (d['QUALITY'] == 0) & (d[yval] > 0)
+            print(42*'.')
+            print('WRN!: omitting all non-zero quality flags. throws out good data!')
+            print(42*'.')
+        else:
+            sel = (d[yval] > 0)
         if badtimewindows is not None:
             for w in badtimewindows:
                 sel &= ~(
@@ -393,7 +427,7 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
         _make_phased_magseries_plot(ax, 0, times, fluxs,
                                     np.ones_like(fluxs)/1e4, period, epoch,
                                     True, True, phasebin, minbinelems,
-                                    plotxlim, 'tls', xliminsetmode=False,
+                                    plotxlim, '', xliminsetmode=False,
                                     magsarefluxes=True, phasems=0.8,
                                     phasebinms=4.0, verbose=True)
         ax.set_ylim(plotylim)
@@ -402,8 +436,9 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
                   linestyle='--', zorder=-2, lw=1, alpha=0.8)
         ax.set_ylim(plotylim)
 
+        dstr = 'detrended' if detrend else ''
         savpath = os.path.join(
-            outdir, 'spoc_lightcurve_detrended_{}_allsector_phasefold.png'.format(yval)
+            outdir, f'spoc_lightcurve_{dstr}_{yval}_allsector_phasefold.png'
         )
 
         fig.savefig(savpath, dpi=400, bbox_inches='tight')
@@ -415,9 +450,11 @@ def explore_flux_lightcurves(data, ticid, period=None, epoch=None, isspoc=True,
         }).to_csv(csvpath, index=False)
         print(f'made {csvpath}')
 
+    if get_lc:
+        return times, fluxs
 
 
-def make_periodogram(data, ticid, pipeline, period_min=1, period_max=2,
+def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
                      manual_peak=None, samples_per_peak=50):
 
     if pipeline == 'spoc':
