@@ -1267,20 +1267,28 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     g_init = models.Gaussian1D(amplitude=0.2*u.dimensionless_unscaled,
                                mean=target_wav*u.AA, stddev=0.5*u.AA)
     g_fit = fit_lines(full_spec, g_init, window=(region.lower, region.upper))
-    y_fit = g_fit(full_spec.wavelength)
+    # deprecated
+    #y_fit = g_fit(full_spec.wavelength)
 
-    fitted_spec = Spectrum1D(spectral_axis=full_spec.wavelength,
+    min_x, max_x, N_x = min(full_spec.wavelength), max(full_spec.wavelength), int(1e4)
+    x_fit = np.linspace(min_x, max_x, N_x)
+    y_fit = g_fit(x_fit)
+
+    fitted_spec = Spectrum1D(spectral_axis=x_fit,
                              flux=(1-y_fit)*u.dimensionless_unscaled)
+    # deprecated
+    #fitted_spec = Spectrum1D(spectral_axis=full_spec.wavelength,
+    #                         flux=(1-y_fit)*u.dimensionless_unscaled)
     fitted_li_equiv_width = equivalent_width(fitted_spec, regions=region)
 
     #
     # print bestfit params
     #
     print(42*'=')
-    print('got Li equiv width of {}'.format(li_equiv_width))
-    print('got fitted Li equiv width of {}'.format(fitted_li_equiv_width))
-    print('got Li centroid of {}'.format(li_centroid))
-    print('fit gaussian1d params are\n{}'.format(repr(g_fit)))
+    print(f'got Li equiv width of {li_equiv_width}')
+    print(f'got fitted Li equiv width of {fitted_li_equiv_width}, from gaussian over {min_x:.1f} - {max_x:.1f}, with {N_x} points. ')
+    print(f'got Li centroid of {li_centroid}')
+    print(f'fit gaussian1d params are\n{repr(g_fit)}')
     print(42*'=')
 
     #
@@ -1295,8 +1303,17 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
 
     axs[2].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
 
+    ylim = axs[2].get_ylim()
+    axs[2].vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
+              color='orangered', linestyle='--', zorder=-2, lw=0.5,
+              alpha=0.3)
+
     axs[3].plot(full_spec.wavelength, full_spec.flux, c='k')
-    axs[3].plot(full_spec.wavelength, y_fit, c='g')
+    axs[3].plot(x_fit, y_fit, c='g')
+    ylim = axs[3].get_ylim()
+    axs[3].vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
+              color='g', linestyle='--', zorder=-2, lw=0.5,
+              alpha=0.3)
 
     txt = (
         'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nGaussFitEW:{:.1f}mA\nEW:{:.1f}mA'.
