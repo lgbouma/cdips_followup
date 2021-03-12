@@ -31,6 +31,7 @@ WIP:
     get_Ca_HK_emission: in theory, for CaHK emission line widths.
 """
 import os, re
+from datetime import datetime
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from numpy import array as nparr
 from matplotlib.transforms import blended_transform_factory
@@ -49,6 +50,8 @@ from copy import deepcopy
 from specutils import Spectrum1D, SpectralRegion
 from specutils.fitting import fit_generic_continuum, fit_lines
 from specutils.analysis import equivalent_width, centroid
+from specutils.manipulation.utils import excise_regions
+
 from astropy.modeling import models
 
 from specmatchemp.spectrum import Spectrum
@@ -1141,18 +1144,49 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
 
 
 
-def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
-                   outpath=None, is_template=False, writecsvresults=True):
+def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
+                   outpath=None, is_template=False, writecsvresults=True,
+                   verbose=True, montecarlo_errors=True):
     """
-    spectrum_path: path to PFS, Veloce, TRES, or GALAH spectrum
+    Shift the spectrum, fit a gaussian, and numerically integrate it over a
+    window (+/-1 angstrom, centered on 6707.835A) to get the Li 6708A
+    equivalent width.  Follows methods from
+    https://specutils.readthedocs.io/en/stable/fitting.html
 
-    wvsol_path: path to PFS wavelength solution (optional)
+    For uncertainties, if `montecarlo_errors` is True, will perform the
+    procedure 20 times, adding continuum noise to the spectrum and repeating
+    the fit.  This takes ~40-60 seconds per spectrum, because the
+    implementation is not at all optimized.
 
-    xshift: angstrom shift required to get into source frame (not vacuum frame).
+    Args:
 
-    delta_wav: window to do the measurement over (angstrom)
+        spectrum_path: path to PFS, Veloce, TRES, or GALAH spectrum
 
-    outpath: summary figure is written here.
+        wvsol_path: path to PFS wavelength solution (optional)
+
+        xshift: angstrom shift required to get into source frame (not vacuum frame).
+
+        delta_wav: window to do the measurement over (angstrom)
+
+        montecarlo_errors: whether to fit the EW many times, adding random
+        noise to the spectrum over each iteration.
+
+        outpath: summary figure is written here.
+
+    Returns:
+        pandas DataFrame with keys:
+
+            'LiEW_mA': EW of the spectrum sans interpolation or gaussian
+            fitting.  At typical R~=20k resolution, underestimates by ~50mA.
+
+            'Fitted_Li_EW_mA': EW of the gaussian interpolated fit. Calibrated
+            against Randich+18 for GALAH EW measurements, and agrees at >~50 mA.
+
+            'Fitted_Li_EW_mA_perr', 'Fitted_Li_EW_mA_merr': 84-50 percentile
+            and 50-16 percentile of the Monte-Carlo'ed `Fitted_Li_EW_mA`.
+
+            Other keys include ['Li_centroid_A', 'gaussian_fit_amplitude'
+            'gaussian_fit_mean', 'gaussian_fit_stddev'].
     """
 
     if not isinstance(outpath, str):
@@ -1177,11 +1211,11 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
 
     # FeI at 6703.58 and 6705.1 (Berger+18 Fig3).
     # FeI at 6707.44
-    # Li I doublet at 6707.76, 6707.91 -> avg 6707.
+    # Li I doublet at 6707.76, 6707.91 -> avg 6707.835
     # CaI lambda at ~6718.
     target_wav = 6707.835
-    vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6718]
-    names = ['FeI', 'FeI', 'FeI', 'Li', '', 'CaI$\lambda$']
+    vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6710.2, 6713.1, 6718]
+    names = ['FeI', 'FeI', 'FeI', 'Li', '', '?', '?', 'CaI$\lambda$']
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
 
     if instrument in ['Veloce', 'TRES', 'PFS']:
@@ -1221,11 +1255,11 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
         xmax = xlim[1]
         sel = (wav > xmin) & (wav < xmax)
 
+        if verbose:
+            print(f'Cutting spectrum to {xmin:.3f} - {xmax:.3f} Angstrom')
+
         wav = wav[sel]
         flx = flx[sel]
-
-    spec = Spectrum1D(spectral_axis=wav*u.AA,
-                      flux=flx*u.dimensionless_unscaled)
 
     #
     # fit continuum. when doing so, exclude absorption lines.
@@ -1238,37 +1272,30 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
                     SpectralRegion((_wv-0.5)*u.AA, (_wv+0.5)*u.AA)
                 )
 
-    cont_flx = (
-        fit_generic_continuum(spec,
-                              exclude_regions=exclude_regions
-        )(spec.spectral_axis)
-    )
+    region = SpectralRegion((target_wav-1.0)*u.AA, (target_wav+1.0)*u.AA)
+
+    spec = Spectrum1D(spectral_axis=wav*u.AA,
+                      flux=flx*u.dimensionless_unscaled)
+
+    cont_flx = fit_generic_continuum(
+        spec, exclude_regions=exclude_regions
+    )(spec.spectral_axis)
 
     cont_norm_spec = spec / cont_flx
 
-    #
     # to fit gaussians, look at 1-flux.
-    #
     full_spec = Spectrum1D(spectral_axis=cont_norm_spec.wavelength,
                            flux=(1-cont_norm_spec.flux))
 
-    #
-    # get the Li EW, assuming it has been correctly centered within a 1A
-    # region.
-    #
-    region = SpectralRegion((target_wav-1.0)*u.AA, (target_wav+1.0)*u.AA)
+    # get the Li EW, assuming that the spectrum has been correctly shifted to
+    # within a 1A region.
     li_equiv_width = equivalent_width(cont_norm_spec, regions=region)
     li_centroid = centroid(full_spec, region)
 
-    #
-    # fit a gaussian too, and get ITS equiv width
-    # https://specutils.readthedocs.io/en/stable/fitting.html
-    #
+    # fit a gaussian, and integrate to get ITS equivalent width
     g_init = models.Gaussian1D(amplitude=0.2*u.dimensionless_unscaled,
                                mean=target_wav*u.AA, stddev=0.5*u.AA)
     g_fit = fit_lines(full_spec, g_init, window=(region.lower, region.upper))
-    # deprecated
-    #y_fit = g_fit(full_spec.wavelength)
 
     min_x, max_x, N_x = min(full_spec.wavelength), max(full_spec.wavelength), int(1e4)
     x_fit = np.linspace(min_x, max_x, N_x)
@@ -1276,20 +1303,79 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
 
     fitted_spec = Spectrum1D(spectral_axis=x_fit,
                              flux=(1-y_fit)*u.dimensionless_unscaled)
-    # deprecated
-    #fitted_spec = Spectrum1D(spectral_axis=full_spec.wavelength,
-    #                         flux=(1-y_fit)*u.dimensionless_unscaled)
     fitted_li_equiv_width = equivalent_width(fitted_spec, regions=region)
+
+
+    if montecarlo_errors:
+        N_montecarlo = int(2e1)
+
+        if exclude_regions is not None:
+            excised_spectrum = excise_regions(spec, exclude_regions)
+            continuum_rms = np.nanstd(excised_spectrum.flux).value
+
+        fitted_li_equiv_widths = []
+
+        for i in range(N_montecarlo):
+            if verbose:
+                print(f'{datetime.utcnow().isoformat()}: {i}/{N_montecarlo}')
+
+            np.random.seed(i)
+            err = np.random.normal(loc=0, scale=continuum_rms, size=len(wav))
+
+            spec = Spectrum1D(spectral_axis=wav*u.AA,
+                              flux=(flx+err)*u.dimensionless_unscaled)
+
+            cont_flx = fit_generic_continuum(
+                spec, exclude_regions=exclude_regions
+            )(spec.spectral_axis)
+
+            cont_norm_spec = spec / cont_flx
+
+            # to fit gaussians, look at 1-flux.
+            # fit a gaussian, and integrate to get ITS equivalent width
+            full_spec = Spectrum1D(spectral_axis=cont_norm_spec.wavelength,
+                                   flux=(1-cont_norm_spec.flux))
+
+            g_init = models.Gaussian1D(amplitude=0.2*u.dimensionless_unscaled,
+                                       mean=target_wav*u.AA, stddev=0.5*u.AA)
+            g_fit = fit_lines(full_spec, g_init, window=(region.lower, region.upper))
+
+            y_fit = g_fit(x_fit)
+
+            fitted_spec = Spectrum1D(spectral_axis=x_fit,
+                                     flux=(1-y_fit)*u.dimensionless_unscaled)
+            _fitted_li_equiv_width = equivalent_width(fitted_spec, regions=region)
+
+            fitted_li_equiv_widths.append(_fitted_li_equiv_width.to(u.angstrom).value)
+
+        fitted_li_equiv_widths = nparr(fitted_li_equiv_widths)
+
+        fitted_li_equiv_widths_perr = (
+            np.percentile(fitted_li_equiv_widths, 84)
+            -
+            np.percentile(fitted_li_equiv_widths, 50)
+        )
+        fitted_li_equiv_widths_merr = (
+            np.percentile(fitted_li_equiv_widths, 50)
+            -
+            np.percentile(fitted_li_equiv_widths, 16)
+        )
+
+    else:
+        fitted_li_equiv_widths_perr = np.nan
+        fitted_li_equiv_widths_merr = np.nan
+
 
     #
     # print bestfit params
     #
-    print(42*'=')
-    print(f'got Li equiv width of {li_equiv_width}')
-    print(f'got fitted Li equiv width of {fitted_li_equiv_width}, from gaussian over {min_x:.1f} - {max_x:.1f}, with {N_x} points. ')
-    print(f'got Li centroid of {li_centroid}')
-    print(f'fit gaussian1d params are\n{repr(g_fit)}')
-    print(42*'=')
+    if verbose:
+        print(42*'=')
+        print(f'got Li equiv width of {li_equiv_width:.3f}')
+        print(f'got fitted Li equiv width of {fitted_li_equiv_width:.3f}, from gaussian over {min_x:.1f} - {max_x:.1f}, with {N_x} points. ')
+        print(f'got Li centroid of {li_centroid:.3f}')
+        print(f'fit gaussian1d params are\n{repr(g_fit)}')
+        print(42*'=')
 
     #
     # plot the results
@@ -1297,6 +1383,11 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
     f,axs = plt.subplots(nrows=4, ncols=1, figsize=(6,8))
 
     axs[0].plot(wav, flx, c='k', zorder=3)
+
+    if montecarlo_errors:
+        axs[0].scatter(excised_spectrum.wavelength, excised_spectrum.flux,
+                    c='gray', zorder=4, s=5)
+
     axs[0].plot(wav, cont_flx, c='r', zorder=2)
 
     axs[1].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
@@ -1315,23 +1406,36 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
               color='g', linestyle='--', zorder=-2, lw=0.5,
               alpha=0.3)
 
-    txt = (
-        'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nGaussFitEW:{:.1f}mA\nEW:{:.1f}mA'.
-        format(g_fit.amplitude.value,
-               g_fit.mean.value,
-               g_fit.stddev.value,
-               (fitted_li_equiv_width*1e3).value,
-               (li_equiv_width*1e3).value)
-    )
+    if not montecarlo_errors:
+        txt = (
+            'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nEW:{:.1f}mA\nGaussFitEW:{:.1f}mA'.
+            format(g_fit.amplitude.value,
+                   g_fit.mean.value,
+                   g_fit.stddev.value,
+                   (li_equiv_width*1e3).value,
+                   (fitted_li_equiv_width*1e3).value)
+        )
+    else:
+        txt = (
+            'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nEW:{:.1f}mA\nGaussFitEW:{:.1f}+{:.1f}-{:.1f}mA'.
+            format(g_fit.amplitude.value,
+                   g_fit.mean.value,
+                   g_fit.stddev.value,
+                   (li_equiv_width*1e3).value,
+                   (fitted_li_equiv_width*1e3).value,
+                   fitted_li_equiv_widths_perr*1e3,
+                   fitted_li_equiv_widths_merr*1e3)
+        )
+
     axs[3].text(
         0.95, 0.95, txt, ha='right', va='top', transform=axs[3].transAxes,
         fontsize='xx-small'
     )
 
-    axs[0].set_ylabel('flux')
-    axs[1].set_ylabel('contnorm flux')
-    axs[2].set_ylabel('contnorm flux [zoom]')
-    axs[3].set_ylabel('1 - (contnorm flux)')
+    axs[0].set_ylabel('$f$')
+    axs[1].set_ylabel('$f_\mathrm{contnorm}$')
+    axs[2].set_ylabel('$f_\mathrm{contnorm}$ [zoom]')
+    axs[3].set_ylabel('$1-f_\mathrm{contnorm}$')
 
     if isinstance(xlim, list):
         for ax in axs:
@@ -1339,7 +1443,7 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
 
     axs[2].set_xlim([target_wav-1.5, target_wav+1.5])
     axs[3].set_xlim([target_wav-1.5, target_wav+1.5])
-    axs[-1].set_xlabel('wavelength [angstrom]')
+    axs[-1].set_xlabel('$\lambda$ [angstrom]')
 
     for ax in axs:
         format_ax(ax)
@@ -1351,6 +1455,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=5,
         outdict = {
             'LiEW_mA': np.round(li_equiv_width*1e3, 3),
             'Fitted_Li_EW_mA': np.round(fitted_li_equiv_width*1e3, 3),
+            'Fitted_Li_EW_mA_perr': np.round(fitted_li_equiv_widths_perr*1e3, 3),
+            'Fitted_Li_EW_mA_merr': np.round(fitted_li_equiv_widths_merr*1e3, 3),
             'Li_centroid_A': np.round(li_centroid, 3),
             'gaussian_fit_amplitude': np.round(g_fit.amplitude.value, 4),
             'gaussian_fit_mean': np.round(g_fit.mean.value, 4),
