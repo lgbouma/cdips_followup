@@ -420,14 +420,17 @@ def read_exofoptess_ctoi_ephem(targetid):
 def get_ephemeris_uncertainty(epoch, epoch_unc, period, period_unc, epoch_obs='today'):
     """
     Given a transit epoch, its uncertainty, and the uncertainty on the period,
-    calculate the uncertainty at some future epoch.
+    calculate the uncertainty at some future epoch.  Implements e.g., Equation
+    4 of Dragomir et al 2019.  Assumes epoch and period are both in the same
+    units (e.g., days).
 
-    Implements e.g., Equation 4 of Dragomir et al 2019.
+    Args:
+        epoch_obs (str or float): "today" or BJD_TDB (really could be JD, UTC, etc
+        too. The scaling would not be affected).
 
-    Assumes epoch and period are both in the same units (e.g., days).
-
-    epoch_obs (str or float): "today" or BJD_TDB (really could be JD, UTC, etc
-    too. The scaling would not be affected).
+    Returns:
+        delta_t_tra_obs (float): uncertainty on transit time, at epoch_obs, in
+        units of DAYS.
     """
 
     if epoch_obs == 'today':

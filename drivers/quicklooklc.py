@@ -52,16 +52,20 @@ def main():
     ticid = '268431671' # manual
     ticid = '339308290' # similar to CD-48
     ticid = '438790187' # CD-48 8201
+    ticid = '120105470' # Kepler 1627b
 
     # # optional #
     # period = 1.395733 # None
     # epoch = 2458597.22243 - 2457000 + 0.23*1.395733 #None
     # badtimewindows = None
 
-    # CD-48 8201
-    period = 2.099291 # None
-    epoch = 2458622.89036 - 2457000 #None
-    badtimewindows = [(1616.75,1617.0),(1617.6,1617.8)]
+    # # CD-48 8201
+    # period = 2.099291 # None
+    # epoch = 2458622.89036 - 2457000 #None
+    # badtimewindows = [(1616.75,1617.0),(1617.6,1617.8)]
+    period, epoch, badtimewindows = None, None, None
+
+    period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
     cdips = 0
     spoc = 0

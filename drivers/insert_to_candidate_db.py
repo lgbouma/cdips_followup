@@ -41,61 +41,19 @@ def insert_single_candidate(
 def manual_insert_many():
 
     sourceids = [
-        #'5805824988445654144',
-        #'5838183443852841216',
-        #'5838450865699668736',
-        #'5878452576220299520',
-        #'5885456190393040512',
-        #'5889360246986113024',
-        #'5940265981724168064',
-        #'5940850376492524800',
-        #'5952590785523816960',
-        #'6024033615115982848',
-        #'6037044827717626112',
-        #'6042883578050870912',
-        #'6637496339607744768',
-        #'6658373007402886400',
-        #'5239758155778687360',
-        #'6539037542941988736',
-        #'2974906868489280768',
-        #'1476485996883837184',
-        #'875071278432954240',
-        #'6113920619134019456',
-        '2003624341205485056',
-        '2067161441672227968',
-        '3033676761434888320',
-        '5254512781523942912',
-        '5290752787819629056',
-        '5312912791851427840',
+        '2103737241426734336',
+        '2133589776693414016',
+        '2132152474478407040',
+        '772430527947893632',
+        '2103714637018491136'
     ]
 
     comments = [
-        #'Hot Jup or Nept, Theia 597 (KC19); cluster existence dubious.',
-        #'Hot Nept, PMS M dwarf (Zari+18), Prot 2d, RotAmp 2%.',
-        #'Warm subNept, Theia 64 (KC19). TOI 1097.',
-        #'EB or Warm Jup, NGC 5617 (170Myr, CG18).',
-        #'Likely EB, NGC 5925 (180Myr, CG18). Star properties unclear. ',
-        #'Likely EB, Alessi 8 (CG18, 120Myr). Prot 6d; dubious bc Teff 6500K.',
-        #'Crowded. HJ or EB. Collinder 307 (CG18, 30Myr). pmDec off.',
-        #'10 Myr EB or HJ. PMS K dwarf host (NGC 6193, CG18).',
-        #'PMS K dwarf HJ (Zari+18). Prot 2d, RotAmp 8%. Good target.',
-        #'Likely EB. PMS (Zari+18), Teff 5000K, Prot 5d, ampltiude 2%.',
-        #'Hot Jup. PMS M dwarf (Zari+18), Prot 2d?, Tdur a bit long.absHot',
-        #'superNept. PMS M dwarf (Zari+18). Prot  0.8d, RotAmp 5%.',
-        #'Host is a subgiant field star.',
-        #'HATS-47. Theia 1098 (KC19); cluster existence dubious.',
-        #'PATHOS-31: IC2602 Rp=4Re NON-GRAZING candidate. High quality.',
-        #'TOI-251: Zhou+20 shows <200 Myr + validated. Rp=2.7, P=5d.',
-        #'TOI-942: Zhou+20 shows <100 Myr + 2 planet validated. Both RM good.',
-        #'TOI-1807 + TIC-27491137. 3 planets transiting 2749, 1 USP transiting 1807. Age 100-200Myr, in a Gaia comoving group. Hughes & C. Hedges, in prep.',
-        #'TOI 1726, Mann+20 THYME3 confirmed. UMa MG member (400 Myr). V=6.9. Dai+20 submitted RM measurement.',
-        #'HIP67522b, Rizzuto+20 THYME2 validated (b near 0). Claimed is HJ; but no mass. No RM yet either.'
-        'NEB 34arcsec W (SG1).  KC19 Cluster might exist. HR diagram decently coeval.',
-        'NEB 22arcsec NW (SG1). Group definitely real and KC19 membership seems good. MIT notes that Could be on neighbor',
-        'SP2, PP2. Star is far from cluster core but could be part of fuzz-like population. Check Prot-Teff of the fuzz to see if the Kounkel members are real. FIES(1) shows Vrot=160km/s.',
-        'SP0: check for Li. PP0: get multicolor zs, gp, ip. It seems to be grazing (boo). CDIPS vetting report looks good (not sure why missed). MIT odd-even is 4sigma --perhaps bc bad initial detrending. Prot is 2.5d for a 6000K star, correct for IC2602.  KC19 IC2602 structure seems clearly wrong because of one merged group at RA/dec 130-55. But this star seems like it could be in the outskirts of the main known cluster. MIT notes crowded field. No 2 min available. ',
-        'NEB with eccentric secondary eclipse (SG2). Source is 17" SW. KC19 Membership seems good. MIT notes 9.9 day eccentric system with separations between events of ~4.72; 5.16',
-        'SP2, PP2. MIT notes: probably an EB. Clearly not CG18 member. KC19s IC2602 structure seems wrong because of one merged group at RA/dec 130-55. But the HR diagram is pretty clean. So maybe the two populations are actually related. Pop Needs Prot sequence. Star is just at cluster turnoff, and is in the weird non-close population.'
+        'Kepler-1627 b, validated planet by Morton. PP0, SP0. Stephenson_1 is <~30 Myr old (KC19). The local KC19 members around this star show a clean main sequence. The G2V host has a ~2d rotation period, consistent with youth. With P=7.2d, Rp~=3.7Re, this is a high priority for SPECFU, incl RM.',
+        'Kepler-52bcd, planets confirmed thru TTV. Compact multi in UBC_1 = Theia 520 (Curtis is finding ~350 Myr). Radii 2, 2, 2 Re. P 7.8, 16.4, 36.5.  Cluster also mentioned by Castro-Ginard+18. G=15.1 target star.',
+        'Kepler-968bc. Confirmed (or validated?) system. 2 tranet in UBC_1 = Theia 520 (Curtis finding ~350 Myr). 2Re inner, 1.8Re outer. Teff 4500K host... G=14.3. Maybe can do things with Keck.',
+        'GJ 1148bc. CARN (Carina-near; ~200Myr) membership not previously noted in literature. Inner ~Msaturn, e=0.3, M4V star HZ. Age~200Myr. Very metal rich ([Fe/H]=+0.32+/-0.05). Zuckerman+06 is the Gagne+18 reference.  I think this would be mainly cool to confirm because of the weird system architecture, and the high metallicity.  Also, if the metallicity of Carina-near in general is this high, that could be pretty useful for planet-hunting.',
+        'PP2, SP1. 1.8Re, P=9.3d. Faint. Stephenson_1 is legit (per Kepler-1627b), but this star is faint and the planet is small. Also, the star rotation period (10ish days IIRC?) did not line up with the expectations for 30 Myr -- would be more like 1 Gyr.  If it were 30 Myr though, its size would place new limits on how SMALL a planet can be at 30 Myr.  Interesting, since most planets that young are large.'
     ]
 
     for s, c in zip(sourceids, comments):
@@ -114,8 +72,8 @@ def manual_insert_many():
 
 if __name__ == "__main__":
 
-    insert_single = 1
-    insert_many = 0
+    insert_single = 0
+    insert_many = 1
 
     if insert_single:
 
