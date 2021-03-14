@@ -91,7 +91,7 @@ def main():
 def manual_main():
     # If you manually wrote the driver file (rather than automatically
     # producing it). E.g., right now, this is for multi-instrument fitting.
-    driver_path = '/home/luke/Dropbox/proj/cdips_followup/drivers/radvel_drivers/20210214/TIC411614400.py'
+    driver_path = '/home/luke/Dropbox/proj/cdips_followup/drivers/radvel_drivers/20210314/TIC457939414.py'
 
     RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
                                'spec_analysis', 'CHIRON', 'phased_RVs')

@@ -24,24 +24,24 @@ def main():
 
     ##########################################
     # CHANGE BELOW
-    savstr = '20210223_21A_thruMay1' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '202100301_toi1880' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 1
     submit = 1
 
-    tic_id = '238597883'
+    tic_id = '359357695'
     source_id = None # '6113920619134019456' # can use instead of TIC
 
-    filtermode = 'ip'# 'zs', 'gp', 'ip'
+    filtermode = 'gp'# 'zs', 'gp', 'ip'
     telescope_class = '1m0'
-    ipp_value = 0.8 # usually 1
+    ipp_value = 1.0 # usually 1
     max_search_time = Time('2021-05-01 23:59:00')
 
     verify_ephemeris_uncertainty = 1 # require t_tra uncertainty < 2 hours
     inflate_duration = 1 # if t_tra uncertainty > 1 hour, inflate transit duration by +/- 45 minutes per side
 
-    transit_type = 'totals' # ['OIBEO', 'IBEO', 'OIBE']
-    max_n_events = 8 # else None. n_events is per eventclass.
+    transit_type = 'fulltotals' # ['OIBEO', 'IBEO', 'OIBE']
+    max_n_events = 12 # else None. n_events is per eventclass.
 
     raise_error = False # raise an error if max_duration_error flag raised.
     max_duration_error = 30 # the submitted LCOGT request must match requested durn to within this difference [minutes]
