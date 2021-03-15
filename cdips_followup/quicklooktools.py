@@ -52,9 +52,11 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0):
             os.mkdir(outdir)
 
     if (not cdips) and (not spoc) and (not eleanor) and (not cdipspre):
-        raise ValueError(
-            'Expected at least one format of TESS LC to be requested.'
+        print(
+            'Expected at least one format of TESS LC to be requested. '
+            'Returning None'
         )
+        return None
 
     if cdipspre:
         # e.g., 5996151172781298304_llc.fits
@@ -308,7 +310,8 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
         period, epoch (float): optional
 
-        detrend (bool): optional, will apply standard wotan rotation-flattening.
+        detrend (bool, or string): 'biweight' or 'pspline' accepted. Default
+        parameters assumed for each.
 
         badtimewindows (list): to manually mask out, [(1656, 1658), (1662,
             1663)], for instance.
@@ -330,15 +333,23 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     times, fluxs= [], []
     for ix, d in enumerate(data):
 
-        savpath = os.path.join(outdir, f'spoc_lightcurve_{ix}.png')
+        savpath = os.path.join(
+            outdir, f'spoc_lightcurve_{str(ix).zfill(2)}.png'
+        )
         if detrend:
-            savpath = os.path.join(outdir, f'spoc_lightcurve_detrended_{ix}.png')
+            savpath = os.path.join(
+                outdir, f'spoc_lightcurve_detrended_{str(ix).zfill(2)}.png'
+            )
 
         plt.close('all')
         f,ax = plt.subplots(figsize=(16*2,4*1.5))
 
         if require_quality_zero:
-            sel = (d['QUALITY'] == 0) & (d[yval] > 0)
+            if 'QUALITY' in d:
+                qualkey = 'QUALITY'
+            else:
+                qualkey = 'SAP_QUALITY'
+            sel = (d[qualkey] == 0) & (d[yval] > 0)
             print(42*'.')
             print('WRN!: omitting all non-zero quality flags. throws out good data!')
             print(42*'.')
@@ -357,7 +368,14 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
         if detrend:
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
-            y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs)
+
+            # # default pspline detrending
+            # y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs)
+
+            # in some cases, might prefer the biweight
+            y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs, method='biweight',
+                                              cval=5, window_length=0.5,
+                                              break_tolerance=0.5)
 
         if detrend:
             ax.plot(x_obs, y_trend, c='r', lw=0.5, zorder=3)
@@ -404,17 +422,17 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     )
 
     savpath = os.path.join(
-        outdir, 'spoc_lightcurve_{}_allsector.png'.  format(yval)
+        outdir, f'spoc_lightcurve_{str(yval).zfill(2)}_allsector.png'
     )
     if detrend:
         savpath = os.path.join(
-            outdir, 'spoc_lightcurve_detrended_{}_allsector.png'.  format(yval)
+            outdir, f'spoc_lightcurve_detrended_{str(yval).zfill(2)}_allsector.png'
         )
 
     plt.close('all')
     f,ax = plt.subplots(figsize=(16,4))
 
-    ax.scatter(stimes, smags, c='k', s=5)
+    ax.scatter(stimes, smags, c='k', s=1)
 
     if not epoch is None:
         tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
@@ -440,40 +458,44 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
         assert isinstance(period, float) and isinstance(epoch, float)
 
-        # use times and fluxs, instead of the sigma clipped thing.
-
-        plt.close('all')
-        fig, ax = plt.subplots(figsize=(4,3))
-
         #
         # ax: primary transit
         #
         tdur_guess = 7
-        phasebin = 6e-3
+        phasebin = 1e-3
         minbinelems = 2
         tdur_by_period = (tdur_guess/24)/period
-        plotxlim = (-0.5, 0.5)
-        plotylim = (0.989, 1.004)
+        plotxlims = [(-0.5, 0.5), (-0.25,-0.15)]
+        xlimstrs = ['xwide','xnarrow']
+        plotylim = (0.994, 1.005)
+        do_vlines = False
 
-        _make_phased_magseries_plot(ax, 0, times, fluxs,
-                                    np.ones_like(fluxs)/1e4, period, epoch,
-                                    True, True, phasebin, minbinelems,
-                                    plotxlim, '', xliminsetmode=False,
-                                    magsarefluxes=True, phasems=0.8,
-                                    phasebinms=4.0, verbose=True)
-        ax.set_ylim(plotylim)
+        for plotxlim, xstr in zip(plotxlims, xlimstrs):
 
-        ax.vlines(1/6, min(plotylim), max(plotylim), color='orangered',
-                  linestyle='--', zorder=-2, lw=1, alpha=0.8)
-        ax.set_ylim(plotylim)
+            plt.close('all')
+            fig, ax = plt.subplots(figsize=(4,3))
 
-        dstr = 'detrended' if detrend else ''
-        savpath = os.path.join(
-            outdir, f'spoc_lightcurve_{dstr}_{yval}_allsector_phasefold.png'
-        )
+            # use times and fluxs, instead of the sigma clipped thing.
+            _make_phased_magseries_plot(ax, 0, times, fluxs,
+                                        np.ones_like(fluxs)/1e4, period, epoch,
+                                        True, True, phasebin, minbinelems,
+                                        plotxlim, '', xliminsetmode=False,
+                                        magsarefluxes=True, phasems=0.8,
+                                        phasebinms=4.0, verbose=True)
+            ax.set_ylim(plotylim)
 
-        fig.savefig(savpath, dpi=400, bbox_inches='tight')
-        print(f'made {savpath}')
+            if do_vlines:
+                ax.vlines(1/6, min(plotylim), max(plotylim), color='orangered',
+                          linestyle='--', zorder=-2, lw=1, alpha=0.8)
+                ax.set_ylim(plotylim)
+
+            dstr = 'detrended' if detrend else ''
+            savpath = os.path.join(
+                outdir, f'spoc_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
+            )
+
+            fig.savefig(savpath, dpi=400, bbox_inches='tight')
+            print(f'made {savpath}')
 
         csvpath = savpath.replace('png','csv')
         pd.DataFrame({
