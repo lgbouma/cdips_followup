@@ -72,6 +72,7 @@ def main():
     eleanor = 1
     cdipspre = 0
     kepler = 0
+    qlp = 0
 
     detrend = 'biweight'
 
@@ -86,7 +87,7 @@ def main():
     require_quality_zero = 0
 
     data = get_tess_data(ticid, outdir=None, cdips=cdips, spoc=spoc,
-                         cdipspre=cdipspre, eleanor=eleanor)
+                         cdipspre=cdipspre, eleanor=eleanor, qlp=qlp)
     if data is None and kepler:
         data = get_kepler_data(ticid, outdir=None)
         spoc = 1
@@ -105,13 +106,19 @@ def main():
         explore_mag_lightcurves(data, ticid, period=period, epoch=epoch)
 
     if do_flux_lcs:
-        explore_flux_lightcurves(data, ticid, isspoc=spoc, period=period,
+        pipedict = {'cdips': cdips, 'spoc':spoc, 'eleanor':eleanor,
+                    'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp}
+        for k,v in pipedict.items():
+            if v:
+                pipeline = k
+
+        explore_flux_lightcurves(data, ticid, pipeline=pipeline, period=period,
                                  epoch=epoch,
                                  require_quality_zero=require_quality_zero)
         if detrend:
-            explore_flux_lightcurves(data, ticid, isspoc=spoc, period=period,
-                                     epoch=epoch, detrend=detrend,
-                                     do_phasefold=do_pf,
+            explore_flux_lightcurves(data, ticid, pipeline=pipeline,
+                                     period=period, epoch=epoch,
+                                     detrend=detrend, do_phasefold=do_pf,
                                      badtimewindows=badtimewindows,
                                      require_quality_zero=require_quality_zero)
 

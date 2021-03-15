@@ -33,7 +33,8 @@ from astrobase.services.tesslightcurves import (
 
 from cdips_followup.paths import RESULTSDIR
 
-def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0):
+def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
+                  qlp=0):
     """
     High-level wrapper to download available TESS data for `ticid` to `outdir`.
     A few different formats are implemented.  If nothing is found, returns
@@ -51,10 +52,18 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0):
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
-    if (not cdips) and (not spoc) and (not eleanor) and (not cdipspre):
+    if (
+        (not cdips)
+        and (not spoc)
+        and (not eleanor)
+        and (not cdipspre)
+        and (not qlp)
+    ):
         print(
-            'Expected at least one format of TESS LC to be requested. '
+            '..........'
+            'WRN! Expected at least one format of TESS LC to be requested. '
             'Returning None'
+            '..........'
         )
         return None
 
@@ -77,6 +86,10 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0):
         lcfiles = glob(os.path.join(outdir,'hlsp_eleanor*fits'))
         if len(lcfiles) == 0:
             lcfiles = get_eleanor_lightcurves(ticid, download_dir=outdir)
+
+    if qlp:
+        # manually downloaded from MAST portal.
+        lcfiles = glob(os.path.join(outdir, 'QLP', 'hlsp_qlp*fits'))
 
     if lcfiles is None:
         return None
@@ -386,7 +399,7 @@ def _get_ylim(y_obs):
 
 
 def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
-                             isspoc=True, detrend=False, window_length=None,
+                             pipeline=None, detrend=False, window_length=None,
                              do_phasefold=0, badtimewindows=None, get_lc=False,
                              require_quality_zero=1):
     """
@@ -398,6 +411,9 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         data (list): from `get_tess_data`.
 
         ticid (str): TIC ID.
+
+        pipeline (str): one of
+            ['cdips', 'spoc', 'eleanor', 'cdipspre', 'kepler', 'qlp'].
 
         outdir (str): diagnostic plots are written here. If None, goes to
         cdips_followup results directory.
@@ -418,10 +434,35 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         lots of data.
     """
 
-    if not isspoc:
+    if pipeline not in ['spoc', 'kepler', 'qlp']:
         raise NotImplementedError
 
-    yval = 'PDCSAP_FLUX'
+    if isinstance(epoch, float):
+        if epoch < 2450000:
+            raise ValueError(f'Expected epoch in BJDTDB. Got epoch={epoch:.6f}.')
+
+    LCKEYDICT = {
+        'spoc': {
+            'flux': 'PDCSAP_FLUX', 'time': 'TIME', 'quality': 'QUALITY',
+            'time_offset':2457000, 'prov': 'spoc', 'inst': 'tess'
+        },
+        'kepler': {
+            'flux': 'PDCSAP_FLUX', 'time': 'TIME', 'quality': 'SAP_QUALITY',
+            'time_offset':2454833, 'prov': 'spoc', 'inst': 'kepler'
+        },
+        #
+        # QLP: per Huang+2020, "SAP_FLUX" is the optimal aperture
+        # time is in BTJD
+        #
+        'qlp': {
+            'flux': 'SAP_FLUX', 'time': 'TIME', 'quality': 'QUALITY',
+            'time_offset':2457000, 'prov': 'mit', 'inst': 'tess'
+        }
+    }
+
+    yval = LCKEYDICT[pipeline]['flux']
+    prov = LCKEYDICT[pipeline]['prov']
+    inst = LCKEYDICT[pipeline]['inst']
 
     if outdir is None:
         outdir = os.path.join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
@@ -430,21 +471,18 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     for ix, d in enumerate(data):
 
         savpath = os.path.join(
-            outdir, f'spoc_lightcurve_{str(ix).zfill(2)}.png'
+            outdir, f'{prov}_{inst}_lightcurve_{str(ix).zfill(2)}.png'
         )
         if detrend:
             savpath = os.path.join(
-                outdir, f'spoc_lightcurve_detrended_{str(ix).zfill(2)}.png'
+                outdir, f'{prov}_{inst}_lightcurve_{detrend}_{str(ix).zfill(2)}.png'
             )
 
         plt.close('all')
         f,ax = plt.subplots(figsize=(16*2,4*1.5))
 
         if require_quality_zero:
-            if 'QUALITY' in d.names:
-                qualkey = 'QUALITY'
-            else:
-                qualkey = 'SAP_QUALITY'
+            qualkey = LCKEYDICT[pipeline]['quality']
             sel = (d[qualkey] == 0) & (d[yval] > 0)
             print(42*'.')
             print('WRN!: omitting all non-zero quality flags. throws out good data!')
@@ -459,15 +497,11 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                     (d['TIME'] < w[1])
                 )
 
-        # correct time offset for kepler data
-        if 'SAP_QUALITY' in d.names:
-            x_offset = 2454833
-        else:
-            x_offset = 0
-
+        # correct time column to BJD_TDB
+        x_offset = LCKEYDICT[pipeline]['time_offset']
         x_obs = d['TIME'][sel] + x_offset
-        y_obs = d[yval][sel] / np.nanmedian(d[yval][sel])
 
+        y_obs = d[yval][sel] / np.nanmedian(d[yval][sel])
         if detrend:
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
@@ -507,10 +541,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         ax.set_ylim(_ylim)
 
         if not epoch is None:
-            if 'QUALITY' in d.names:
-                tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
-            else:
-                tra_times = epoch + np.arange(-1000,1000,1)*period
+            tra_times = epoch + np.arange(-1000,1000,1)*period
 
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
@@ -533,11 +564,11 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     )
 
     savpath = os.path.join(
-        outdir, f'spoc_lightcurve_{str(yval).zfill(2)}_allsector.png'
+        outdir, f'{prov}_{inst}_lightcurve_{str(yval).zfill(2)}_allsector.png'
     )
     if detrend:
         savpath = os.path.join(
-            outdir, f'spoc_lightcurve_detrended_{str(yval).zfill(2)}_allsector.png'
+            outdir, f'{prov}_{inst}_lightcurve_{detrend}_{str(yval).zfill(2)}_allsector.png'
         )
 
     plt.close('all')
@@ -546,10 +577,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     ax.scatter(stimes, smags, c='k', s=1)
 
     if not epoch is None:
-        if 'QUALITY' in d.names:
-            tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
-        else:
-            tra_times = epoch + np.arange(-1000,1000,1)*period
+        tra_times = epoch + np.arange(-1000,1000,1)*period
 
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -575,7 +603,10 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         #
         # ax: primary transit
         #
-        phasebin = 1e-3
+        if inst == 'kepler':
+            phasebin = 1e-3
+        elif inst == 'tess':
+            phasebin = 5e-3
         minbinelems = 2
         plotxlims = [(-0.5, 0.5), (-0.05,0.05)]
         xlimstrs = ['xwide','xnarrow']
@@ -601,9 +632,9 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                           linestyle='--', zorder=-2, lw=1, alpha=0.8)
                 ax.set_ylim(plotylim)
 
-            dstr = 'detrended' if detrend else ''
+            dstr = detrend if detrend else ''
             savpath = os.path.join(
-                outdir, f'spoc_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
+                outdir, f'{prov}_{inst}_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
             )
 
             fig.savefig(savpath, dpi=400, bbox_inches='tight')
