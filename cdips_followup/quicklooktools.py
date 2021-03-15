@@ -119,7 +119,9 @@ def get_kepler_data(ticid, outdir=None):
     return data
 
 
-def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
+def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
+                                require_quality_zero=0, detrend=0,
+                                do_phasefold=0):
 
     yval = 'CORR_FLUX'
 
@@ -128,15 +130,49 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
 
         outdir = '../results/quicklooklc/TIC{}'.format(ticid)
         savpath = os.path.join(outdir, 'eleanor_lightcurve_{}.png'.format(ix))
+        if detrend:
+            savpath = os.path.join(outdir, 'eleanor_lightcurve_detrended_{}.png'.format(ix))
 
         plt.close('all')
         f,ax = plt.subplots(figsize=(16,4))
 
         sel = (d['QUALITY'] == 0) & (d[yval] > 0)
+        if require_quality_zero:
+            if 'QUALITY' in d.names:
+                qualkey = 'QUALITY'
+            else:
+                qualkey = 'SAP_QUALITY'
+            sel = (d[qualkey] == 0) & (d[yval] > 0)
+            print(42*'.')
+            print('WRN!: omitting all non-zero quality flags. throws out good data!')
+            print(42*'.')
+        else:
+            sel = (d[yval] > 0)
 
-        ax.scatter(d['TIME'][sel], d[yval][sel], c='k', s=5)
-        times.append(d['TIME'][sel])
-        fluxs.append( d[yval][sel] / np.nanmedian(d[yval][sel]) )
+        x_obs = d['TIME'][sel]
+        y_obs = d[yval][sel]
+
+        if detrend:
+            ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
+
+            # # default pspline detrending
+            if detrend=='pspline':
+                y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs)
+
+            # in some cases, might prefer the biweight
+            elif detrend == 'biweight':
+                y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs,
+                                                  method='biweight', cval=5,
+                                                  window_length=0.5,
+                                                  break_tolerance=0.5)
+
+            else:
+                raise NotImplementedError
+
+        if detrend:
+            ax.plot(x_obs, y_trend, c='r', lw=0.5, zorder=3)
+        else:
+            ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
         ax.set_xlabel('time [bjdtdb]')
         ax.set_ylabel(yval)
@@ -147,23 +183,33 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
         f.savefig(savpath, dpi=300, bbox_inches='tight')
         print('made {}'.format(savpath))
 
+        times.append(x_obs)
+        fluxs.append( y_obs / np.nanmedian(y_obs) )
+
+
     times = np.hstack(np.array(times).flatten())
     fluxs = np.hstack(np.array(fluxs).flatten())
 
     stimes, smags, _ = lcmath.sigclip_magseries(
-        times, fluxs, np.ones_like(fluxs), sigclip=[8,3], iterative=True,
+        times, fluxs, np.ones_like(fluxs), sigclip=[5,2.5], iterative=True,
         magsarefluxes=True
     )
 
     savpath = os.path.join(
-        outdir, 'eleanor_lightcurve_{}_allsector.png'.  format(yval)
+        outdir, f'eleanor_lightcurve_{yval}_allsector.png'
     )
+    if detrend:
+        savpath = os.path.join(
+            outdir, f'eleanor_lightcurve_detrended_{yval}_allsector.png'
+        )
+
+    # do the sigma clipped
+    x_obs, y_obs = stimes, smags
 
     plt.close('all')
     f,ax = plt.subplots(figsize=(16,4))
 
-    ax.scatter(stimes, smags, c='k', s=5)
-
+    ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
     if not epoch is None:
         tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
 
@@ -183,6 +229,56 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None):
 
     f.savefig(savpath, dpi=400, bbox_inches='tight')
     print('made {}'.format(savpath))
+
+    if do_phasefold:
+
+        assert isinstance(period, float) and isinstance(epoch, float)
+
+        #
+        # ax: primary transit
+        #
+        phasebin = 3e-2
+        minbinelems = 2
+        plotxlims = [(-0.5, 0.5), (-0.05,0.05)]
+        xlimstrs = ['xwide','xnarrow']
+        plotylim = None # (0.994, 1.005)
+        do_vlines = False
+
+        for plotxlim, xstr in zip(plotxlims, xlimstrs):
+
+            plt.close('all')
+            fig, ax = plt.subplots(figsize=(4,3))
+
+            _make_phased_magseries_plot(ax, 0, x_obs, y_obs,
+                                        np.ones_like(fluxs)/1e4, period, epoch,
+                                        True, True, phasebin, minbinelems,
+                                        plotxlim, '', xliminsetmode=False,
+                                        magsarefluxes=True, phasems=0.8,
+                                        phasebinms=4.0, verbose=True)
+            if plotylim is not None:
+                ax.set_ylim(plotylim)
+
+            if do_vlines:
+                ax.vlines(1/6, min(plotylim), max(plotylim), color='orangered',
+                          linestyle='--', zorder=-2, lw=1, alpha=0.8)
+                ax.set_ylim(plotylim)
+
+            dstr = 'detrended' if detrend else ''
+            savpath = os.path.join(
+                outdir, f'eleanor_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
+            )
+
+            fig.savefig(savpath, dpi=400, bbox_inches='tight')
+            print(f'made {savpath}')
+
+        csvpath = savpath.replace('png','csv')
+        # sigma clipped and detrended
+        pd.DataFrame({
+            'time': x_obs, 'flux': y_obs
+        }).to_csv(csvpath, index=False)
+        print(f'made {csvpath}')
+
+
 
 
 def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
@@ -345,7 +441,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         f,ax = plt.subplots(figsize=(16*2,4*1.5))
 
         if require_quality_zero:
-            if 'QUALITY' in d:
+            if 'QUALITY' in d.names:
                 qualkey = 'QUALITY'
             else:
                 qualkey = 'SAP_QUALITY'
@@ -363,19 +459,31 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                     (d['TIME'] < w[1])
                 )
 
-        x_obs = d['TIME'][sel]
+        # correct time offset for kepler data
+        if 'SAP_QUALITY' in d.names:
+            x_offset = 2454833
+        else:
+            x_offset = 0
+
+        x_obs = d['TIME'][sel] + x_offset
         y_obs = d[yval][sel] / np.nanmedian(d[yval][sel])
 
         if detrend:
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
             # # default pspline detrending
-            # y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs)
+            if detrend=='pspline':
+                y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs)
 
             # in some cases, might prefer the biweight
-            y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs, method='biweight',
-                                              cval=5, window_length=0.5,
-                                              break_tolerance=0.5)
+            elif detrend == 'biweight':
+                y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs,
+                                                  method='biweight', cval=5,
+                                                  window_length=0.5,
+                                                  break_tolerance=0.5)
+
+            else:
+                raise NotImplementedError
 
         if detrend:
             ax.plot(x_obs, y_trend, c='r', lw=0.5, zorder=3)
@@ -399,7 +507,10 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         ax.set_ylim(_ylim)
 
         if not epoch is None:
-            tra_times = epoch + np.arange(-1000,1000,1)*period
+            if 'QUALITY' in d.names:
+                tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
+            else:
+                tra_times = epoch + np.arange(-1000,1000,1)*period
 
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
@@ -435,7 +546,10 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     ax.scatter(stimes, smags, c='k', s=1)
 
     if not epoch is None:
-        tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
+        if 'QUALITY' in d.names:
+            tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
+        else:
+            tra_times = epoch + np.arange(-1000,1000,1)*period
 
         xlim = ax.get_xlim()
         ylim = ax.get_ylim()
@@ -461,11 +575,9 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         #
         # ax: primary transit
         #
-        tdur_guess = 7
         phasebin = 1e-3
         minbinelems = 2
-        tdur_by_period = (tdur_guess/24)/period
-        plotxlims = [(-0.5, 0.5), (-0.25,-0.15)]
+        plotxlims = [(-0.5, 0.5), (-0.05,0.05)]
         xlimstrs = ['xwide','xnarrow']
         plotylim = (0.994, 1.005)
         do_vlines = False

@@ -64,19 +64,20 @@ def main():
     # epoch = 2458622.89036 - 2457000 #None
     # badtimewindows = [(1616.75,1617.0),(1617.6,1617.8)]
     period, epoch, badtimewindows = None, None, None
+
     period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
     cdips = 0
     spoc = 0
-    eleanor = 0
+    eleanor = 1
     cdipspre = 0
-    kepler = 1
+    kepler = 0
 
     detrend = 'biweight'
 
     do_mag_lcs = 0
-    do_eleanor_lcs = 0
-    do_flux_lcs = 1
+    do_eleanor_lcs = 1
+    do_flux_lcs = 0
 
     do_periodogram = 0
     do_pf = 1
@@ -91,7 +92,14 @@ def main():
         spoc = 1
 
     if do_eleanor_lcs:
-        explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch)
+        explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch,
+                                    require_quality_zero=require_quality_zero)
+        if detrend:
+            explore_eleanor_lightcurves(
+                data, ticid, period=period, epoch=epoch,
+                require_quality_zero=require_quality_zero, detrend=detrend,
+                do_phasefold=do_pf
+            )
 
     if do_mag_lcs:
         explore_mag_lightcurves(data, ticid, period=period, epoch=epoch)
