@@ -1,6 +1,7 @@
 """
 Contents:
     get_tess_data
+    get_kepler_data
     explore_flux_lightcurves
     explore_mag_lightcurves
     explore_eleanor_lightcurves
@@ -77,6 +78,36 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0):
 
     if lcfiles is None:
         return None
+
+    data = []
+    for f in lcfiles:
+        hdul = fits.open(f)
+        data.append(hdul[1].data)
+
+    return data
+
+
+def get_kepler_data(ticid, outdir=None):
+    """
+    Reads in Kepler data for anything downloaded off MAST (manually).
+
+    Args:
+        ticid (str)
+        outdir (str or None): path
+    Returns:
+        data (list): list of FITS data tables, per sector.
+    """
+
+    if outdir is None:
+        outdir = os.path.join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+    lcfiles = glob(
+        os.path.join(outdir,'MAST*','Kepler','kplr*lc*','kplr*llc.fits')
+    )
+    if len(lcfiles) == 0:
+        raise NotImplementedError
 
     data = []
     for f in lcfiles:
