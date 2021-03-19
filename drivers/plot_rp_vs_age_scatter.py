@@ -1,4 +1,8 @@
 '''
+***DEPRECATED, IN FAVOR OF TIMMY.DRIVERS.PLOT_RP_VS_AGE_SCATTER.PY***
+***DEPRECATED, IN FAVOR OF TIMMY.DRIVERS.PLOT_RP_VS_AGE_SCATTER.PY***
+***DEPRECATED, IN FAVOR OF TIMMY.DRIVERS.PLOT_RP_VS_AGE_SCATTER.PY***
+
 DESCRIPTION
 ----------
 Make scatter plot of Rp vs age using exoplanet archive and candidates.csv.
@@ -261,12 +265,12 @@ def plot_rp_vs_age_scatter(active_targets=0, split_toi_ctoi=0, hjs_only=0,
 
 if __name__=='__main__':
 
-    active_targets = 1  # show current follow-up targets.
-    ismanualsubset = 1  # if false, will show all current follow-up targets.
-    isvalidated = 1     # whether to include CDIPS paper as their own thing.
+    active_targets = 0  # show active CDIPS targets from candidates.csv.
+    ismanualsubset = 1  # requires "active_targets" to take effect. if true, shows only subset of CDIPS targets from get_candidate_params
+    isvalidated = 0     # show "validated" and "potential" (CDIPS targets)
     split_toi_ctoi = 0  # whether to split based on TOI/CTOI
     hjs_only = 0        # changes units to jupiter radii
-    ispublictalk = 1    # changes labels and units
+    ispublictalk = 0    # changes labels and units
 
     plot_rp_vs_age_scatter(active_targets=active_targets,
                            split_toi_ctoi=split_toi_ctoi,
