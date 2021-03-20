@@ -69,28 +69,35 @@ def main():
 
     cdips = 0
     spoc = 0
-    eleanor = 1
+    eleanor = 0
     cdipspre = 0
-    kepler = 0
+    kepler = 1
     qlp = 0
 
-    detrend = 'biweight'
+    detrend = None #'biweight'
 
     do_mag_lcs = 0
-    do_eleanor_lcs = 1
-    do_flux_lcs = 0
+    do_eleanor_lcs = 0
+    do_flux_lcs = 1
 
-    do_periodogram = 0
-    do_pf = 1
+    do_periodogram = 1
+    do_pf = 0
     do_riverplot = 0
 
     require_quality_zero = 0
+
+    ####################
+
+    pipedict = {'cdips': cdips, 'spoc':spoc, 'eleanor':eleanor,
+                'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp}
+    for k,v in pipedict.items():
+        if v:
+            pipeline = k
 
     data = get_tess_data(ticid, outdir=None, cdips=cdips, spoc=spoc,
                          cdipspre=cdipspre, eleanor=eleanor, qlp=qlp)
     if data is None and kepler:
         data = get_kepler_data(ticid, outdir=None)
-        spoc = 1
 
     if do_eleanor_lcs:
         explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch,
@@ -106,11 +113,6 @@ def main():
         explore_mag_lightcurves(data, ticid, period=period, epoch=epoch)
 
     if do_flux_lcs:
-        pipedict = {'cdips': cdips, 'spoc':spoc, 'eleanor':eleanor,
-                    'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp}
-        for k,v in pipedict.items():
-            if v:
-                pipeline = k
 
         explore_flux_lightcurves(data, ticid, pipeline=pipeline, period=period,
                                  epoch=epoch,
@@ -123,17 +125,17 @@ def main():
                                      require_quality_zero=require_quality_zero)
 
     if do_periodogram:
-        if cdips:
+        if pipeline == 'cdips':
             time = data[0]['TMID_BJD']
             flux, err = _given_mag_get_flux(data[0]['IRM1'], data[0]['IRE1'])
             _data = {'time': time, 'flux': flux, 'err': err}
-            pipeline = 'cdips'
-        elif spoc:
+        elif pipeline in ['spoc', 'kepler']:
+            # just look at a single sector
             _data = data[0]
-            pipeline = 'spoc'
         else:
             raise NotImplementedError
-        make_periodogram(_data, ticid, pipeline)
+        make_periodogram(_data, ticid, pipeline, period_min=1, period_max=20,
+                         nterms_0=1)
 
     if do_riverplot:
         make_riverplot(data)

@@ -33,6 +33,27 @@ from astrobase.services.tesslightcurves import (
 
 from cdips_followup.paths import RESULTSDIR
 
+LCKEYDICT = {
+    'spoc': {
+        'flux': 'PDCSAP_FLUX', 'time': 'TIME', 'quality': 'QUALITY',
+        'time_offset':2457000, 'prov': 'spoc', 'inst': 'tess'
+    },
+    'kepler': {
+        'flux': 'PDCSAP_FLUX', 'time': 'TIME', 'quality': 'SAP_QUALITY',
+        'time_offset':2454833, 'prov': 'spoc', 'inst': 'kepler'
+    },
+    #
+    # QLP: per Huang+2020, "SAP_FLUX" is the optimal aperture
+    # time is in BTJD
+    #
+    'qlp': {
+        'flux': 'SAP_FLUX', 'time': 'TIME', 'quality': 'QUALITY',
+        'time_offset':2457000, 'prov': 'mit', 'inst': 'tess'
+    }
+}
+
+
+
 def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
                   qlp=0):
     """
@@ -441,25 +462,6 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         if epoch < 2450000:
             raise ValueError(f'Expected epoch in BJDTDB. Got epoch={epoch:.6f}.')
 
-    LCKEYDICT = {
-        'spoc': {
-            'flux': 'PDCSAP_FLUX', 'time': 'TIME', 'quality': 'QUALITY',
-            'time_offset':2457000, 'prov': 'spoc', 'inst': 'tess'
-        },
-        'kepler': {
-            'flux': 'PDCSAP_FLUX', 'time': 'TIME', 'quality': 'SAP_QUALITY',
-            'time_offset':2454833, 'prov': 'spoc', 'inst': 'kepler'
-        },
-        #
-        # QLP: per Huang+2020, "SAP_FLUX" is the optimal aperture
-        # time is in BTJD
-        #
-        'qlp': {
-            'flux': 'SAP_FLUX', 'time': 'TIME', 'quality': 'QUALITY',
-            'time_offset':2457000, 'prov': 'mit', 'inst': 'tess'
-        }
-    }
-
     yval = LCKEYDICT[pipeline]['flux']
     prov = LCKEYDICT[pipeline]['prov']
     inst = LCKEYDICT[pipeline]['inst']
@@ -651,13 +653,13 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
 
 def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
-                     manual_peak=None, samples_per_peak=50):
+                     manual_peak=None, samples_per_peak=50, nterms_0=6):
 
-    if pipeline == 'spoc':
-        time = data['TIME']
-        flux = data['PDCSAP_FLUX']
-        err = data['PDCSAP_FLUX_ERR']
-        qual = data['QUALITY']
+    if pipeline in ['spoc', 'kepler']:
+        time = data[LCKEYDICT[pipeline]['time']]
+        flux = data[LCKEYDICT[pipeline]['flux']]
+        err = flux*1e-4
+        qual = data[LCKEYDICT[pipeline]['quality']]
         sel = np.isfinite(time) & np.isfinite(flux) & np.isfinite(err) # (qual == 0)
         time, flux, err = time[sel], flux[sel], err[sel]
         med_flux = np.nanmedian(flux)
@@ -667,6 +669,8 @@ def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
         time = data['time']
         flux = data['flux']
         err = data['err']
+    else:
+        raise NotImplementedError
 
     ##########################################
 
@@ -677,7 +681,6 @@ def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
 
     fig, ax = plt.subplots()
 
-    nterms_0=6
     ls = LombScargle(time, flux, err, nterms=nterms_0)
     freq, power = ls.autopower(minimum_frequency=1/period_max,
                                maximum_frequency=1/period_min,
@@ -700,6 +703,8 @@ def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
     peaks, props = find_peaks(power, height=1e-1)
     print(period[peaks])
 
+    tstr = f'LS period = {ls_period_0:.6f} d'
+    ax.set_title(tstr)
     ax.set_yscale('log')
     ax.set_xscale('log')
 
