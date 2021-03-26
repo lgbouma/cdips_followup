@@ -99,7 +99,7 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
                                            download_dir=outdir, verbose=True)
 
     if spoc:
-        lcfiles = glob(os.path.join(outdir,'mastDownload','TESS','*','tess*fits'))
+        lcfiles = glob(os.path.join(outdir,'*','TESS','*','tess*lc.fits'))
         if len(lcfiles) == 0:
             lcfiles = get_two_minute_spoc_lightcurves(ticid, download_dir=outdir)
 

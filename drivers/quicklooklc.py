@@ -53,6 +53,8 @@ def main():
     ticid = '339308290' # similar to CD-48
     ticid = '438790187' # CD-48 8201
     ticid = '120105470' # Kepler 1627b
+    ticid = '424470353' # 2MASS J15460752-6258042 50 Myr TT
+    ticid = '409525054' # BD+45 598, edge on disk
 
     # # optional #
     # period = 1.395733 # None
@@ -65,13 +67,13 @@ def main():
     # badtimewindows = [(1616.75,1617.0),(1617.6,1617.8)]
     period, epoch, badtimewindows = None, None, None
 
-    period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
+    # period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
     cdips = 0
-    spoc = 0
+    spoc = 1
     eleanor = 0
     cdipspre = 0
-    kepler = 1
+    kepler = 0
     qlp = 0
 
     detrend = None #'biweight'
@@ -80,7 +82,7 @@ def main():
     do_eleanor_lcs = 0
     do_flux_lcs = 1
 
-    do_periodogram = 1
+    do_periodogram = 0
     do_pf = 0
     do_riverplot = 0
 

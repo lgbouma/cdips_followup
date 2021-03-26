@@ -8,4 +8,4 @@ for ix, r in df.iterrows():
                                         r['period'], r['period_unc'],
                                         epoch_obs='today')
 
-    print(f"{ix}: TIC {r['ticid']}. {24*eph_unc:.1f} hr.")
+    print(f"{ix}: TIC {r['ticid']}. {24*eph_unc:.2f} hr. {24*60*eph_unc:.1f} min.")

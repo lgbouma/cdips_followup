@@ -27,19 +27,19 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 0          # plot all orders
-    args.do_sms_analysis = 1    # run specmatch-syn analysis
+    args.do_orders = 1          # plot all orders
+    args.do_sms_analysis = 0    # run specmatch-syn analysis
     args.do_sme_analysis = 0    # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0         # specmatch-emp check
     args.do_inspect = 0         # inspect to figure out require rest-frame shift
-    args.do_li_ew = 0           # once rest-frame shift is known
+    args.do_li_ew = 1           # once rest-frame shift is known
     args.do_vsini = 0           # measure vsini
     args.do_ca_hk = 0           # get Ca HK emission properties
 
-    args.is_pfs = 1
+    args.is_pfs = 0
     args.is_veloce = 0
     args.is_fies = 0
-    args.is_tres = 0
+    args.is_tres = 1
 
     if args.is_pfs:
 
@@ -178,12 +178,13 @@ def main_tres(args):
     # specname = '269-003518_2016-12-12_05h30m47s_cb.spec.fits'
     # specname = '269-003518_2015-10-01_08h35m20s_cb.spec.fits'
     # specname = '269-003518_2015-10-02_08h09m59s_cb.spec.fits'
-    specname = '269-003518_2017-01-19_04h03m24s_cb.spec.fits'
+    # specname = '269-003518_2017-01-19_04h03m24s_cb.spec.fits'
+    specname = 'TRES_spectrum_Kepler1627.fits'
 
     spectrum_path = os.path.join(
-        DATADIR, 'TRES', 'QATAR_4', specname
+        DATADIR, 'TRES', specname
     )
-    idstring = 'QATAR_4_2017-01-19'
+    idstring = 'Kepler1627'
 
     if args.do_orders:
         outdir = os.path.join(OUTDIR, 'TRES', 'spec_viz_orders')
