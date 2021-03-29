@@ -4,9 +4,9 @@ Eq 14 of Lovis & Fischer 2010, assuming Mstar >> Mplanet
 import numpy as np
 from astropy import units as u, constants as const
 
-msini = 1*u.Mjup # 49 * u.Mearth
-Mstar = 1.1 * u.Msun
-P = 8.3 * u.day
+msini = 20*u.Mearth #1*u.Mjup # 49 * u.Mearth
+Mstar = 0.94 * u.Msun
+P = 7.2 * u.day
 e = 0
 
 K = (

@@ -7,8 +7,6 @@ from glob import glob
 
 from radvel import driver
 import emcee
-if not emcee.__version__ == "2.2.1":
-    raise AssertionError('radvel requires emcee v2')
 
 from cdips.utils import today_YYYYMMDD
 from cdips_followup import __path__

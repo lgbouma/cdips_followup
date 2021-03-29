@@ -598,6 +598,13 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     f.savefig(savpath, dpi=400, bbox_inches='tight')
     print('made {}'.format(savpath))
 
+    csvpath = savpath.replace('.png','_sigclipped.csv')
+    pd.DataFrame({
+        'time': stimes, 'flux': smags,
+    }).to_csv(csvpath, index=False)
+    print(f'made {csvpath}')
+
+
     if do_phasefold:
 
         assert isinstance(period, float) and isinstance(epoch, float)
