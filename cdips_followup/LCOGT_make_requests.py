@@ -130,7 +130,8 @@ MAXTIMEDICT = {
 SITEDICT = {
     'at_site': ['SAAO', 'Siding Spring Observatory',
                 'McDonald Observatory', 'Cerro Tololo',
-                'Haleakala Observatories'],
+                'Haleakala Observatories', 'Keck Observatory',
+                'Las Campanas Observatory'],
     'of_address': ['Wise Observatory'] # for NRES
 }
 

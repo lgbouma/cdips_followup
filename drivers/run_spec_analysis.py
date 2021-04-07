@@ -27,7 +27,7 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 1          # plot all orders
+    args.do_orders = 0          # plot all orders
     args.do_sms_analysis = 0    # run specmatch-syn analysis
     args.do_sme_analysis = 0    # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0         # specmatch-emp check
@@ -36,10 +36,10 @@ def main():
     args.do_vsini = 0           # measure vsini
     args.do_ca_hk = 0           # get Ca HK emission properties
 
-    args.is_pfs = 0
+    args.is_pfs = 1
     args.is_veloce = 0
     args.is_fies = 0
-    args.is_tres = 1
+    args.is_tres = 0
 
     if args.is_pfs:
 
