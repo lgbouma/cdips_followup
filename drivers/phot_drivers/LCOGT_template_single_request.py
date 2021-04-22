@@ -24,29 +24,30 @@ def main():
 
     ##########################################
     # CHANGE BELOW
-    savstr = '20210315_kepler1627' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20210419_tic217933560' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
-    validate = 0
-    submit = 0
+    validate = 1
+    submit = 1
 
-    tic_id = '120105470'
+    tic_id = '217933560'
     source_id = None # '6113920619134019456' # can use instead of TIC
 
     filtermode = 'gp'# 'zs', 'gp', 'ip'
-    telescope_class = 'special'
+    telescope_class = '1m0' # '1m0', '2m0', 'special'
     ipp_value = 1.0 # usually 1
-    max_search_time = Time('2024-03-01 23:59:00')
+    max_search_time = Time('2021-06-31 23:59:00')
+    # max_search_time = Time('2021-08-31 23:59:00')
 
     verify_ephemeris_uncertainty = 1 # require t_tra uncertainty < 2 hours
     inflate_duration = 1 # if t_tra uncertainty > 1 hour, inflate transit duration by +/- 45 minutes per side
 
-    transit_type = 'all' # ['OIBEO', 'IBEO', 'OIBE']
+    transit_type = 'totals' # see above
     max_n_events = 99 # else None. n_events is per eventclass.
 
     raise_error = False # raise an error if max_duration_error flag raised.
     max_duration_error = 30 # the submitted LCOGT request must match requested durn to within this difference [minutes]
 
-    sites = ['Keck Observatory'] # Default for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+    sites = None # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
 
     # CHANGE ABOVE
     ##########################################
