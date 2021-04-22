@@ -8,6 +8,8 @@ READ:
     read_pfs: Read PFS IDL SAV file.
     read_feros: Read FEROS FITS file.
     read_galah: Read GALAH (DR3) spectrum FITS file.
+        read_galah_given_sobject_id
+    read_gaiaeso: Read GAIA-ESO (DR4) spectrum FITS file. (GIRAFFE and UVES)
 
 SPECMATCH WRAPPERS:
     specmatch_analyze: shift+cross-correlate to get vsini, Rstar, FeH w/ SME.
@@ -284,7 +286,16 @@ def read_feros(spectrum_path):
     d = hdul[0].data
     wav = d[0,0]
     flx = d[3,0]
-    return wav, flx
+    return flx, wav
+
+
+def read_gaiaeso(spectrum_path):
+
+    hdul = fits.open(spectrum_path)
+    d = hdul[1].data
+    wav = 10*d.WAVE # convert to angstrom
+    flx = d.FLUX
+    return flx.flatten(), wav.flatten()
 
 
 def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
@@ -1206,6 +1217,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         single_ccd = 3 # since we're doing Li measurements
         flx, wav = read_galah(spectrum_path, single_ccd)
         instrument = 'HERMES'
+    elif 'gaiaeso' in spectrum_path.lower():
+        flx, wav = read_gaiaeso(spectrum_path)
+        instrument = 'UVES/GIRAFFE'
     else:
         raise NotImplementedError
 
