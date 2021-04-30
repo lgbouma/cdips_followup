@@ -1176,6 +1176,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         wvsol_path: path to PFS wavelength solution (optional)
 
         xshift: angstrom shift required to get into source frame (not vacuum frame).
+        Sign such that if `xshift = 1`, you blueshift the spectrm by 1
+        angstrom.
 
         delta_wav: window to do the measurement over (angstrom)
 
