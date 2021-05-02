@@ -60,3 +60,4 @@ doc/*observing_run_planning*
 results/tic*
 results/*_21A_*
 results/20210311*
+drivers/oneoff_drivers/*ephemeris_uncertainties*txt
