@@ -95,7 +95,7 @@ def manual_main():
         os.path.dirname(__path__[0]),
         'drivers',
         'radvel_drivers',
-        '20210328', 'TIC457939414.py'
+        '20210430', 'TIC360630575.py'
     )
 
     RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
