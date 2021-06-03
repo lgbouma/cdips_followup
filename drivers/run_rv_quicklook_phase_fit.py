@@ -1,5 +1,5 @@
 """
-Environment: py37_emcee2
+Environment: py37
 Given RV vs time, does it phase up?
 
 Contents:
@@ -95,7 +95,7 @@ def manual_main():
         os.path.dirname(__path__[0]),
         'drivers',
         'radvel_drivers',
-        '20210430', 'TIC360630575.py'
+        '20210521', 'TIC360630575.py'
     )
 
     RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',

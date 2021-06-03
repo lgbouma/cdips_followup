@@ -61,3 +61,5 @@ results/tic*
 results/*_21A_*
 results/20210311*
 drivers/oneoff_drivers/*ephemeris_uncertainties*txt
+drivers/oneoff_drivers/*behmard*
+results/20210510*

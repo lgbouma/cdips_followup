@@ -37,7 +37,6 @@ def main():
     ticid = '440113053' # qatar-4
     ticid = '123755508' # pathos-38
     ticid = '374732772' # pathos-42
-    ticid = '438790187' # from Montet and Elsa
     ticid = '411614400' # by urs truly
     ticid = '264593815' # CVSO 17
     ticid = '264593828' # CVSO 17 neighbor
@@ -56,32 +55,35 @@ def main():
     ticid = '409525054' # BD+45 598, edge on disk
     ticid = '120105470' # Kepler 1627b
     ticid = '179367009' # J1407, V1400 Cen, Mamajek's object
+    ticid = '438790187' # from Montet and Elsa, 10 Myr LCC
+    ticid = '464405850' # Schneiderman's object
 
     # # optional #
     # period = 1.395733 # None
     # epoch = 2458597.22243 - 2457000 + 0.23*1.395733 #None
     # badtimewindows = None
 
-    # # CD-48 8201
+    # # # CD-48 8201 / TIC 438790187
     # period = 2.099291 # None
-    # epoch = 2458622.89036 - 2457000 #None
+    # #epoch = 2458622.89036 # default
+    # epoch = 2458622.8904 #None
     # badtimewindows = [(1616.75,1617.0),(1617.6,1617.8)]
-    period, epoch, badtimewindows = None, None, None
 
     # # Kepler1627
     # period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
-    cdips = 1
+    cdips = 0
     spoc = 0
-    eleanor = 0
+    eleanor = 1
     cdipspre = 0
     kepler = 0
     qlp = 0
 
     detrend = 'biweight' # None, 'biweight', or 'pspline'
+    period, epoch, badtimewindows = None, None, None
 
-    do_mag_lcs = 1
-    do_eleanor_lcs = 0
+    do_mag_lcs = 0
+    do_eleanor_lcs = 1
     do_flux_lcs = 0
 
     do_periodogram = 0
@@ -122,11 +124,12 @@ def main():
                                  epoch=epoch,
                                  require_quality_zero=require_quality_zero)
         if detrend:
-            explore_flux_lightcurves(data, ticid, pipeline=pipeline,
-                                     period=period, epoch=epoch,
-                                     detrend=detrend, do_phasefold=do_pf,
-                                     badtimewindows=badtimewindows,
-                                     require_quality_zero=require_quality_zero)
+            t, f = explore_flux_lightcurves(
+                data, ticid, pipeline=pipeline, period=period, epoch=epoch,
+                detrend=detrend, do_phasefold=do_pf,
+                badtimewindows=badtimewindows,
+                require_quality_zero=require_quality_zero, get_lc=1
+            )
 
     if do_periodogram:
         if pipeline == 'cdips':
