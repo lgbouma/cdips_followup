@@ -99,7 +99,7 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
                                            download_dir=outdir, verbose=True)
 
     if spoc:
-        lcfiles = glob(os.path.join(outdir,'*','TESS','*','tess*lc.fits'))
+        lcfiles = glob(os.path.join(outdir,'*','TESS',f'*tess*{ticid}*','tess*lc.fits'))
         if len(lcfiles) == 0:
             lcfiles = get_two_minute_spoc_lightcurves(ticid, download_dir=outdir)
 
@@ -412,6 +412,7 @@ def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
 
 
 def _get_ylim(y_obs):
+    assert len(y_obs)>0
     iqr = (np.nanpercentile(y_obs, 75) -
            np.nanpercentile(y_obs, 25))
     ylower = np.nanmedian(y_obs) - 2.5*iqr
@@ -429,12 +430,13 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
     Args:
 
-        data (list): from `get_tess_data`.
+        data (list): from `get_tess_data`, contents [hdulistA[1].data,
+            hdulistB[1].data], etc..
 
         ticid (str): TIC ID.
 
-        pipeline (str): one of
-            ['cdips', 'spoc', 'eleanor', 'cdipspre', 'kepler', 'qlp'].
+        pipeline (str): one of ['cdips', 'spoc', 'eleanor', 'cdipspre',
+        'kepler', 'qlp'].  This is used to access the flux, provenance, etc.
 
         outdir (str): diagnostic plots are written here. If None, goes to
         cdips_followup results directory.
@@ -454,6 +456,8 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         require_quality_zero (bool): if True, sets QUALITY==0, throwing out
         lots of data.
     """
+
+    assert isinstance(data, list), 'Expected list of FITStables.'
 
     if pipeline not in ['spoc', 'kepler', 'qlp']:
         raise NotImplementedError
@@ -517,6 +521,13 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                                                   method='biweight', cval=5,
                                                   window_length=0.5,
                                                   break_tolerance=0.5)
+
+            elif detrend == 'median':
+                y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs,
+                                                  method='median',
+                                                  window_length=0.6,
+                                                  break_tolerance=0.5,
+                                                  edge_cutoff=0.)
 
             else:
                 raise NotImplementedError
