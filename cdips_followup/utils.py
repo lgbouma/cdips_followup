@@ -69,12 +69,15 @@ def given_sourceid_get_radec(source_id):
     return ra, dec
 
 
-def given_sourceid_get_gaiarow(source_id):
+def given_sourceid_get_gaiarow(source_id, whichgaia='gaiadr2'):
+    """
+    args:
+        source_id: from gaiadr2, gaiaedr3, etc.
+    """
 
     jobstr = (
-        "select top 1 g.ra, g.dec, g.pmra, g.pmdec, g.phot_g_mean_mag from "
-        "gaiadr2.gaia_source as g where g.source_id = {:s}".
-        format(source_id)
+        "select top 1 g.ra, g.dec, g.pmra, g.pmdec, g.phot_g_mean_mag, g.phot_bp_mean_mag, g.phot_rp_mean_mag from "+
+        f"{whichgaia}.gaia_source as g where g.source_id = {source_id:s}"
     )
 
     job = Gaia.launch_job(jobstr)
