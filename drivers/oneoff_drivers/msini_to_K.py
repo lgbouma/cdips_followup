@@ -16,4 +16,5 @@ K = (
     (P.to(u.yr).value)**(-1/3)
 )
 
+print(msini, Mstar, P, e)
 print('K = {:.4f} m/s'.format(K))
