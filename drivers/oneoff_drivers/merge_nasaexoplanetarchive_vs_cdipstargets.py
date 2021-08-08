@@ -1,10 +1,9 @@
 """
-Merge NASA exoplanet archive against CDIPS target list.
+Merge NASA exoplanet archive, or the TOI list, against the CDIPS target list.
 """
 
 from cdips.utils.tapqueries import get_exoplanetarchive_planetarysystems
 from cdips.utils.catalogs import get_cdips_catalog
-from cdips_followup.utils import get_cdips_candidates
 from cdips_followup.paths import DATADIR, RESULTSDIR
 
 import os
@@ -12,7 +11,7 @@ from glob import glob
 import pandas as pd, numpy as np
 
 OVERWRITE = 0
-CDIPSVER = 0.5
+CDIPSVER = 0.6
 
 #
 # columns described at
