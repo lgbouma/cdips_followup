@@ -83,6 +83,8 @@ sel = (
     (sdf.reference_id != 'NASAExoArchive_ps_20210506,Oh2017')
     &
     (sdf.reference_id != 'Zari2018ums')
+    &
+    (sdf.reference_id != 'Oh2017')
 )
 
 _sel = (sdf.reference_id.str.contains('HATSandHATNcandidates20210505'))

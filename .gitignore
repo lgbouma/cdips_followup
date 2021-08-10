@@ -64,3 +64,4 @@ drivers/oneoff_drivers/*ephemeris_uncertainties*txt
 drivers/oneoff_drivers/*behmard*
 results/20210510*
 results/KNOWNPLANET_YOUNGSTAR_XMATCH/
+results/OBSERVING

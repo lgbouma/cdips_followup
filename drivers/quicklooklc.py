@@ -57,6 +57,7 @@ def main():
     ticid = '179367009' # J1407, V1400 Cen, Mamajek's object
     ticid = '438790187' # from Montet and Elsa, 10 Myr LCC
     ticid = '464405850' # Schneiderman's object
+    ticid = '4294779' # toi 2451
 
     # # optional #
     # period = 1.395733 # None
@@ -73,8 +74,8 @@ def main():
     # period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
     cdips = 0
-    spoc = 0
-    eleanor = 1
+    spoc = 1
+    eleanor = 0
     cdipspre = 0
     kepler = 0
     qlp = 0
@@ -83,8 +84,8 @@ def main():
     period, epoch, badtimewindows = None, None, None
 
     do_mag_lcs = 0
-    do_eleanor_lcs = 1
-    do_flux_lcs = 0
+    do_eleanor_lcs = 0
+    do_flux_lcs = 1
 
     do_periodogram = 0
     do_pf = 0
