@@ -27,7 +27,7 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 0          # plot all orders
+    args.do_orders = 1          # plot all orders
     args.do_sms_analysis = 0    # run specmatch-syn analysis
     args.do_sme_analysis = 0    # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0         # specmatch-emp check
@@ -36,10 +36,11 @@ def main():
     args.do_vsini = 0           # measure vsini
     args.do_ca_hk = 0           # get Ca HK emission properties
 
-    args.is_pfs = 1
+    args.is_pfs = 0
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
+    args.is_hires = 1
 
     if args.is_pfs:
 
@@ -74,6 +75,9 @@ def main():
 
     elif args.is_tres:
         main_tres(args)
+
+    elif args.is_hires:
+        main_hires(args)
 
 
 def main_pfs(args):
@@ -207,6 +211,40 @@ def main_tres(args):
 
     else:
         raise NotImplementedError
+
+
+def main_hires(args):
+
+    # nb. any of these are good
+    specname = 'ij405.85.fits'
+
+    spectrum_path = os.path.join(
+        DATADIR, 'HIRES', specname
+    )
+    idstring = 'Kepler1627'
+
+    if args.do_orders:
+        outdir = os.path.join(OUTDIR, 'HIRES', 'spec_viz_orders')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+
+    if args.do_li_ew:
+        outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        args.xshift = -0.65
+        args.idstring = idstring
+        outpath = os.path.join(
+            outdir,
+            '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
+        )
+        get_Li_6708_EW(spectrum_path, wvsol_path=None,
+                       xshift=args.xshift, outpath=outpath)
+
+    else:
+        raise NotImplementedError
+
 
 
 

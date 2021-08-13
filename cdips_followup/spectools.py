@@ -640,7 +640,10 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
             flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0,
                                         return_err=0)
         else:
-            raise NotImplementedError
+            print('WRN! Assuming HIRES spectrum is already deblazed')
+            flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0,
+                                        return_err=0)
+
     elif 'TRES' in spectrum_path:
         flx_2d, wav_2d = read_tres(spectrum_path)
     else:
@@ -1215,6 +1218,11 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     elif "TRES" in spectrum_path:
         flx_2d, wav_2d = read_tres(spectrum_path)
         instrument = 'TRES'
+    elif "HIRES" in spectrum_path:
+        print('WRN! Assuming HIRES spectrum is already deblazed')
+        flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0,
+                                    return_err=0)
+        instrument = 'HIRES'
     elif "galah" in spectrum_path.lower():
         single_ccd = 3 # since we're doing Li measurements
         flx, wav = read_galah(spectrum_path, single_ccd)
@@ -1234,7 +1242,7 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     names = ['FeI', 'FeI', 'FeI', 'Li', '', '?', '?', 'CaI$\lambda$']
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
 
-    if instrument in ['Veloce', 'TRES', 'PFS']:
+    if instrument in ['Veloce', 'TRES', 'PFS', 'HIRES']:
         #
         # retrieve the order corresponding to target wavelength.
         # then shift the wavelength solution to source frame, if needed.
