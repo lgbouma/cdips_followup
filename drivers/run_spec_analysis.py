@@ -10,10 +10,11 @@ Given spectrum from PFS / Veloce / CHIRON / FEROS / TRES:
 * Run specmatch-synth (nb. this functionality requires py27 environment)
 """
 import os
+from glob import glob
 from cdips_followup import __path__
 from cdips_followup.spectools import (
     get_Li_6708_EW, inspect_pfs, specmatch_viz_compare, specmatch_analyze,
-    plot_orders, plot_spec_vs_dwarf_library,
+    plot_orders, plot_spec_vs_dwarf_library, plot_stack_comparison,
     measure_veloce_vsini, get_Ca_HK_emission
 )
 
@@ -27,14 +28,15 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 1          # plot all orders
-    args.do_sms_analysis = 0    # run specmatch-syn analysis
-    args.do_sme_analysis = 0    # specmatch-emp for Teff, Rstar, spec compare
-    args.do_sme_viz = 0         # specmatch-emp check
-    args.do_inspect = 0         # inspect to figure out require rest-frame shift
-    args.do_li_ew = 1           # once rest-frame shift is known
-    args.do_vsini = 0           # measure vsini
-    args.do_ca_hk = 0           # get Ca HK emission properties
+    args.do_orders = 0           # plot all orders
+    args.do_sms_analysis = 0     # run specmatch-syn analysis
+    args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
+    args.do_sme_viz = 0          # specmatch-emp check
+    args.do_inspect = 0          # inspect to figure out require rest-frame shift
+    args.do_li_ew = 0            # once rest-frame shift is known
+    args.do_vsini = 0            # measure vsini
+    args.do_ca_hk = 0            # get Ca HK emission properties
+    args.do_stack_comparison = 1 # compare versus stack
 
     args.is_pfs = 0
     args.is_veloce = 0
@@ -215,9 +217,8 @@ def main_tres(args):
 
 def main_hires(args):
 
-    # nb. any of these are good
+    # iodine-free case for Kepler1627; single star; single spectrum
     specname = 'ij405.85.fits'
-
     spectrum_path = os.path.join(
         DATADIR, 'HIRES', specname
     )
@@ -228,6 +229,19 @@ def main_hires(args):
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+
+    if args.do_stack_comparison:
+        outdir = os.path.join(OUTDIR, 'HIRES', 'stack_comparisons')
+        #NOTE: with iodine, Kep1627 2021/08/09.
+        # bj: CaHK, ij: Halpha, Li. rj: Na D and Mg b.
+        specglob = 'ij423*.fits'
+        spectrum_paths = glob(os.path.join(
+            '/Users/luke/Dropbox/proj/rudolf/data/spec/20210807_HIRES/CKS_REDUC',
+            specglob
+        ))
+        idstring = 'Kepler1627'
+        assert len(spectrum_paths) > 1
+        plot_stack_comparison(spectrum_paths, outdir=outdir, idstring=idstring)
 
     if args.do_li_ew:
         outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
@@ -241,13 +255,6 @@ def main_hires(args):
         )
         get_Li_6708_EW(spectrum_path, wvsol_path=None,
                        xshift=args.xshift, outpath=outpath)
-
-    else:
-        raise NotImplementedError
-
-
-
-
 
 
 def main_veloce(args):

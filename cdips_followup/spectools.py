@@ -25,6 +25,7 @@ CALCULATE:
 VISUALIZE:
     viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
     plot_orders
+    plot_stack_comparison
     inspect_pfs
     specmatch_viz_compare: SME comparison of target and HIRES library spectra.
     plot_spec_vs_dwarf_library: SME ditto.
@@ -542,7 +543,8 @@ def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=5180*u.AA,
 # visualization #
 #################
 
-def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
+def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
+                    ylim=None, norm_median=False, ylabel=None):
 
     if isinstance(xlim, list):
         xmin = xlim[0]
@@ -551,6 +553,10 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
 
         wav = wav[sel]
         flx = flx[sel]
+
+    if norm_median:
+        median_flx = np.nanmedian(flx)
+        flx /= median_flx
 
     plt.close('all')
     f,ax = plt.subplots(figsize=(10,3))
@@ -565,6 +571,10 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
 
     ax.set_xlabel('wavelength [angstrom]')
     ax.set_ylabel('flux [e-]')
+    if norm_median:
+        ax.set_ylabel('flux (median normalized)')
+    if ylabel:
+        ax.set_ylabel(ylabel)
 
     xmin = min(wav)
     xmax = max(wav)
@@ -573,6 +583,16 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None):
     for k, v in line_d.items():
         if v > xmin and v<xmax:
             this_d[k] = v
+
+    if isinstance(ylim, (list, tuple)):
+        ax.set_ylim(ylim)
+
+    if norm_median:
+        txt = f'med(f)={median_flx:.1f}e$^-$'
+        #trans = blended_transform_factory(ax.transAxes, ax.transData)
+        bbox = dict(facecolor='white', edgecolor='none', alpha=0.7)
+        ax.text(0.98, 0.98, txt, va='top', ha='right', bbox=bbox,
+                transform=ax.transAxes, fontsize='small')
 
     if len(this_d) > 0:
         for k, v in this_d.items():
@@ -679,6 +699,107 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
             outname = f'{idstring}_order{str(order).zfill(2)}_flat.png'
             outpath = os.path.join(outdir, outname)
             viz_1d_spectrum(flat, wav, outpath)
+
+
+def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
+                          idstring=None, is_template=False, xshift=0,
+                          flat_path=None):
+    """
+    Do a visual comparison of spectra in a time-series stack.
+    """
+
+    if not isinstance(outdir, str):
+        raise ValueError
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+
+    assert 'hires' in spectrum_paths[0].lower()
+
+    flx_arrs, norm_flx_arrs, wav_arrs = [], [], []
+
+    # collect all spectra; trim and shift if requested
+    for sp in spectrum_paths:
+        k = os.path.basename(sp).replace('.fits','')
+        flxs, norm_flxs, wavs= [], [], []
+        print('WRN! Assuming HIRES spectrum is already deblazed')
+        flx_2d, wav_2d = read_hires(sp, is_registered=0, return_err=0)
+        start = 10
+        end = -10
+        for order in range(wav_2d.shape[0]):
+            flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
+            if isinstance(xshift, (float, int)):
+                wav = deepcopy(wav) - xshift
+            flxs.append(flx)
+            norm_flxs.append(flx/np.nanmedian(flx))
+            wavs.append(wav)
+
+            outname = f'{idstring}_{k}_order{str(order).zfill(2)}.png'
+            outpath = os.path.join(outdir, outname)
+            if not os.path.exists(outpath):
+                ylim = None
+                if order == 7:
+                    # Ca-HK
+                    _flx = deepcopy(flx)
+                    viz_1d_spectrum(
+                        flx, wav, outpath.replace('.png','_normmedian.png'),
+                        ylim=[0,3], norm_median=True
+                    )
+                    flx = _flx
+                    ylim = [0,600]
+                viz_1d_spectrum(flx, wav, outpath, ylim=ylim)
+            else:
+                print(f'Found {outpath}')
+
+        flx_arr = np.array(flxs)
+        norm_flx_arr = np.array(norm_flxs)
+        wav_arr = np.array(wavs)
+        flx_arrs.append(flx_arr)
+        norm_flx_arrs.append(norm_flx_arr)
+        wav_arrs.append(wav_arr)
+
+    # stack, take median (Nspectra x Norders x Nwavelengths)
+    flx_arrs = np.array(flx_arrs)
+    norm_flx_arrs = np.array(norm_flx_arrs)
+    wav_arrs = np.array(wav_arrs)
+
+    # model is the median over all orders.
+    model_flx = np.nanmedian(norm_flx_arrs, axis=0)
+
+    # same viz, on the differences...
+    for sp in spectrum_paths:
+        k = os.path.basename(sp).replace('.fits','')
+        flx_2d, wav_2d = read_hires(sp, is_registered=0, return_err=0)
+        start, end = 10, -10
+        for order in range(wav_2d.shape[0]):
+            flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
+            _model_f = model_flx[order, :]
+            assert _model_f.shape == flx.shape
+            if isinstance(xshift, (float, int)):
+                wav = deepcopy(wav) - xshift
+            norm_flx = flx/np.nanmedian(flx)
+
+            diff_f = norm_flx - _model_f
+
+            outname = f'{idstring}_{k}_order{str(order).zfill(2)}_modelsubtracted.png'
+            outpath = os.path.join(outdir, outname)
+            csvpath = outpath.replace('.png','.csv')
+            if not os.path.exists(outpath):
+                ylim = [-0.5,0.5]
+                viz_1d_spectrum(diff_f, wav, outpath, ylim=ylim,
+                                ylabel='f/(med_λ(f)) - med_t(f/med_λ(f))')
+            else:
+                print(f'Found {outpath}')
+
+            if not os.path.exists(csvpath):
+                outdf = pd.DataFrame({
+                    'wav': wav,
+                    'norm_flx': norm_flx,
+                    'model_flx': _model_f,
+                    'diff_flx': diff_f
+                })
+                outdf.to_csv(csvpath, index=False)
+                print(f'Made {csvpath}')
+
 
 
 def inspect_pfs(nightstr, targetline, xlim=None):
