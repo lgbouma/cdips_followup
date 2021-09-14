@@ -81,8 +81,11 @@ VELOCE_VSINI_ORDERS_VS_NEXTGEN = [
 # a few common lines
 line_d = {
     'Fe_L': 3820.44,
+    'H$\eta$': 3835.397, # 9->2
+    'H$\zeta$': 3889.096, # 8->2
     'Ca_K': 3933.66,
     'Ca_H': 3968.47,
+    'H$\epsilon$': 3970.075, # 7->2
     'H$\delta$': 4101.75,
     'H$\gamma$': 4340.47,
     r'H$\beta$': 4861.35,
@@ -105,7 +108,7 @@ line_d = {
     'LiI_a': 6707.76,
     'LiI_b': 6707.91,
     'CaI$\lambda$': 6718,
-    'Halpha': 6562.8,
+    'Halpha': 6562.8, # 3->2
     'CaI_IRT_a': 8498,
     'CaI_IRT_b': 8542,
     'CaI_IRT_c': 8662
