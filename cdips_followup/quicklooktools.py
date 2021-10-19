@@ -6,6 +6,7 @@ Contents:
     explore_mag_lightcurves
     explore_eleanor_lightcurves
     make_periodogram
+    make_riverplot
 """
 from glob import glob
 import os, multiprocessing
@@ -873,6 +874,9 @@ def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
         print('made {}'.format(savpath))
 
 
+def make_riverplot(data):
 
-
-
+    msg = (
+        'Implementation resides in complexrotators project'
+    )
+    raise NotImplementedError(msg)

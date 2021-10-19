@@ -58,6 +58,7 @@ def main():
     ticid = '438790187' # from Montet and Elsa, 10 Myr LCC
     ticid = '464405850' # Schneiderman's object
     ticid = '4294779' # toi 2451
+    ticid = '238597707' # trojan candidate
 
     # # optional #
     # period = 1.395733 # None
@@ -80,18 +81,17 @@ def main():
     kepler = 0
     qlp = 0
 
-    detrend = 'biweight' # None, 'biweight', or 'pspline'
+    detrend = None # 'biweight' # None, 'biweight', or 'pspline'
     period, epoch, badtimewindows = None, None, None
 
     do_mag_lcs = 0
     do_eleanor_lcs = 0
     do_flux_lcs = 1
 
-    do_periodogram = 0
-    do_pf = 0
-    do_riverplot = 0
+    do_periodogram = 1
+    do_pf = 1
 
-    require_quality_zero = 0
+    require_quality_zero = 1
 
     ####################
 
@@ -144,9 +144,6 @@ def main():
             raise NotImplementedError
         make_periodogram(_data, ticid, pipeline, period_min=1, period_max=20,
                          nterms_0=1)
-
-    if do_riverplot:
-        make_riverplot(data)
 
 
 if __name__ == "__main__":

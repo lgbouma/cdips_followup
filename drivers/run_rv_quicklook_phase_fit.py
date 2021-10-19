@@ -95,11 +95,12 @@ def manual_main():
         os.path.dirname(__path__[0]),
         'drivers',
         'radvel_drivers',
-        '20210521', 'TIC360630575.py'
+        '20211014', 'HIP67522_CHIRON.py'
     )
 
     RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
-                               'spec_analysis', 'CHIRON', 'phased_RVs')
+                               'spec_analysis', 'multi_instrument',
+                               'phased_RVs_CHIRON')
     if not os.path.exists(RVRESULTDIR):
         os.mkdir(RVRESULTDIR)
 
