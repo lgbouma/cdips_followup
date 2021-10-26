@@ -33,10 +33,10 @@ def main():
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
     args.do_inspect = 0          # inspect to figure out require rest-frame shift
-    args.do_li_ew = 0            # once rest-frame shift is known
+    args.do_li_ew = 1            # once rest-frame shift is known
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
-    args.do_stack_comparison = 1 # compare versus stack
+    args.do_stack_comparison = 0 # compare versus stack
 
     args.is_pfs = 0
     args.is_veloce = 0
@@ -217,12 +217,12 @@ def main_tres(args):
 
 def main_hires(args):
 
-    # iodine-free case for Kepler1627; single star; single spectrum
-    specname = 'ij405.85.fits'
+    # single star; single spectrum
+    idstring = 'Kepler1643'
+    specname = 'ij438.82.fits'
     spectrum_path = os.path.join(
-        DATADIR, 'HIRES', specname
+        DATADIR, 'HIRES', idstring, specname
     )
-    idstring = 'Kepler1627'
 
     if args.do_orders:
         outdir = os.path.join(OUTDIR, 'HIRES', 'spec_viz_orders')
@@ -247,11 +247,12 @@ def main_hires(args):
         outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        args.xshift = -0.65
+        args.xshift = -0.05
         args.idstring = idstring
         outpath = os.path.join(
             outdir,
-            '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
+            '{}_{}_Li_EW_shift{:.2f}.png'.format(
+                args.idstring, specname.replace('.fits',''), args.xshift)
         )
         get_Li_6708_EW(spectrum_path, wvsol_path=None,
                        xshift=args.xshift, outpath=outpath)

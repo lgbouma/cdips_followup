@@ -58,7 +58,6 @@ from specutils.manipulation.utils import excise_regions
 from astropy.modeling import models
 
 from specmatchemp.spectrum import Spectrum
-from specmatchemp.specmatch import SpecMatch
 import specmatchemp.library
 import specmatchemp.plots as smplot
 
@@ -1900,6 +1899,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     s_spectrum = Spectrum(wav, flx)
     s_spectrum.name = idstring
 
+    from specmatchemp.specmatch import SpecMatch
     sm_res = SpecMatch(s_spectrum, lib)
     sm_res.shift()
 
