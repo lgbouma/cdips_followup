@@ -15,7 +15,86 @@ from cdips_followup.quicklooktools import (
     explore_mag_lightcurves, make_periodogram, get_kepler_data
 )
 
-def main():
+def quicklooklc(
+    ticid,
+    outdir = None,
+    cdips = 0,
+    spoc = 1,
+    eleanor = 0,
+    cdipspre = 0,
+    kepler = 0,
+    qlp = 0,
+    detrend = 'best', # None, 'biweight', 'locor', 'notch'
+    do_mag_lcs = 0,
+    do_eleanor_lcs = 0,
+    do_flux_lcs = 1,
+    do_periodogram = 0,
+    do_pf = 1,
+    require_quality_zero = 0,
+    forceylim = None, # [0.93, 1.07]# for the flux light curves
+    period = None,
+    epoch = None,
+    badtimewindows = None
+):
+
+    ####################
+
+    pipedict = {'cdips': cdips, 'spoc':spoc, 'eleanor':eleanor,
+                'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp}
+    for k,v in pipedict.items():
+        if v:
+            pipeline = k
+
+    data = get_tess_data(ticid, outdir=outdir, cdips=cdips, spoc=spoc,
+                         cdipspre=cdipspre, eleanor=eleanor, qlp=qlp)
+    if data is None and kepler:
+        data = get_kepler_data(ticid, outdir=outdir)
+
+    if do_eleanor_lcs:
+        explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch,
+                                    require_quality_zero=require_quality_zero)
+        if detrend:
+            explore_eleanor_lightcurves(
+                data, ticid, period=period, epoch=epoch,
+                require_quality_zero=require_quality_zero, detrend=detrend,
+                do_phasefold=do_pf
+            )
+
+    if do_mag_lcs:
+        explore_mag_lightcurves(data, ticid, period=period, epoch=epoch)
+
+    if do_flux_lcs:
+
+        explore_flux_lightcurves(data, ticid, pipeline=pipeline, period=period,
+                                 outdir=outdir,
+                                 epoch=epoch,
+                                 require_quality_zero=require_quality_zero,
+                                 forceylim=forceylim)
+        if detrend:
+            t, f = explore_flux_lightcurves(
+                data, ticid, pipeline=pipeline, period=period, epoch=epoch,
+                outdir=outdir,
+                detrend=detrend, do_phasefold=do_pf,
+                badtimewindows=badtimewindows,
+                require_quality_zero=require_quality_zero, get_lc=1,
+                forceylim=forceylim
+            )
+
+    if do_periodogram:
+        if pipeline == 'cdips':
+            time = data[0]['TMID_BJD']
+            flux, err = _given_mag_get_flux(data[0]['IRM1'], data[0]['IRE1'])
+            _data = {'time': time, 'flux': flux, 'err': err}
+        elif pipeline in ['spoc', 'kepler']:
+            # just look at a single sector
+            _data = data[0]
+        else:
+            raise NotImplementedError
+        make_periodogram(_data, ticid, pipeline, period_min=1, period_max=20,
+                         nterms_0=1, outdir=outdir)
+
+
+if __name__ == "__main__":
 
     ticid =  '34488204' #
     ticid = '389423271' # speedy mic
@@ -55,10 +134,12 @@ def main():
     ticid = '409525054' # BD+45 598, edge on disk
     ticid = '120105470' # Kepler 1627b
     ticid = '179367009' # J1407, V1400 Cen, Mamajek's object
-    ticid = '438790187' # from Montet and Elsa, 10 Myr LCC
     ticid = '464405850' # Schneiderman's object
     ticid = '4294779' # toi 2451
     ticid = '238597707' # trojan candidate
+    ticid = '438790187' # from Montet and Elsa, 10 Myr LCC
+    ticid = '56551765' # Tau1 =V1096 Tau = Anon1
+    ticid = '56655841' # Tau2
 
     # # optional #
     # period = 1.395733 # None
@@ -74,77 +155,9 @@ def main():
     # # Kepler1627
     # period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
-    cdips = 0
-    spoc = 1
-    eleanor = 0
-    cdipspre = 0
-    kepler = 0
-    qlp = 0
+    #period, epoch, badtimewindows = None, None, None
+    period, epoch, badtimewindows = 10.801262596715182, 2459482.27269369, None
+    period, epoch, badtimewindows = 4.946716, 2458821.250043, None
 
-    detrend = None # 'biweight' # None, 'biweight', or 'pspline'
-    period, epoch, badtimewindows = None, None, None
-
-    do_mag_lcs = 0
-    do_eleanor_lcs = 0
-    do_flux_lcs = 1
-
-    do_periodogram = 1
-    do_pf = 1
-
-    require_quality_zero = 1
-
-    ####################
-
-    pipedict = {'cdips': cdips, 'spoc':spoc, 'eleanor':eleanor,
-                'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp}
-    for k,v in pipedict.items():
-        if v:
-            pipeline = k
-
-    data = get_tess_data(ticid, outdir=None, cdips=cdips, spoc=spoc,
-                         cdipspre=cdipspre, eleanor=eleanor, qlp=qlp)
-    if data is None and kepler:
-        data = get_kepler_data(ticid, outdir=None)
-
-    if do_eleanor_lcs:
-        explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch,
-                                    require_quality_zero=require_quality_zero)
-        if detrend:
-            explore_eleanor_lightcurves(
-                data, ticid, period=period, epoch=epoch,
-                require_quality_zero=require_quality_zero, detrend=detrend,
-                do_phasefold=do_pf
-            )
-
-    if do_mag_lcs:
-        explore_mag_lightcurves(data, ticid, period=period, epoch=epoch)
-
-    if do_flux_lcs:
-
-        explore_flux_lightcurves(data, ticid, pipeline=pipeline, period=period,
-                                 epoch=epoch,
-                                 require_quality_zero=require_quality_zero)
-        if detrend:
-            t, f = explore_flux_lightcurves(
-                data, ticid, pipeline=pipeline, period=period, epoch=epoch,
-                detrend=detrend, do_phasefold=do_pf,
-                badtimewindows=badtimewindows,
-                require_quality_zero=require_quality_zero, get_lc=1
-            )
-
-    if do_periodogram:
-        if pipeline == 'cdips':
-            time = data[0]['TMID_BJD']
-            flux, err = _given_mag_get_flux(data[0]['IRM1'], data[0]['IRE1'])
-            _data = {'time': time, 'flux': flux, 'err': err}
-        elif pipeline in ['spoc', 'kepler']:
-            # just look at a single sector
-            _data = data[0]
-        else:
-            raise NotImplementedError
-        make_periodogram(_data, ticid, pipeline, period_min=1, period_max=20,
-                         nterms_0=1)
-
-
-if __name__ == "__main__":
-    main()
+    quicklooklc(ticid, period=period, epoch=epoch,
+                badtimewindows=badtimewindows)
