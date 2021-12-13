@@ -174,6 +174,8 @@ def _given_Gmag_get_exptime_defocus(Gmag, telescope_class):
         df = pd.read_csv(os.path.join(DATADIR, 'LCOGT_2m_guess_exptime.csv'))
     elif telescope_class == 'special':
         return 0, 0
+    else:
+        raise NotImplementedError
 
     if Gmag > df.G.max():
         raise AssertionError(f'Got G={Gmag:.2f}. Target too faint.')
@@ -203,7 +205,8 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
         return -1
 
     API_TOKEN = token  # API token obtained from https://observe.lco.global/accounts/profile/
-    PROPOSAL_ID = 'NOAO2021A-009'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
+    #PROPOSAL_ID = 'NOAO2021A-009'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
+    PROPOSAL_ID = 'NSF2021B-014'  # Proposal IDs may be found here: https://observe.lco.global/proposals/
 
     # starttime e.g., '2019-05-02 00:00:00'
     _starttime = starttime.iso[0:19]
@@ -259,6 +262,10 @@ def make_request_group(targetname, ra, dec, pmra, pmdec, Gmag, starttime,
         instrument_type = '2M0-SCICAM-SPECTRAL'
         mode = 'default'
         bin_x, bin_y = 2, 2
+    elif telescope_class == 'muscat':
+        instrument_type = '2M0-SCICAM-MUSCAT'
+        mode = 'MUSCAT_FAST' # readout mode
+        bin_x, bin_y = 1, 1
     elif telescope_class == 'special':
         instrument_type = '0'
         mode = '0'
@@ -340,7 +347,8 @@ def get_requests_given_ephem(
     semesterstr='20B',
     filtermode='ip',
     telescope_class='1m0',
-    ipp_value=1.0):
+    ipp_value=1.0,
+    force_acceptability=None):
     """
     Given an ephemeris, and the basic details of a target, generate LCOGT
     requests for any available transits at the given sites, between
@@ -356,6 +364,10 @@ def get_requests_given_ephem(
         schedule_oot_duration: used for the LCOGT-side REQUESTS, rather than
         the astroplan scheduling. Can be longer than oot_duration (used for
         astroplan scheduling) in order to try and get a bit more data.
+
+        force_acceptability: int or None.  If int (e.g., 50) it'll queue an
+        acceptability fraction of 50%. Else it'll go to the ACCEPTABILITY_DICT
+        defaults.
 
     Note:
         LCO Semester A is Dec 1 thru May 31.
@@ -454,7 +466,13 @@ def get_requests_given_ephem(
                 starttime = sel_time[0]
                 endtime = sel_time[1]
 
-                acceptability_threshold = ACCEPTABILITY_DICT[eventclass]
+                if force_acceptability is None:
+                    acceptability_threshold = ACCEPTABILITY_DICT[eventclass]
+                else:
+                    assert isinstance(force_acceptability, int)
+                    assert force_acceptability <= 100
+                    assert force_acceptability >= 1
+                    acceptability_threshold = force_acceptability
 
                 g = make_request_group(
                     targetname, ra, dec, pmra, pmdec, Gmag, starttime, endtime,
@@ -497,7 +515,7 @@ def make_single_request_from_row(
         r, savstr, eventclass, ephem_dict=None,
         min_search_time=Time(dt.datetime.today().isoformat()),
         max_search_time=None, filtermode='ip', telescope_class=None,
-        sites=None, ipp_value=1.0
+        sites=None, ipp_value=1.0, force_acceptability=None
     ):
     #
     # require the passed dataframe row has the right format.
@@ -608,7 +626,8 @@ def make_single_request_from_row(
                                     eventclass=eventclass,
                                     filtermode=filtermode,
                                     telescope_class=telescope_class,
-                                    ipp_value=ipp_value)
+                                    ipp_value=ipp_value,
+                                    force_acceptability=force_acceptability)
 
     return this
 

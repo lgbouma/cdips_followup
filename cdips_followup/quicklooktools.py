@@ -21,7 +21,6 @@ from copy import deepcopy
 
 from cdips.plotting import vetting_pdf as vp
 from cdips.lcproc import mask_orbit_edges as moe
-from cdips.lcproc import detrend as dtr
 from cdips.utils.lcutils import _given_mag_get_flux
 
 from numpy.polynomial.legendre import Legendre
@@ -424,7 +423,7 @@ def _get_ylim(y_obs):
 def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                              pipeline=None, detrend=False, window_length=None,
                              do_phasefold=0, badtimewindows=None, get_lc=False,
-                             require_quality_zero=1):
+                             require_quality_zero=1, forceylim=None):
     """
     Given a list of SPOC 2 minute data FITS tables, stitch them across sectors
     and make diagnostic plots.
@@ -478,11 +477,11 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     for ix, d in enumerate(data):
 
         savpath = os.path.join(
-            outdir, f'{prov}_{inst}_lightcurve_{str(ix).zfill(2)}.png'
+            outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{str(ix).zfill(2)}.png'
         )
         if detrend:
             savpath = os.path.join(
-                outdir, f'{prov}_{inst}_lightcurve_{detrend}_{str(ix).zfill(2)}.png'
+                outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{str(ix).zfill(2)}.png'
             )
 
         plt.close('all')
@@ -515,6 +514,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
             # # default pspline detrending
             if detrend=='pspline':
                 y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs)
+                x_trend = deepcopy(x_obs)
 
             # in some cases, might prefer the biweight
             elif detrend == 'biweight':
@@ -522,6 +522,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                                                   method='biweight', cval=5,
                                                   window_length=0.5,
                                                   break_tolerance=0.5)
+                x_trend = deepcopy(x_obs)
 
             elif detrend == 'median':
                 y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs,
@@ -529,12 +530,39 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                                                   window_length=0.6,
                                                   break_tolerance=0.5,
                                                   edge_cutoff=0.)
+                x_trend = deepcopy(x_obs)
+
+            elif detrend == 'best':
+                from cdips.lcproc.find_planets import run_periodograms_and_detrend
+                dtr_dict = {'method':'best', 'break_tolerance':0.5, 'window_length':0.5}
+                lsp_options = {'period_min':0.1, 'period_max':20}
+
+                # r = [source_id, ls_period, ls_fap, ls_amplitude, tls_period, tls_sde,
+                #      tls_t0, tls_depth, tls_duration, tls_distinct_transit_count,
+                #      tls_odd_even, dtr_method]
+
+                r, search_time, search_flux, dtr_stages_dict = run_periodograms_and_detrend(
+                    ticid, x_obs, y_obs, dtr_dict,
+                    period_min=lsp_options['period_min'],
+                    period_max=lsp_options['period_max'], dtr_method='best',
+                    return_extras=True,
+                    magisflux=True
+                )
+                y_trend, x_trend, dtr_method = (
+                    dtr_stages_dict['trend_flux'],
+                    dtr_stages_dict['trend_time'],
+                    dtr_stages_dict['dtr_method_used']
+                )
+                x_obs, y_obs = deepcopy(search_time), deepcopy(search_flux)
+                print(f'TIC{ticid} TLS results')
+                print(f'dtr_method_used: {dtr_method}')
+                print(r)
 
             else:
                 raise NotImplementedError
 
         if detrend:
-            ax.plot(x_obs, y_trend, c='r', lw=0.5, zorder=3)
+            ax.plot(x_trend, y_trend, c='r', lw=0.5, zorder=3)
         else:
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
@@ -553,6 +581,8 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
             _ylim = _get_ylim(y_obs)
 
         ax.set_ylim(_ylim)
+        if isinstance(forceylim, list) or isinstance(forceylim, tuple):
+            ax.set_ylim(forceylim)
 
         if not epoch is None:
             tra_times = epoch + np.arange(-1000,1000,1)*period
@@ -578,11 +608,11 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
     )
 
     savpath = os.path.join(
-        outdir, f'{prov}_{inst}_lightcurve_{str(yval).zfill(2)}_allsector.png'
+        outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{str(yval).zfill(2)}_allsector.png'
     )
     if detrend:
         savpath = os.path.join(
-            outdir, f'{prov}_{inst}_lightcurve_{detrend}_{str(yval).zfill(2)}_allsector.png'
+            outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{str(yval).zfill(2)}_allsector.png'
         )
 
     plt.close('all')
@@ -655,7 +685,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
             dstr = detrend if detrend else ''
             savpath = os.path.join(
-                outdir, f'{prov}_{inst}_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
+                outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
             )
 
             fig.savefig(savpath, dpi=400, bbox_inches='tight')
@@ -671,8 +701,9 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         return times, fluxs
 
 
-def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
-                     manual_peak=None, samples_per_peak=50, nterms_0=6):
+def make_periodogram(data, ticid, pipeline, outdir=None, period_min=0.1,
+                     period_max=20, manual_peak=None, samples_per_peak=50,
+                     nterms_0=6):
 
     if pipeline in ['spoc', 'kepler']:
         time = data[LCKEYDICT[pipeline]['time']]
@@ -730,7 +761,8 @@ def make_periodogram(data, ticid, pipeline, period_min=0.1, period_max=20,
     ax.set_xlabel('period [d]')
     ax.set_ylabel('power')
 
-    outdir = '../results/quicklooklc/TIC{}'.format(ticid)
+    if outdir is None:
+        outdir = '../results/quicklooklc/TIC{}'.format(ticid)
     savpath = os.path.join(outdir, 'ls_periodogram.png')
     fig.savefig(savpath, dpi=300, bbox_inches='tight')
     print('made {}'.format(savpath))
