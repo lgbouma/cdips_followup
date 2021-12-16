@@ -18,13 +18,13 @@ from cdips_followup.quicklooktools import (
 def quicklooklc(
     ticid,
     outdir = None,
-    cdips = 0,
-    spoc = 1,
+    cdips = 1,
+    spoc = 0,
     eleanor = 0,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
-    detrend = 'best', # None, 'biweight', 'locor', 'notch'
+    detrend = 'minimal',#'best', # None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
     do_eleanor_lcs = 0,
     do_flux_lcs = 1,
@@ -32,9 +32,11 @@ def quicklooklc(
     do_pf = 1,
     require_quality_zero = 0,
     forceylim = None, # [0.93, 1.07]# for the flux light curves
-    period = None,
-    epoch = None,
-    badtimewindows = None
+    period = 1.317741,
+    epoch = 2458765.950120,
+    badtimewindows = None,
+    slideclipdict = {'window_length':5, 'high':2., 'low':2.},
+    mask_orbit_edges = True
 ):
 
     ####################
@@ -69,7 +71,9 @@ def quicklooklc(
                                  outdir=outdir,
                                  epoch=epoch,
                                  require_quality_zero=require_quality_zero,
-                                 forceylim=forceylim)
+                                 forceylim=forceylim,
+                                 slideclipdict=slideclipdict,
+                                 mask_orbit_edges=mask_orbit_edges)
         if detrend:
             t, f = explore_flux_lightcurves(
                 data, ticid, pipeline=pipeline, period=period, epoch=epoch,
@@ -77,7 +81,8 @@ def quicklooklc(
                 detrend=detrend, do_phasefold=do_pf,
                 badtimewindows=badtimewindows,
                 require_quality_zero=require_quality_zero, get_lc=1,
-                forceylim=forceylim
+                forceylim=forceylim, slideclipdict=slideclipdict,
+                mask_orbit_edges=mask_orbit_edges
             )
 
     if do_periodogram:
@@ -140,6 +145,10 @@ if __name__ == "__main__":
     ticid = '438790187' # from Montet and Elsa, 10 Myr LCC
     ticid = '56551765' # Tau1 =V1096 Tau = Anon1
     ticid = '56655841' # Tau2
+    ticid = '332207549'
+    ticid = '302773669' # HD 17156b
+    ticid = '198456933' # complex rotator
+    ticid = '364075855' # CR steph-1
 
     # # optional #
     # period = 1.395733 # None
@@ -155,9 +164,4 @@ if __name__ == "__main__":
     # # Kepler1627
     # period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
-    #period, epoch, badtimewindows = None, None, None
-    period, epoch, badtimewindows = 10.801262596715182, 2459482.27269369, None
-    period, epoch, badtimewindows = 4.946716, 2458821.250043, None
-
-    quicklooklc(ticid, period=period, epoch=epoch,
-                badtimewindows=badtimewindows)
+    quicklooklc(ticid)
