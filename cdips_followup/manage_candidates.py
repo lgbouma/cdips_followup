@@ -270,15 +270,18 @@ def insert_candidate(
     # Construct and insert the new row.
     #
 
+    refkey = 'reference' if 'reference' in cdips_r else 'reference_id'
+    agekey = 'logt' if 'logt' in cdips_r else 'mean_age'
+
     new_row = pd.DataFrame({
         'source_id': str(source_id),
         'ticid': str(ticid),
         'toi': str(toiid),
         'targetid': str(targetid),
         'iscdipstarget': iscdipstarget,
-        'reference': cdips_r.reference,
+        'reference': cdips_r[refkey],
         'name': cdips_r.cluster,
-        'age': cdips_r.logt,
+        'age': cdips_r[agekey],
         'nbhd_rating': nbhd_rating if not pd.isnull(nbhd_rating) else '--',
         'init_priority': init_priority,
         'current_priority': current_priority,

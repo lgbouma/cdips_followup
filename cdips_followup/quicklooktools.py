@@ -21,7 +21,11 @@ from copy import deepcopy
 
 from cdips.plotting import vetting_pdf as vp
 from cdips.lcproc import mask_orbit_edges as moe
+from cdips.lcproc import detrend as dtr
 from cdips.utils.lcutils import _given_mag_get_flux
+import cdips.utils.lcutils as lcu
+
+from wotan import slide_clip
 
 from numpy.polynomial.legendre import Legendre
 
@@ -49,6 +53,10 @@ LCKEYDICT = {
     'qlp': {
         'flux': 'SAP_FLUX', 'time': 'TIME', 'quality': 'QUALITY',
         'time_offset':2457000, 'prov': 'mit', 'inst': 'tess'
+    },
+    'cdips': {
+        'flux': 'PCA1', 'time': 'TMID_BJD', 'quality': 'IRQ1',
+        'time_offset':0, 'prov':'cdips', 'inst':'tess'
     }
 }
 
@@ -157,7 +165,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
                                 require_quality_zero=0, detrend=0,
                                 do_phasefold=0):
 
-    yval = 'CORR_FLUX'
+    ykey = 'CORR_FLUX'
 
     times, fluxs= [], []
     for ix, d in enumerate(data):
@@ -170,21 +178,21 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
         plt.close('all')
         f,ax = plt.subplots(figsize=(16,4))
 
-        sel = (d['QUALITY'] == 0) & (d[yval] > 0)
+        sel = (d['QUALITY'] == 0) & (d[ykey] > 0)
         if require_quality_zero:
             if 'QUALITY' in d.names:
                 qualkey = 'QUALITY'
             else:
                 qualkey = 'SAP_QUALITY'
-            sel = (d[qualkey] == 0) & (d[yval] > 0)
+            sel = (d[qualkey] == 0) & (d[ykey] > 0)
             print(42*'.')
             print('WRN!: omitting all non-zero quality flags. throws out good data!')
             print(42*'.')
         else:
-            sel = (d[yval] > 0)
+            sel = (d[ykey] > 0)
 
         x_obs = d['TIME'][sel]
-        y_obs = d[yval][sel]
+        y_obs = d[ykey][sel]
 
         if detrend:
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
@@ -209,7 +217,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
         ax.set_xlabel('time [bjdtdb]')
-        ax.set_ylabel(yval)
+        ax.set_ylabel(ykey)
         ylim = ax.get_ylim()
 
         ax.set_title(ix)
@@ -230,11 +238,11 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
     )
 
     savpath = os.path.join(
-        outdir, f'eleanor_lightcurve_{yval}_allsector.png'
+        outdir, f'eleanor_lightcurve_{ykey}_allsector.png'
     )
     if detrend:
         savpath = os.path.join(
-            outdir, f'eleanor_lightcurve_detrended_{yval}_allsector.png'
+            outdir, f'eleanor_lightcurve_detrended_{ykey}_allsector.png'
         )
 
     # do the sigma clipped
@@ -257,7 +265,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
         ax.set_xlim(xlim)
 
     ax.set_xlabel('time [bjdtdb]')
-    ax.set_ylabel('relative '+yval)
+    ax.set_ylabel('relative '+ykey)
 
     ax.set_title(ix)
 
@@ -271,7 +279,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
         #
         # ax: primary transit
         #
-        phasebin = 3e-2
+        phasebin = 1e-2
         minbinelems = 2
         plotxlims = [(-0.5, 0.5), (-0.05,0.05)]
         xlimstrs = ['xwide','xnarrow']
@@ -299,7 +307,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
 
             dstr = 'detrended' if detrend else ''
             savpath = os.path.join(
-                outdir, f'eleanor_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
+                outdir, f'eleanor_lightcurve_{dstr}_{ykey}_{xstr}_allsector_phasefold.png'
             )
 
             fig.savefig(savpath, dpi=400, bbox_inches='tight')
@@ -317,14 +325,14 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
 
 def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
 
-    for yval in ['TFA1','TFA2','TFA3','IRM1','IRM2','IRM3','PCA1','PCA2','PCA3']:
+    for ykey in ['IRM1','IRM2','IRM3','PCA1','PCA2','PCA3','TFA1','TFA2','TFA3',]:
 
         times, mags= [], []
         for ix, d in enumerate(data):
 
             savpath = (
                 '../results/quicklooklc/TIC{}/mag_lightcurve_{}_{}.png'.
-                format(ticid, yval, ix)
+                format(ticid, ykey, ix)
             )
             if os.path.exists(savpath):
                 print('found {}, rewriting'.format(savpath))
@@ -332,12 +340,12 @@ def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
             plt.close('all')
             f,ax = plt.subplots(figsize=(16,4))
 
-            ax.scatter(d['TMID_BJD'], d[yval], c='k', s=5)
+            ax.scatter(d['TMID_BJD'], d[ykey], c='k', s=5)
             times.append(d['TMID_BJD'])
-            mags.append( d[yval] - np.nanmedian(d[yval]) )
+            mags.append( d[ykey] - np.nanmedian(d[ykey]) )
 
             ax.set_xlabel('time [bjdtdb]')
-            ax.set_ylabel(yval)
+            ax.set_ylabel(ykey)
             ylim = ax.get_ylim()
             ax.set_ylim((max(ylim), min(ylim)))
 
@@ -371,7 +379,7 @@ def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
 
         savpath = (
             '../results/quicklooklc/TIC{}/mag_lightcurve_{}_allsector.png'.
-            format(ticid, yval)
+            format(ticid, ykey)
         )
         if os.path.exists(savpath):
             print('found {}, rewriting'.format(savpath))
@@ -401,7 +409,7 @@ def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
             ax.set_xlim(xlim)
 
         ax.set_xlabel('time [bjdtdb]')
-        ax.set_ylabel('relative '+yval)
+        ax.set_ylabel('relative '+ykey)
         ylim = ax.get_ylim()
         ax.set_ylim((max(ylim), min(ylim)))
 
@@ -420,10 +428,13 @@ def _get_ylim(y_obs):
     return (ylower, yupper)
 
 
-def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
-                             pipeline=None, detrend=False, window_length=None,
-                             do_phasefold=0, badtimewindows=None, get_lc=False,
-                             require_quality_zero=1, forceylim=None):
+def explore_flux_lightcurves(
+    data, ticid, outdir=None, period=None, epoch=None, pipeline=None,
+    detrend=False, window_length=None, do_phasefold=0, badtimewindows=None,
+    get_lc=False, require_quality_zero=1, forceylim=None, normstitch=True,
+    slideclipdict={'window_length':1, 'high':3, 'low':8},
+    mask_orbit_edges=False
+):
     """
     Given a list of SPOC 2 minute data FITS tables, stitch them across sectors
     and make diagnostic plots.
@@ -455,18 +466,27 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
         require_quality_zero (bool): if True, sets QUALITY==0, throwing out
         lots of data.
+
+        normstitch (bool): normalize flux across sectors s.t. the relative
+        amplitude remains fixed.
+
+        slideclipdict (dict): e.g., {'window_length':1, 'high':3, 'low':8} for
+        1 day sliding window, exclude +3MAD from median above and -8MAD from
+        median below.
     """
 
     assert isinstance(data, list), 'Expected list of FITStables.'
 
-    if pipeline not in ['spoc', 'kepler', 'qlp']:
+    if pipeline not in ['spoc', 'kepler', 'qlp', 'cdips']:
         raise NotImplementedError
 
     if isinstance(epoch, float):
         if epoch < 2450000:
             raise ValueError(f'Expected epoch in BJDTDB. Got epoch={epoch:.6f}.')
 
-    yval = LCKEYDICT[pipeline]['flux']
+    ykey = LCKEYDICT[pipeline]['flux']
+    xkey = LCKEYDICT[pipeline]['time']
+    qualkey = LCKEYDICT[pipeline]['quality']
     prov = LCKEYDICT[pipeline]['prov']
     inst = LCKEYDICT[pipeline]['inst']
 
@@ -488,26 +508,45 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         f,ax = plt.subplots(figsize=(16*2,4*1.5))
 
         if require_quality_zero:
-            qualkey = LCKEYDICT[pipeline]['quality']
-            sel = (d[qualkey] == 0) & (d[yval] > 0)
+            okkey = 0 if pipeline in 'spoc,kepler,qlp'.split(',') else 'G'
+            sel = (d[qualkey] == okkey) & (d[ykey] > 0)
             print(42*'.')
             print('WRN!: omitting all non-zero quality flags. throws out good data!')
             print(42*'.')
         else:
-            sel = (d[yval] > 0)
+            sel = (d[ykey] > 0)
         if badtimewindows is not None:
             for w in badtimewindows:
                 sel &= ~(
-                    (d['TIME'] > w[0])
+                    (d[xkey] > w[0])
                     &
-                    (d['TIME'] < w[1])
+                    (d[xkey] < w[1])
                 )
 
         # correct time column to BJD_TDB
         x_offset = LCKEYDICT[pipeline]['time_offset']
-        x_obs = d['TIME'][sel] + x_offset
+        x_obs = d[xkey][sel] + x_offset
 
-        y_obs = d[yval][sel] / np.nanmedian(d[yval][sel])
+        # get the median-normalized flux
+        y_obs = d[ykey][sel]
+        if pipeline == 'cdips':
+            y_obs, _ = _given_mag_get_flux(y_obs, y_obs*1e-3)
+        y_obs /= np.nanmedian(y_obs)
+
+        if mask_orbit_edges:
+            x_obs, y_obs, _ = moe.mask_orbit_start_and_end(
+                x_obs, y_obs, raise_expectation_error=False, orbitgap=0.7,
+                orbitpadding=12/(24),
+                return_inds=True
+            )
+
+        # slide clip -- remove outliers with windowed stdevn removal
+        y_obs = slide_clip(x_obs, y_obs, slideclipdict['window_length'],
+                           low=slideclipdict['low'],
+                           high=slideclipdict['high'], method='mad',
+                           center='median')
+
+
         if detrend:
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
@@ -521,6 +560,13 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                 y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs,
                                                   method='biweight', cval=5,
                                                   window_length=0.5,
+                                                  break_tolerance=0.5)
+                x_trend = deepcopy(x_obs)
+
+            elif detrend == 'minimal':
+                y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs,
+                                                  method='biweight', cval=2,
+                                                  window_length=3.5,
                                                   break_tolerance=0.5)
                 x_trend = deepcopy(x_obs)
 
@@ -570,7 +616,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         fluxs.append( y_obs )
 
         ax.set_xlabel('time [bjdtdb]')
-        ax.set_ylabel(yval)
+        ax.set_ylabel(ykey)
         ylim = ax.get_ylim()
 
         ax.set_title(ix)
@@ -599,20 +645,26 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         f.savefig(savpath, dpi=300, bbox_inches='tight')
         print('made {}'.format(savpath))
 
-    times = np.hstack(np.array(times).flatten())
-    fluxs = np.hstack(np.array(fluxs).flatten())
+    if normstitch:
+        times, fluxs, _ = lcu.stitch_light_curves(
+            times, fluxs, fluxs, magsarefluxes=True, normstitch=True
+        )
+    else:
+        times = np.hstack(np.array(times).flatten())
+        fluxs = np.hstack(np.array(fluxs).flatten())
 
+    # NOTE: this call is deprecated
     stimes, smags, _ = lcmath.sigclip_magseries(
-        times, fluxs, np.ones_like(fluxs), sigclip=[8,3], iterative=True,
+        times, fluxs, np.ones_like(fluxs), sigclip=[20,20], iterative=True,
         magsarefluxes=True
     )
 
     savpath = os.path.join(
-        outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{str(yval).zfill(2)}_allsector.png'
+        outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{str(ykey).zfill(2)}_allsector.png'
     )
     if detrend:
         savpath = os.path.join(
-            outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{str(yval).zfill(2)}_allsector.png'
+            outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{str(ykey).zfill(2)}_allsector.png'
         )
 
     plt.close('all')
@@ -633,7 +685,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         ax.set_xlim(xlim)
 
     ax.set_xlabel('time [bjdtdb]')
-    ax.set_ylabel('relative '+yval)
+    ax.set_ylabel('relative '+ykey)
 
     ax.set_title(ix)
 
@@ -661,7 +713,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
         minbinelems = 2
         plotxlims = [(-0.5, 0.5), (-0.05,0.05)]
         xlimstrs = ['xwide','xnarrow']
-        plotylim = (0.994, 1.005)
+        plotylim = [0.9, 1.08]#None #[0.9,1.1]
         do_vlines = False
 
         for plotxlim, xstr in zip(plotxlims, xlimstrs):
@@ -676,7 +728,11 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
                                         plotxlim, '', xliminsetmode=False,
                                         magsarefluxes=True, phasems=0.8,
                                         phasebinms=4.0, verbose=True)
-            ax.set_ylim(plotylim)
+            if isinstance(plotylim, (list, tuple)):
+                ax.set_ylim(plotylim)
+            else:
+                plotylim = _get_ylim(fluxs)
+                ax.set_ylim(plotylim)
 
             if do_vlines:
                 ax.vlines(1/6, min(plotylim), max(plotylim), color='orangered',
@@ -685,7 +741,7 @@ def explore_flux_lightcurves(data, ticid, outdir=None, period=None, epoch=None,
 
             dstr = detrend if detrend else ''
             savpath = os.path.join(
-                outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{dstr}_{yval}_{xstr}_allsector_phasefold.png'
+                outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{dstr}_{ykey}_{xstr}_allsector_phasefold.png'
             )
 
             fig.savefig(savpath, dpi=400, bbox_inches='tight')
