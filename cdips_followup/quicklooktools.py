@@ -541,10 +541,11 @@ def explore_flux_lightcurves(
             )
 
         # slide clip -- remove outliers with windowed stdevn removal
-        y_obs = slide_clip(x_obs, y_obs, slideclipdict['window_length'],
-                           low=slideclipdict['low'],
-                           high=slideclipdict['high'], method='mad',
-                           center='median')
+        if isinstance(slideclipdict, dict):
+            y_obs = slide_clip(x_obs, y_obs, slideclipdict['window_length'],
+                               low=slideclipdict['low'],
+                               high=slideclipdict['high'], method='mad',
+                               center='median')
 
 
         if detrend:
