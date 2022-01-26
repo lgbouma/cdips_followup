@@ -6,7 +6,7 @@ import os
 from glob import glob
 import numpy as np, pandas as pd
 
-joel_update = 1
+joel_update = 0
 exofoptess_ctoi_insert = 0
 toi_insert = 0
 pipe_insert = 0

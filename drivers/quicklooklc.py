@@ -18,8 +18,8 @@ from cdips_followup.quicklooktools import (
 def quicklooklc(
     ticid,
     outdir = None,
-    cdips = 1,
-    spoc = 0,
+    cdips = 0,
+    spoc = 1,
     eleanor = 0,
     cdipspre = 0,
     kepler = 0,
@@ -28,15 +28,15 @@ def quicklooklc(
     do_mag_lcs = 0,
     do_eleanor_lcs = 0,
     do_flux_lcs = 1,
-    do_periodogram = 0,
+    do_periodogram = 1,
     do_pf = 1,
     require_quality_zero = 0,
     forceylim = None, # [0.93, 1.07]# for the flux light curves
-    period = 1.317741,
-    epoch = 2458765.950120,
+    period = 0.46348,
+    epoch = 2459450.,
     badtimewindows = None,
-    slideclipdict = {'window_length':5, 'high':2., 'low':2.},
-    mask_orbit_edges = True
+    slideclipdict = {'window_length':5, 'high':4, 'low':4},
+    mask_orbit_edges = False
 ):
 
     ####################
@@ -95,7 +95,7 @@ def quicklooklc(
             _data = data[0]
         else:
             raise NotImplementedError
-        make_periodogram(_data, ticid, pipeline, period_min=1, period_max=20,
+        make_periodogram(_data, ticid, pipeline, period_min=0.1, period_max=20,
                          nterms_0=1, outdir=outdir)
 
 
@@ -149,6 +149,7 @@ if __name__ == "__main__":
     ticid = '302773669' # HD 17156b
     ticid = '198456933' # complex rotator
     ticid = '364075855' # CR steph-1
+    ticid = '440686535' # CR in pleiades
 
     # # optional #
     # period = 1.395733 # None

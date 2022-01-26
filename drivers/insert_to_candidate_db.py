@@ -70,18 +70,18 @@ def manual_insert_many():
 
 if __name__ == "__main__":
 
-    insert_single = 0
-    insert_many = 1
+    insert_single = 1
+    insert_many = 0
 
     if insert_single:
 
         insert_single_candidate(
-            ticid = '235005571',
-            comment = 'George Zhou found. V=12.41 late K / early-M dwarf in sector-28 with a 1.3d period hot Neptune at Rp=4Re. It is high in the HRD, potentially implying a photometric binary, or perhaps that it is on the PMS. Has archival UVES (ESO) spectrum. No sign of SB2, exhibits no Li absorption, but shows significant p-cygni structure in H-alpha, and a very complicated emission profile in Ca HK. The lack of Li is OK, given the speed of Li depletion in low mass stars. George suggests to keep on going with this target too. ',
+            ticid = '56551765',
+            comment = 'V1096 Tau = Herbig Anon 1.  Taurus 1-3 Myr.  Maybe HEB system, maybe 1-3Myr HJ..  Need to check for chromaticity, then careful RVs to untangle the SB2. ',
             nbhd_rating = 0,
             init_priority = 0,
-            pending_photometry_observations = 'PP0. try ip/gp.',
-            pending_spectroscopic_observations = 'SP2.'
+            pending_photometry_observations = 'PP0.',
+            pending_spectroscopic_observations = 'SP1.'
         )
 
     if insert_many:

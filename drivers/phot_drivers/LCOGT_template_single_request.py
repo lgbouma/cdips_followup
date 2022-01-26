@@ -24,30 +24,34 @@ def main():
 
     ##########################################
     # CHANGE BELOW
-    savstr = '20210602_toi2123' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20211211_v1096tau' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
-    validate = 0
-    submit = 0
+    validate = 1
+    submit = 1
 
-    tic_id = '105840719' # '120105470'
+    tic_id = '56551765' # '120105470'
     source_id = None # '6113920619134019456' # can use instead of TIC
 
-    filtermode = 'ip'# 'zs', 'gp', 'ip'
+    filtermode = 'rp'# 'zs', 'gp', 'ip'
     telescope_class = '1m0' # '1m0', '2m0', 'special'
+    #telescope_class = 'special' # '1m0', '2m0', 'special'
     ipp_value = 1 # usually 1
-    max_search_time = Time('2021-07-31 23:59:00')
-    # max_search_time = Time('2021-08-31 23:59:00')
+    #max_search_time = Time('2022-12-31 23:59:00')
+    max_search_time = Time('2022-01-31 23:59:00')
 
     verify_ephemeris_uncertainty = 1 # require t_tra uncertainty < 2 hours
     inflate_duration = 1 # if t_tra uncertainty > 1 hour, inflate transit duration by +/- 45 minutes per side
 
-    transit_type = 'all' # see above
+    transit_type = 'totals' # see above
     max_n_events = 99 # else None. n_events is per eventclass.
 
     raise_error = False # raise an error if max_duration_error flag raised.
     max_duration_error = 30 # the submitted LCOGT request must match requested durn to within this difference [minutes]
 
-    sites = ['Keck Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+    sites = None #['Keck Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+    #sites = ['Keck Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+
+    force_acceptability = 50 # None or int.
 
     # CHANGE ABOVE
     ##########################################
@@ -102,7 +106,8 @@ def main():
         savstr, source_id, period, epoch, duration, create_eventclasses,
         overwrite=overwrite, max_search_time=max_search_time,
         filtermode=filtermode, telescope_class=telescope_class,
-        ipp_value=ipp_value, sites=sites
+        ipp_value=ipp_value, sites=sites,
+        force_acceptability=force_acceptability
     )
 
     # if a maximum number of events is set, impose it!

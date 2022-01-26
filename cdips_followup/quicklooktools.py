@@ -701,7 +701,9 @@ def explore_flux_lightcurves(
 
     if do_phasefold:
 
-        assert isinstance(period, float) and isinstance(epoch, float)
+        assert (
+            isinstance(period, (float,int)) and isinstance(epoch, (float,int))
+        )
 
         #
         # ax: primary transit
