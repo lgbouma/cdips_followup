@@ -301,6 +301,53 @@ def read_gaiaeso(spectrum_path):
     return flx.flatten(), wav.flatten()
 
 
+def read_neid(filename, read_ccf=True,
+              skip_orders=(slice(0, 3, None), slice(118, 123, None))):
+    '''
+    Read a NEID spectrum.
+
+    NEID Data Format can be found here:
+    https://neid.ipac.caltech.edu/docs/NEID-DRP/dataformat.html
+
+    Skips orders 0-2, 118-122, setting them to nan
+
+    Args:
+    -----
+    filename : str
+        Spectrum filename (NEID L1 or L2 .fits file)
+    '''
+    hdu_list = fits.open(filename)
+    header = hdu_list[0].header
+    level = header['DATALVL']
+    if level < 2:
+        read_ccf = False
+
+    w = np.copy(hdu_list[7].data)
+    s = np.copy(hdu_list[1].data)
+    s_err = np.sqrt(hdu_list[4].data)
+
+    for order in skip_orders:
+        s[order] = np.nan
+        s_err[order] = np.nan
+
+    if read_ccf:
+        ccf_hdu = hdu_list[12]
+        ccf_header = ccf_hdu.header
+        ccf_start, ccf_step = ccf_header['CCFSTART'], ccf_header['CCFSTEP']
+        n_pixels = ccf_header['NAXIS1']
+        #  gamma_rv = float(header['QRV'])
+        ccf_vels = np.arange(n_pixels) * ccf_step + ccf_start
+        ccf_data = np.copy(ccf_hdu.data)
+        for order in skip_orders:
+            ccf_data[order] = np.nan
+
+        hdu_list.close()
+        return w, s, s_err, ccf_vels, ccf_data
+    else:
+        hdu_list.close()
+        return w, s, s_err
+
+
 def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
                                 requirefind=True, single_ccd=None):
     """
@@ -1353,6 +1400,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     elif 'gaiaeso' in spectrum_path.lower():
         flx, wav = read_gaiaeso(spectrum_path)
         instrument = 'UVES/GIRAFFE'
+    elif 'NEID' in spectrum_path:
+        wav_2d, flx_2d, _ = read_neid(spectrum_path, read_ccf=False)
+        instrument = 'NEID'
     else:
         raise NotImplementedError
 
@@ -1362,10 +1412,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     # CaI lambda at ~6718.
     target_wav = 6707.835
     vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6710.2, 6713.1, 6718]
-    names = ['FeI', 'FeI', 'FeI', 'Li', '', '?', '?', 'CaI$\lambda$']
+    names = ['FeI', 'FeI', 'FeI', 'Li', '', 'FeI', '?', 'CaI$\lambda$']
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
 
-    if instrument in ['Veloce', 'TRES', 'PFS', 'HIRES']:
+    if instrument in ['Veloce', 'TRES', 'PFS', 'HIRES', 'NEID']:
         #
         # retrieve the order corresponding to target wavelength.
         # then shift the wavelength solution to source frame, if needed.
@@ -1407,6 +1457,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
         wav = wav[sel]
         flx = flx[sel]
+
+        sel = np.isfinite(flx) & np.isfinite(wav)
+        wav, flx = wav[sel], flx[sel]
+
 
     #
     # fit continuum. when doing so, exclude absorption lines.
