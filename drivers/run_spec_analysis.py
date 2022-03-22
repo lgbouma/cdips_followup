@@ -42,7 +42,8 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 1
+    args.is_hires = 0
+    args.is_neid = 1
 
     if args.is_pfs:
 
@@ -81,6 +82,8 @@ def main():
     elif args.is_hires:
         main_hires(args)
 
+    elif args.is_neid:
+        main_neid(args)
 
 def main_pfs(args):
 
@@ -186,11 +189,12 @@ def main_tres(args):
     # specname = '269-003518_2015-10-02_08h09m59s_cb.spec.fits'
     # specname = '269-003518_2017-01-19_04h03m24s_cb.spec.fits'
     specname = 'TRES_spectrum_Kepler1627.fits'
+    specname = 'KOI_7368_ab20150601.fits'
 
     spectrum_path = os.path.join(
         DATADIR, 'TRES', specname
     )
-    idstring = 'Kepler1627'
+    idstring = 'KOI_7368'
 
     if args.do_orders:
         outdir = os.path.join(OUTDIR, 'TRES', 'spec_viz_orders')
@@ -202,7 +206,7 @@ def main_tres(args):
         outdir = os.path.join(OUTDIR, 'TRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        args.xshift = 0
+        args.xshift = -0.3
         args.idstring = idstring
         outpath = os.path.join(
             outdir,
@@ -218,8 +222,8 @@ def main_tres(args):
 def main_hires(args):
 
     # single star; single spectrum
-    idstring = 'Kepler1643'
-    specname = 'ij438.82.fits'
+    idstring = 'KOI-7913B'
+    specname = 'ij438.81.fits'
     spectrum_path = os.path.join(
         DATADIR, 'HIRES', idstring, specname
     )
@@ -248,6 +252,36 @@ def main_hires(args):
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         args.xshift = -0.05
+        args.idstring = idstring
+        outpath = os.path.join(
+            outdir,
+            '{}_{}_Li_EW_shift{:.2f}.png'.format(
+                args.idstring, specname.replace('.fits',''), args.xshift)
+        )
+        get_Li_6708_EW(spectrum_path, wvsol_path=None,
+                       xshift=args.xshift, outpath=outpath)
+
+
+def main_neid(args):
+
+    # single star; single spectrum
+    idstring = 'TOI4145'
+    specname = 'TOI4145S-sy20211128-neidL2.fits'
+    spectrum_path = os.path.join(
+        DATADIR, 'NEID', idstring, specname
+    )
+
+    if args.do_orders:
+        outdir = os.path.join(OUTDIR, 'NEID', 'spec_viz_orders')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+
+    if args.do_li_ew:
+        outdir = os.path.join(OUTDIR, 'NEID', 'Li_EW')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        args.xshift = 1.80
         args.idstring = idstring
         outpath = os.path.join(
             outdir,
