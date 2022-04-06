@@ -1494,17 +1494,26 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     li_centroid = centroid(full_spec, region)
 
     # fit a gaussian, and integrate to get ITS equivalent width
-    g_init = models.Gaussian1D(amplitude=0.2*u.dimensionless_unscaled,
-                               mean=target_wav*u.AA, stddev=0.5*u.AA)
-    g_fit = fit_lines(full_spec, g_init, window=(region.lower, region.upper))
+    g_init = models.Gaussian1D(
+        amplitude=0.2*u.dimensionless_unscaled,
+        mean=target_wav*u.AA, stddev=0.5*u.AA
+    )
+    g_fit = fit_lines(
+        full_spec, g_init, window=(region.lower, region.upper)
+    )
 
-    min_x, max_x, N_x = min(full_spec.wavelength), max(full_spec.wavelength), int(1e4)
+    min_x, max_x, N_x = (
+        min(full_spec.wavelength), max(full_spec.wavelength), int(1e4)
+    )
     x_fit = np.linspace(min_x, max_x, N_x)
     y_fit = g_fit(x_fit)
 
-    fitted_spec = Spectrum1D(spectral_axis=x_fit,
-                             flux=(1-y_fit)*u.dimensionless_unscaled)
-    fitted_li_equiv_width = equivalent_width(fitted_spec, regions=region)
+    fitted_spec = Spectrum1D(
+        spectral_axis=x_fit, flux=(1-y_fit)*u.dimensionless_unscaled
+    )
+    fitted_li_equiv_width = equivalent_width(
+        fitted_spec, regions=region
+    )
 
 
     if montecarlo_errors:
@@ -1534,20 +1543,32 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
             # to fit gaussians, look at 1-flux.
             # fit a gaussian, and integrate to get ITS equivalent width
-            full_spec = Spectrum1D(spectral_axis=cont_norm_spec.wavelength,
-                                   flux=(1-cont_norm_spec.flux))
+            full_spec = Spectrum1D(
+                spectral_axis=cont_norm_spec.wavelength,
+                flux=(1-cont_norm_spec.flux)
+            )
 
-            g_init = models.Gaussian1D(amplitude=0.2*u.dimensionless_unscaled,
-                                       mean=target_wav*u.AA, stddev=0.5*u.AA)
-            g_fit = fit_lines(full_spec, g_init, window=(region.lower, region.upper))
+            g_init = models.Gaussian1D(
+                amplitude=0.2*u.dimensionless_unscaled,
+                mean=target_wav*u.AA, stddev=0.5*u.AA
+            )
+            g_fit = fit_lines(
+                full_spec, g_init, window=(region.lower, region.upper)
+            )
 
             y_fit = g_fit(x_fit)
 
-            fitted_spec = Spectrum1D(spectral_axis=x_fit,
-                                     flux=(1-y_fit)*u.dimensionless_unscaled)
-            _fitted_li_equiv_width = equivalent_width(fitted_spec, regions=region)
+            fitted_spec = Spectrum1D(
+                spectral_axis=x_fit,
+                flux=(1-y_fit)*u.dimensionless_unscaled
+            )
+            _fitted_li_equiv_width = equivalent_width(
+                fitted_spec, regions=region
+            )
 
-            fitted_li_equiv_widths.append(_fitted_li_equiv_width.to(u.angstrom).value)
+            fitted_li_equiv_widths.append(
+                _fitted_li_equiv_width.to(u.angstrom).value
+            )
 
         fitted_li_equiv_widths = nparr(fitted_li_equiv_widths)
 
@@ -1573,7 +1594,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     if verbose:
         print(42*'=')
         print(f'got Li equiv width of {li_equiv_width:.3f}')
-        print(f'got fitted Li equiv width of {fitted_li_equiv_width:.3f}, from gaussian over {min_x:.1f} - {max_x:.1f}, with {N_x} points. ')
+        print(f'got fitted Li equiv width of {fitted_li_equiv_width:.3f}, '
+              f'from gaussian over {min_x:.1f} - {max_x:.1f}, with '
+              f'{N_x} points. ')
         print(f'got Li centroid of {li_centroid:.3f}')
         print(f'fit gaussian1d params are\n{repr(g_fit)}')
         print(42*'=')
@@ -1596,36 +1619,34 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     axs[2].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
 
     ylim = axs[2].get_ylim()
-    axs[2].vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
-              color='orangered', linestyle='--', zorder=-2, lw=0.5,
-              alpha=0.3)
+    axs[2].vlines([region.lower.value, region.upper.value],
+                  min(ylim), max(ylim), color='orangered', linestyle='--',
+                  zorder=-2, lw=0.5, alpha=0.3)
 
     axs[3].plot(full_spec.wavelength, full_spec.flux, c='k')
     axs[3].plot(x_fit, y_fit, c='g')
     ylim = axs[3].get_ylim()
-    axs[3].vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
-              color='g', linestyle='--', zorder=-2, lw=0.5,
-              alpha=0.3)
+    axs[3].vlines([region.lower.value, region.upper.value],
+                  min(ylim), max(ylim), color='g', linestyle='--', zorder=-2,
+                  lw=0.5, alpha=0.3)
 
     if not montecarlo_errors:
         txt = (
-            'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nEW:{:.1f}mA\nGaussFitEW:{:.1f}mA'.
-            format(g_fit.amplitude.value,
-                   g_fit.mean.value,
-                   g_fit.stddev.value,
-                   (li_equiv_width*1e3).value,
-                   (fitted_li_equiv_width*1e3).value)
+            f'gaussian1d\namplitude:{g_fit.amplitude.value:.3f}'
+            f'\nmean:{g_fit.mean.value:.3f}'
+            f'\nstd:{g_fit.stddev.value:.3f}'
+            f'\nEW:{(li_equiv_width*1e3).value:.1f}mA'
+            f'\nGaussFitEW:{(fitted_li_equiv_width*1e3).value:.1f}mA'
         )
     else:
         txt = (
-            'gaussian1d\namplitude:{:.3f}\nmean:{:.3f}\nstd:{:.3f}\nEW:{:.1f}mA\nGaussFitEW:{:.1f}+{:.1f}-{:.1f}mA'.
-            format(g_fit.amplitude.value,
-                   g_fit.mean.value,
-                   g_fit.stddev.value,
-                   (li_equiv_width*1e3).value,
-                   (fitted_li_equiv_width*1e3).value,
-                   fitted_li_equiv_widths_perr*1e3,
-                   fitted_li_equiv_widths_merr*1e3)
+            f'gaussian1d\namplitude:{g_fit.amplitude.value:.3f}'
+            f'\nmean:{g_fit.mean.value:.3f}'
+            f'\nstd:{g_fit.stddev.value:.3f}'
+            f'\nEW:{(li_equiv_width*1e3).value:.1f}mA'
+            f'\nGaussFitEW:{(fitted_li_equiv_width*1e3).value:.1f}'
+            f'+{fitted_li_equiv_widths_perr*1e3:.1f}'
+            f'-{fitted_li_equiv_widths_merr*1e3:.1f}mA'
         )
 
     axs[3].text(
