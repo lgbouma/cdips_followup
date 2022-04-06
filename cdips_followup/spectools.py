@@ -1411,8 +1411,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     # Li I doublet at 6707.76, 6707.91 -> avg 6707.835
     # CaI lambda at ~6718.
     target_wav = 6707.835
-    vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6710.2, 6713.1, 6718]
-    names = ['FeI', 'FeI', 'FeI', 'Li', '', 'FeI', '?', 'CaI$\lambda$']
+    # "~" here is not a line -- it's a spacer to ensure we don't cut the
+    # continuum too closer.
+    vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6708.1, 6710.2, 6713.1, 6718]
+    names = ['FeI', 'FeI', 'FeI', 'Li', 'Li', '~', 'FeI', '?', 'CaI$\lambda$']
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
 
     if instrument in ['Veloce', 'TRES', 'PFS', 'HIRES', 'NEID']:
@@ -1461,6 +1463,14 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         sel = np.isfinite(flx) & np.isfinite(wav)
         wav, flx = wav[sel], flx[sel]
 
+        if verbose:
+            thispath = outpath.replace('.png', '_fittedslice.csv')
+            outdf = pd.DataFrame({
+                'wav': wav,
+                'flx': flx
+            })
+            outdf.to_csv(thispath, index=False)
+            print(f'Cacheing to {thispath}')
 
     #
     # fit continuum. when doing so, exclude absorption lines.
@@ -1659,9 +1669,23 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     axs[2].set_ylabel('$f_\mathrm{contnorm}$ [zoom]')
     axs[3].set_ylabel('$1-f_\mathrm{contnorm}$')
 
-    if isinstance(xlim, list):
-        for ax in axs:
-            ax.set_xlim(xlim)
+    assert isinstance(xlim, list)
+    for ax in axs:
+        ax.set_xlim(xlim)
+
+    if isinstance(vlines, list):
+        sel = (nparr(vlines)>min(xlim)) & (nparr(vlines)<max(xlim))
+        vlines, names = nparr(vlines)[sel], nparr(names)[sel]
+        ylim = axs[0].get_ylim()
+        delta_y = 0.9*(max(ylim) - min(ylim))
+        axs[0].vlines(vlines, min(ylim)+delta_y, max(ylim), zorder=-3,
+                      linestyles=':', color='k', lw=0.3)
+        axs[0].set_ylim(ylim)
+
+        tform = blended_transform_factory(axs[0].transData, axs[0].transAxes)
+        for x, n in zip(vlines, names):
+            axs[0].text(x, 0.95, n, ha='center', va='top', transform=tform,
+                        fontsize=4)
 
     axs[2].set_xlim([target_wav-1.5, target_wav+1.5])
     axs[3].set_xlim([target_wav-1.5, target_wav+1.5])
