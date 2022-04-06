@@ -19,27 +19,30 @@ def quicklooklc(
     ticid,
     outdir = None,
     cdips = 0,
-    spoc = 1,
-    eleanor = 0,
+    spoc = 0,
+    eleanor = 1,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
-    detrend = 'minimal',#'best', # None, 'biweight', 'locor', 'notch', 'minimal'
+    detrend = None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
-    do_eleanor_lcs = 0,
-    do_flux_lcs = 1,
-    do_periodogram = 1,
-    do_pf = 1,
+    do_eleanor_lcs = 1,
+    do_flux_lcs = 0,
+    do_periodogram = 0,
+    do_pf = 0,
     require_quality_zero = 0,
     forceylim = None, # [0.93, 1.07]# for the flux light curves
-    period = 0.46348,
-    epoch = 2459450.,
+    period = None,
+    epoch = None,
     badtimewindows = None,
-    slideclipdict = {'window_length':5, 'high':4, 'low':4},
+    slideclipdict = None, #{'window_length':5, 'high':4, 'low':4},
     mask_orbit_edges = False
 ):
 
-    ####################
+    if do_pf:
+        assert (
+            isinstance(period, (float,int)) and isinstance(epoch, (float,int))
+        )
 
     pipedict = {'cdips': cdips, 'spoc':spoc, 'eleanor':eleanor,
                 'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp}
@@ -150,6 +153,11 @@ if __name__ == "__main__":
     ticid = '198456933' # complex rotator
     ticid = '364075855' # CR steph-1
     ticid = '440686535' # CR in pleiades
+    ticid = '94478915'
+    ticid = '329335127' # V1716 Cyg
+    ticid = '56655841'
+    ticid = '219234987' # gamma dor
+    ticid = '27009706'
 
     # # optional #
     # period = 1.395733 # None
