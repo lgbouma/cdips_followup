@@ -42,8 +42,8 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 0
-    args.is_neid = 1
+    args.is_hires = 1
+    args.is_neid = 0
 
     if args.is_pfs:
 
@@ -222,8 +222,8 @@ def main_tres(args):
 def main_hires(args):
 
     # single star; single spectrum
-    idstring = 'KOI-7913B'
-    specname = 'ij438.81.fits'
+    idstring = 'Kepler1643'
+    specname = 'ij384.99.fits'
     spectrum_path = os.path.join(
         DATADIR, 'HIRES', idstring, specname
     )
@@ -251,15 +251,16 @@ def main_hires(args):
         outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        args.xshift = -0.05
+        args.xshift = -0.30
         args.idstring = idstring
-        outpath = os.path.join(
-            outdir,
-            '{}_{}_Li_EW_shift{:.2f}.png'.format(
-                args.idstring, specname.replace('.fits',''), args.xshift)
-        )
-        get_Li_6708_EW(spectrum_path, wvsol_path=None,
-                       xshift=args.xshift, outpath=outpath)
+        for delta_wav in [2.5,5,7.5]:
+            outname = (
+                f"{args.idstring}_{specname.replace('.fits','')}_"
+                f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+            )
+            outpath = os.path.join(outdir, outname)
+            get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
+                           xshift=args.xshift, outpath=outpath)
 
 
 def main_neid(args):
