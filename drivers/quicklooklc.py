@@ -158,6 +158,7 @@ if __name__ == "__main__":
     ticid = '56655841'
     ticid = '219234987' # gamma dor
     ticid = '27009706'
+    ticid = '96680681' # AB Aur
 
     # # optional #
     # period = 1.395733 # None

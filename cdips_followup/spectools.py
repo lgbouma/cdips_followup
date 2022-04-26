@@ -18,6 +18,7 @@ SPECMATCH WRAPPERS:
 CALCULATE:
     fit_continuum: fits a quadratic polynomial across the order.
     get_Li_6708_EW: measure Li EW.
+    get_Halpha_EW: measure Halpha EW
     measure_veloce_vsini: wraps below.
         measure_vsini: compares target spectrum to broadend NextGen spectra
     given_deltawvlen_get_vsys: convert Δλ to velocity.
@@ -1711,6 +1712,18 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         outdf = pd.DataFrame(outdict, index=[0])
         outdf.to_csv(outpath, index=False)
         print(f'Made {outpath}')
+
+
+def get_Halpha_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
+                  outpath=None, is_template=False, writecsvresults=True,
+                  verbose=True, montecarlo_errors=True):
+    #FIXME UPDATE THE entire thing!  Probably find-replace a lot of stuff.
+    """
+    TODO
+    """
+
+    raise NotImplementedError('need to write it!  likely by copy-pasting from '
+                              'Li EW implementation')
 
 
 def measure_vsini(wav, flx, flxerr=None, teff=6000, logg=4.5, vturb=2, outdir=None,

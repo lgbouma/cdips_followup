@@ -13,9 +13,9 @@ import os
 from glob import glob
 from cdips_followup import __path__
 from cdips_followup.spectools import (
-    get_Li_6708_EW, inspect_pfs, specmatch_viz_compare, specmatch_analyze,
-    plot_orders, plot_spec_vs_dwarf_library, plot_stack_comparison,
-    measure_veloce_vsini, get_Ca_HK_emission
+    get_Li_6708_EW, get_Halpha_EW, inspect_pfs, specmatch_viz_compare,
+    specmatch_analyze, plot_orders, plot_spec_vs_dwarf_library,
+    plot_stack_comparison, measure_veloce_vsini, get_Ca_HK_emission
 )
 
 DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
@@ -33,7 +33,8 @@ def main():
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
     args.do_inspect = 0          # inspect to figure out require rest-frame shift
-    args.do_li_ew = 1            # once rest-frame shift is known
+    args.do_li_ew = 0            # once rest-frame shift is known
+    args.do_halpha_ew = 1        # emission, absorption, either way!
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
     args.do_stack_comparison = 0 # compare versus stack
@@ -222,8 +223,10 @@ def main_tres(args):
 def main_hires(args):
 
     # single star; single spectrum
-    idstring = 'Kepler1643'
-    specname = 'ij384.99.fits'
+    idstring = 'KOI-7913A'
+    specname = 'ij440.75.fits'
+    #idstring = 'KOI-7913B'
+    #specname = 'ij438.81.fits'
     spectrum_path = os.path.join(
         DATADIR, 'HIRES', idstring, specname
     )
@@ -251,7 +254,7 @@ def main_hires(args):
         outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        args.xshift = -0.30
+        args.xshift = -0.05
         args.idstring = idstring
         for delta_wav in [2.5,5,7.5]:
             outname = (
@@ -261,6 +264,22 @@ def main_hires(args):
             outpath = os.path.join(outdir, outname)
             get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
                            xshift=args.xshift, outpath=outpath)
+
+    if args.do_halpha_ew:
+        outdir = os.path.join(OUTDIR, 'HIRES', 'Halpha_EW')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        args.xshift = -0.05
+        args.idstring = idstring
+        for delta_wav in [2.5,5,7.5]:
+            outname = (
+                f"{args.idstring}_{specname.replace('.fits','')}_"
+                f"Halpha_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+            )
+            outpath = os.path.join(outdir, outname)
+            get_Halpha_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
+                          xshift=args.xshift, outpath=outpath)
+
 
 
 def main_neid(args):
