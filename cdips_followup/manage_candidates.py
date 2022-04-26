@@ -93,14 +93,14 @@ def insert_candidate(
     manual_dict: dict
 
         With keys:
-        nbhd_rating (0-2, or -1 for null),
-        init_priority (0-2),
-        current_priority (0-2),
-        pending_spectroscopic_observations (str, '--' if null),
-        pending_photometry_observations (str, '--' if null),
-        comment (str, '--' if null)
-        candidate_provenance (str)
-        isretired (0 or 1)
+        "nbhd_rating" (0-2, or -1 for null),
+        "init_priority" (0-2),
+        "current_priority" (0-2),
+        "pending_spectroscopic_observations" (str, '--' if null),
+        "pending_photometry_observations" (str, '--' if null),
+        "comment" (str, '--' if null)
+        "candidate_provenance" (str)
+        "isretired" (0 or 1)
 
     raise_error_if_duplicate: boolean
 
@@ -142,13 +142,9 @@ def insert_candidate(
                 cdips_r[col] = -1
 
     else:
-        cdips_cols = [
-            'cluster', 'reference', 'ext_catalog_name', 'ra', 'dec', 'pmra',
-            'pmdec', 'parallax', 'phot_g_mean_mag', 'phot_bp_mean_mag',
-            'phot_rp_mean_mag', 'k13_name_match', 'unique_cluster_name',
-            'how_match', 'not_in_k13', 'comment', 'logt', 'e_logt',
-            'logt_provenance'
-        ]
+        cdips_cols = (
+        "source_id,ra,dec,parallax,parallax_error,pmra,pmdec,phot_g_mean_mag,phot_rp_mean_mag,phot_bp_mean_mag,cluster,age,mean_age,reference_id,reference_bibcode".split(',')
+        )
 
         cdips_r = pd.Series({
             'source_id': source_id
@@ -199,15 +195,17 @@ def insert_candidate(
         'rp': 'Planet Radius (R_Earth)',
         'rp_unc': 'Planet Radius (R_Earth) err',
         'period': 'Period (days)',
-        'depth': 'Depth (mmag)'
+        'depth': 'Depth (mmag)',
+        'comment': 'Comments'
     }
     if plproperties_r is None:
         plproperties_r = get_exofop_ctoi_catalog_entry(ticid)
         plkeyd = {
-            'rp': 'Radius (R_Earth)',
-            'rp_unc': 'Radius (R_Earth) Error',
+            'rp': 'Planet Radius (R_Earth)',
+            'rp_unc': 'Planet Radius (R_Earth) Error',
             'period': 'Period (days)',
-            'depth': 'Depth mmag'
+            'depth': 'Depth mmag',
+            'comment': 'Notes'
         }
 
     if isinstance(plproperties_r, pd.DataFrame):
@@ -273,6 +271,8 @@ def insert_candidate(
     refkey = 'reference' if 'reference' in cdips_r else 'reference_id'
     agekey = 'logt' if 'logt' in cdips_r else 'mean_age'
 
+    _comment = str(comment)+' '+str(plproperties_r[plkeyd['comment']])
+
     new_row = pd.DataFrame({
         'source_id': str(source_id),
         'ticid': str(ticid),
@@ -287,7 +287,7 @@ def insert_candidate(
         'current_priority': current_priority,
         'pending_spectroscopic_observations': pending_spectroscopic_observations,
         'pending_photometry_observations': pending_photometry_observations,
-        'comment': comment,
+        'comment': _comment.lstrip(" "),
         'rp': plproperties_r[plkeyd['rp']],
         'rp_unc': plproperties_r[plkeyd['rp_unc']],
         'period': plproperties_r[plkeyd['period']],

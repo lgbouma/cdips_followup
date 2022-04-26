@@ -16,7 +16,9 @@ def insert_single_candidate(
     nbhd_rating = 1,
     init_priority = 1,
     pending_photometry_observations = '--',
-    pending_spectroscopic_observations = '--'):
+    pending_spectroscopic_observations = '--',
+    raise_error_if_duplicate=True
+):
 
 
     current_priority = init_priority
@@ -34,25 +36,41 @@ def insert_single_candidate(
 
     insert_candidate(
         source_id=None, ticid=ticid, manual_dict=d,
-        raise_error_if_duplicate=True
+        raise_error_if_duplicate=raise_error_if_duplicate
     )
 
 
 def manual_insert_many():
 
-    sourceids = [
-        #'2890062263458259968',
-        #'2072431332214824576',
-        #'1833519030401513984',
-        '5404435280772350848'
-    ]
+    # sourceids = [
+    #     '5404435280772350848'
+    # ]
+    # comments = [
+    #     "Probably multi. Prot 3d? is consistent with the youth, b/c Teff 6500K... but also consistent with a good deal older than 100 Myr.   Neighborhood plot looks ok.  Definitely worth getting Li, spectra, etc to check"
+    # ]
 
-    comments = [
-        #"V-shaped. Cool if planet (probably is not, since V-shaped).  Neighborhood plot looks fine -- Platais5 is definitely a real thing though Prot cleanup required.   Star Prot 2.5 or 3 days from SPOC LC.  Teff 3250K, it's an M dwarf.  Smearing expected here on transit, given the 2 hour transit?  Needs some RVs to verify.  SG1 finds VPC, detecting event on target.",
-        #"Good youngest HJ cand.  Teff 7800K; an early F/late A-star.  Rp=22Re.  One could set a mass upper limit via RVs, and get a DT observation to confirm.  Cluster membership from Gaia blind kinematics is good (actual cluster plot would be better).  Needs recon spectroscopy to check if high RV scatter."
-        #"This candidate HJ orbits a Teff 5850K G-dwarf.  The star's rotation period appears to be 2.5-3 days. i.e., consistent with an age of ~100 Myr give or take.  And the transit looks really good.  Kinematically, the str is in the outskirts of the Alessi12 cluster, at least as discussed by KC19.  It is one of the closest stars reported in the cluster, and so its proper motions are pretty different from the other cluster members.  Needs specFU (e.g., for Li) to verify youth."
-        "Probably multi. Prot 3d? is consistent with the youth, b/c Teff 6500K... but also consistent with a good deal older than 100 Myr.   Neighborhood plot looks ok.  Definitely worth getting Li, spectra, etc to check"
-    ]
+    sourceids = ['184854434646126080', '212991482660701184',
+                 '241728185423117184', '253885554213280896',
+                 '332007951305099776', '431682700462002432',
+                 '490451390799691392', '521454526326028928',
+                 '526763312065766016', '542223510700499968',
+                 '568619413331898240', '1056826907054257664',
+                 '1203566251429799680', '1522821409742783616',
+                 '1538570814298529664', '1686171213716517504',
+                 '1728717091031847680', '1824446002246491136',
+                 '1833519030401513984', '1935439776865267072',
+                 '1942514069039535360', '1968083349388709120',
+                 '1970742930580834176', '1972872684597722496',
+                 '1984154395449640832', '1990082343676699136',
+                 '2056621793787000704', '2067807061156062720',
+                 '2122642764047814144', '2123377821930505472',
+                 '2136224721950935168', '2152854796663244160',
+                 '2155491051885121152', '2166937311541545856',
+                 '2174182749574436096', '2190239295819005440',
+                 '2204810126994432384', '2222159767637696896',
+                 '2270404997834401664', '3447802181031092992',
+                 '4519168132218628992', '4599686193337056256']
+    comments = ['' for s in sourceids]
 
     for s, c in zip(sourceids, comments):
 
@@ -62,16 +80,17 @@ def manual_insert_many():
             ticid = ticid,
             comment = c,
             nbhd_rating = 0,
-            init_priority = 0,
+            init_priority = 1,
             pending_photometry_observations = 'to_assess',
-            pending_spectroscopic_observations = 'to_assess'
+            pending_spectroscopic_observations = 'to_assess',
+            raise_error_if_duplicate=False
         )
 
 
 if __name__ == "__main__":
 
-    insert_single = 1
-    insert_many = 0
+    insert_single = 0
+    insert_many = 1
 
     if insert_single:
 
