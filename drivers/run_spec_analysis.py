@@ -33,8 +33,8 @@ def main():
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
     args.do_inspect = 0          # inspect to figure out require rest-frame shift
-    args.do_li_ew = 0            # once rest-frame shift is known
-    args.do_halpha_ew = 1        # emission, absorption, either way!
+    args.do_li_ew = 1            # once rest-frame shift is known
+    args.do_halpha_ew = 0        # emission, absorption, either way!
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
     args.do_stack_comparison = 0 # compare versus stack
@@ -223,8 +223,10 @@ def main_tres(args):
 def main_hires(args):
 
     # single star; single spectrum
-    idstring = 'KOI-7913A'
-    specname = 'ij440.75.fits'
+    idstring = 'TOI-1136'
+    specname = 'ij363.529.fits'
+    #idstring = 'KOI-7913A'
+    #specname = 'ij440.75.fits'
     #idstring = 'KOI-7913B'
     #specname = 'ij438.81.fits'
     spectrum_path = os.path.join(
@@ -254,7 +256,8 @@ def main_hires(args):
         outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        args.xshift = -0.05
+        #args.xshift = -0.2
+        args.xshift = 0
         args.idstring = idstring
         for delta_wav in [2.5,5,7.5]:
             outname = (

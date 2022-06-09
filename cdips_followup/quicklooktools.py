@@ -760,7 +760,7 @@ def explore_flux_lightcurves(
         return times, fluxs
 
 
-def make_periodogram(data, ticid, pipeline, outdir=None, period_min=0.1,
+def make_periodogram(data, ticid, pipeline, id_str=None, outdir=None, period_min=0.1,
                      period_max=20, manual_peak=None, samples_per_peak=50,
                      nterms_0=6):
 
@@ -822,7 +822,8 @@ def make_periodogram(data, ticid, pipeline, outdir=None, period_min=0.1,
 
     if outdir is None:
         outdir = '../results/quicklooklc/TIC{}'.format(ticid)
-    savpath = os.path.join(outdir, 'ls_periodogram.png')
+    s = '' if id_str is None else f'_{id_str}'
+    savpath = os.path.join(outdir, f'ls_periodogram{s}.png')
     fig.savefig(savpath, dpi=300, bbox_inches='tight')
     print('made {}'.format(savpath))
 
@@ -892,11 +893,10 @@ def make_periodogram(data, ticid, pipeline, outdir=None, period_min=0.1,
 
     fig.tight_layout()
 
-    savpath = os.path.join(outdir, 'ls_models_resids.png')
+    s = '' if id_str is None else f'_{id_str}'
+    savpath = os.path.join(outdir, f'ls_models_resids{s}.png')
     fig.savefig(savpath, dpi=300, bbox_inches='tight')
     print('made {}'.format(savpath))
-
-
 
 
     ##########################################

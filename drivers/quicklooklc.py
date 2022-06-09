@@ -19,16 +19,16 @@ def quicklooklc(
     ticid,
     outdir = None,
     cdips = 0,
-    spoc = 0,
-    eleanor = 1,
+    spoc = 1,
+    eleanor = 0,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
     detrend = None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
-    do_eleanor_lcs = 1,
-    do_flux_lcs = 0,
-    do_periodogram = 0,
+    do_eleanor_lcs = 0,
+    do_flux_lcs = 1,
+    do_periodogram = 1,
     do_pf = 0,
     require_quality_zero = 0,
     forceylim = None, # [0.93, 1.07]# for the flux light curves
@@ -93,13 +93,16 @@ def quicklooklc(
             time = data[0]['TMID_BJD']
             flux, err = _given_mag_get_flux(data[0]['IRM1'], data[0]['IRE1'])
             _data = {'time': time, 'flux': flux, 'err': err}
+            _data = [_data]
         elif pipeline in ['spoc', 'kepler']:
-            # just look at a single sector
-            _data = data[0]
+            _data = data
         else:
             raise NotImplementedError
-        make_periodogram(_data, ticid, pipeline, period_min=0.1, period_max=20,
-                         nterms_0=1, outdir=outdir)
+
+        for ix, _d in enumerate(_data):
+            make_periodogram(_d, ticid, pipeline, id_str=f"{ticid}_{ix}",
+                             period_min=0.1, period_max=20, nterms_0=1,
+                             outdir=outdir)
 
 
 if __name__ == "__main__":
@@ -159,6 +162,10 @@ if __name__ == "__main__":
     ticid = '219234987' # gamma dor
     ticid = '27009706'
     ticid = '96680681' # AB Aur
+    ticid = '142276270' # TOI-1136
+    ticid = '166089209' # toi-1136 friend1
+    ticid = '219467520' # toi-1136 friend2
+    ticid = '99904467' # toi-1136 friend3
 
     # # optional #
     # period = 1.395733 # None
