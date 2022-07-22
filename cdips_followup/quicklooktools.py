@@ -611,7 +611,24 @@ def explore_flux_lightcurves(
         if detrend:
             ax.plot(x_trend, y_trend, c='r', lw=0.5, zorder=3)
         else:
-            ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
+
+            exptime_sec = np.nanmedian(np.diff(x_obs))*24*60*60
+
+            if exptime_sec >= 600:
+                ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
+
+            elif exptime_sec <= 600:
+                ax.scatter(
+                    x_obs, y_obs, c='darkgray', s=1, zorder=1, alpha=0.4
+                )
+                from astrobase.lcmath import time_bin_magseries
+                bin_dict = time_bin_magseries(
+                    x_obs, y_obs, binsize=1800., minbinelems=2
+                )
+                ax.scatter(
+                    bin_dict['binnedtimes'], bin_dict['binnedmags'], c='k',
+                    s=4, zorder=2
+                )
 
         times.append( x_obs )
         fluxs.append( y_obs )
@@ -671,7 +688,24 @@ def explore_flux_lightcurves(
     plt.close('all')
     f,ax = plt.subplots(figsize=(16,4))
 
-    ax.scatter(stimes, smags, c='k', s=1)
+    exptime_sec = np.nanmedian(np.diff(stimes))*24*60*60
+
+    if exptime_sec >= 600:
+        ax.scatter(stimes, smags, c='k', s=1, zorder=2)
+
+    elif exptime_sec <= 600:
+        ax.scatter(
+            stimes, smags, c='darkgray', s=1, zorder=1, alpha=0.4,
+            edgecolors='darkgray', marker='.'
+        )
+        from astrobase.lcmath import time_bin_magseries
+        bin_dict = time_bin_magseries(
+            stimes, smags, binsize=3600., minbinelems=2
+        )
+        ax.scatter(
+            bin_dict['binnedtimes'], bin_dict['binnedmags'], c='k',
+            s=1, zorder=2
+        )
 
     if not epoch is None:
         tra_times = epoch + np.arange(-1000,1000,1)*period

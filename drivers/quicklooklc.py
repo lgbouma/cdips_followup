@@ -166,6 +166,8 @@ if __name__ == "__main__":
     ticid = '166089209' # toi-1136 friend1
     ticid = '219467520' # toi-1136 friend2
     ticid = '99904467' # toi-1136 friend3
+    ticid = '427685831' # WASP-52
+    ticid = '198008005' # TOI-858
 
     # # optional #
     # period = 1.395733 # None
