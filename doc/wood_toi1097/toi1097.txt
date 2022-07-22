@@ -1,0 +1,19 @@
+TIC 360630575
+
+Output from George's pipeline:
+
+#######################################################
+T0360630575
+2021-01-26T09-11-25.7 2459240.8846 RV  9.177 0.052 Teff 5892 logg 4.47 feh -0.12 vsini 10.5 SB2 Probability 0.1
+2021-04-02T04-55-22.9 2459306.70984 RV  9.168 0.03 Teff 5951 logg 4.48 feh -0.1 vsini 10.5 SB2 Probability 0.1
+2021-04-04T05-14-53.9 2459308.72347 RV  9.289 0.064 Teff 5869 logg 4.45 feh 0.05 vsini 10.2 SB2 Probability 0.4
+2021-04-08T04-07-57.6 2459312.67711 RV  9.221 0.04 Teff 5882 logg 4.45 feh -0.12 vsini 10.7 SB2 Probability 0.1
+2021-04-10T05-46-40.1 2459314.74577 RV  9.176 0.042 Teff 5896 logg 4.4 feh -0.06 vsini 10.5 SB2 Probability 0.3
+2021-04-18T06-15-38.5 2459322.76611 RV  9.128 0.058 Teff 5926 logg 4.48 feh -0.11 vsini 10.6 SB2 Probability 0.1
+2021-05-03T03-00-06.2 2459337.63059 RV  9.246 0.083 Teff 5847 logg 4.49 feh -0.02 vsini 10.7 SB2 Probability 0.3
+2021-05-04T02-36-23.7 2459338.61418 RV  9.158 0.115 Teff 5908 logg 4.44 feh -0.01 vsini 10.8 SB2 Probability 0.3
+2021-05-05T04-30-51.7 2459339.69362 RV  9.173 0.053 Teff 5852 logg 4.36 feh -0.01 vsini 10.3 SB2 Probability 0.2
+2021-05-12T02-01-35.7 2459346.5901 RV  9.171 0.074 Teff 5840 logg 4.39 feh -0.1 vsini 10.4 SB2 Probability 0.2
+Other users have also obtained observations of this target:
+quinn proposal id 530 also has 2 observations for ['T0360630575']
+zhou proposal id 559 also has 1 observations for ['T0360630575']
