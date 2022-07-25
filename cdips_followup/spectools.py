@@ -118,8 +118,8 @@ line_d = {
 DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
 OUTDIR = os.path.join(os.path.dirname(__path__[0]), 'results/spec_analysis')
 TESTOUTDIR = os.path.join(OUTDIR, 'tests')
-if not os.path.exists(TESTOUTDIR):
-    os.mkdir(TESTOUTDIR)
+for d in [OUTDIR, TESTOUTDIR]:
+    if not os.path.exists(d): os.mkdir(d)
 
 ########
 # read #
