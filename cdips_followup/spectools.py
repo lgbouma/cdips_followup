@@ -1464,6 +1464,12 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         sel = np.isfinite(flx) & np.isfinite(wav)
         wav, flx = wav[sel], flx[sel]
 
+        # exclude cosmic rays, by requiring flux < median(flux) + 5*STD_MAD
+        stdev_hat = 1.483 * np.nanmedian(np.abs(flx - np.nanmedian(flx)))
+        sel = ~(flx>np.nanmedian(flx)+5*stdev_hat)
+
+        wav, flx = wav[sel], flx[sel]
+
         if verbose:
             thispath = outpath.replace('.png', '_fittedslice.csv')
             outdf = pd.DataFrame({
