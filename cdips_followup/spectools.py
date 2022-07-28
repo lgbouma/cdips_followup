@@ -1349,8 +1349,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
         wvsol_path: path to PFS wavelength solution (optional)
 
-        xshift: angstrom shift required to get into source frame (not vacuum frame).
-        Sign such that if `xshift = 1`, you blueshift the spectrm by 1
+        xshift: angstrom shift required to get into source frame (not vacuum
+        frame).  Sign such that if `xshift = 1`, you blueshift the spectrm by 1
         angstrom.
 
         delta_wav: window to do the measurement over (angstrom)
@@ -1674,6 +1674,7 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     for ax in axs:
         ax.set_xlim(xlim)
 
+    # Plot known lines
     if isinstance(vlines, list):
         sel = (nparr(vlines)>min(xlim)) & (nparr(vlines)<max(xlim))
         vlines, names = nparr(vlines)[sel], nparr(names)[sel]
@@ -1687,6 +1688,35 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         for x, n in zip(vlines, names):
             axs[0].text(x, 0.95, n, ha='center', va='top', transform=tform,
                         fontsize=4)
+
+    # Plot xshift diagnostic bars
+    target_wav = 6707.835
+    for xbar in np.arange(0, 2.0, 0.3333):
+
+        # axs0
+        for ax in [axs[0], axs[1], axs[2]]:
+            ylim = ax.get_ylim()
+            delta_y = 0.7*(max(ylim) - min(ylim))
+            ax.vlines([target_wav], min(ylim), max(ylim)-delta_y, zorder=-3,
+                      linestyles=':', color='C0', lw=0.6)
+            ax.vlines([target_wav-0.5], min(ylim), max(ylim)-delta_y, zorder=-3,
+                      linestyles=':', color='C1', lw=0.6)
+            ax.vlines([target_wav+0.5], min(ylim), max(ylim)-delta_y, zorder=-3,
+                      linestyles=':', color='C1', lw=0.6)
+            ymid = np.mean([min(ylim), max(ylim)-delta_y])
+            ax.vlines([target_wav-1.0], min(ylim), max(ylim)-delta_y, zorder=-3,
+                      linestyles=':', color='C2', lw=0.3)
+            ax.vlines([target_wav+1.0], min(ylim), max(ylim)-delta_y, zorder=-3,
+                      linestyles=':', color='C2', lw=0.3)
+            ax.plot(
+                [target_wav - xbar, target_wav + xbar],
+                [ymid, ymid],
+                c='C0',
+                lw=5,
+                alpha=0.2
+            )
+            ax.set_ylim(ylim)
+
 
     axs[2].set_xlim([target_wav-1.5, target_wav+1.5])
     axs[3].set_xlim([target_wav-1.5, target_wav+1.5])
