@@ -127,11 +127,19 @@ MAXTIMEDICT = {
 #  'salt', 'sirene', 'spm', 'spo', 'srt', 'sso', 'tona', 'tug', 'ukirt', 'vbo',
 #  'vla']
 
+# Astroplan sites can have different accessing methods. SITEDICT allows one of
+# two patterns:
+#    if site in SITEDICT['at_site']:
+#        _site = Observer.at_site(site)
+#    elif site in SITEDICT['of_address']:
+#        _loc = EarthLocation.of_address(site)
+#        _site = Observer(location=_loc, name=site)
+#        _site = Observer(location=_loc, name=site)
 SITEDICT = {
     'at_site': ['SAAO', 'Siding Spring Observatory',
                 'McDonald Observatory', 'Cerro Tololo',
                 'Haleakala Observatories', 'Keck Observatory',
-                'Las Campanas Observatory'],
+                'Las Campanas Observatory', 'Cerro Paranal'],
     'of_address': ['Wise Observatory'] # for NRES
 }
 
