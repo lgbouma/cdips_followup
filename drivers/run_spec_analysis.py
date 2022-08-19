@@ -43,8 +43,10 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 1
+    args.is_hires = 0
     args.is_neid = 0
+    args.is_harps = 0
+    args.is_coralie = 1
 
     if args.is_pfs:
 
@@ -56,16 +58,18 @@ def main():
         args.is_template = False
 
         # Template quicklooks
-        args.spectrum_name = 'TIC268301217_template_spectrum_v20201111.dat'
-        args.flat_name = 'nf_n58_10.dat' # or none
+        #args.spectrum_name = 'TIC268301217_template_spectrum_v20201111.dat'
+        #args.flat_name = 'nf_n58_10.dat' # or none
+        args.spectrum_name = 'TOI3364.dat'
+        args.flat_name = None
         args.wvsol_name = None
-        args.idstring = 'TIC268301217_20201111_template'
+        args.idstring = 'TOI3364'
         args.is_template = True
 
         if args.do_sme_analysis:
             args.teff = 5700
         if args.do_li_ew or args.do_ca_hk or args.do_orders:
-            args.xshift = 1.6 # set 
+            args.xshift = 1.80 # set 
             if args.is_template:
                 args.idstring += '_shift{:.2f}'.format(args.xshift)
 
@@ -85,6 +89,12 @@ def main():
 
     elif args.is_neid:
         main_neid(args)
+
+    elif args.is_harps:
+        main_harps(args)
+
+    elif args.is_coralie:
+        main_coralie(args)
 
 def main_pfs(args):
 
@@ -122,13 +132,14 @@ def main_pfs(args):
         outdir = os.path.join(OUTDIR, 'PFS', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        outpath = os.path.join(
-            outdir,
-            '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
-        )
-        get_Li_6708_EW(spectrum_path, wvsol_path=wvsol_path,
-                       xshift=args.xshift, outpath=outpath,
-                       is_template=args.is_template)
+        for deltawav in [7.5, 10]:
+            outpath = os.path.join(
+                outdir,
+                f'{args.idstring}_Li_EW_shift{args.xshift:.2f}_deltawav{deltawav}.png'
+            )
+            get_Li_6708_EW(spectrum_path, wvsol_path=wvsol_path,
+                           xshift=args.xshift, outpath=outpath,
+                           is_template=args.is_template, delta_wav=deltawav)
 
     if args.do_ca_hk:
         outdir = os.path.join(OUTDIR, 'PFS', 'Ca_HK')
@@ -223,8 +234,8 @@ def main_tres(args):
 def main_hires(args):
 
     # single star; single spectrum
-    idstring = 'TOI-1136'
-    specname = 'ij363.529.fits'
+    idstring = 'KOI-3991'
+    specname = 'ij173.1400.fits'
     #idstring = 'KOI-7913A'
     #specname = 'ij440.75.fits'
     #idstring = 'KOI-7913B'
@@ -253,11 +264,12 @@ def main_hires(args):
         plot_stack_comparison(spectrum_paths, outdir=outdir, idstring=idstring)
 
     if args.do_li_ew:
+
         outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        #args.xshift = -0.2
-        args.xshift = 0
+
+        args.xshift = None
         args.idstring = idstring
         for delta_wav in [2.5,5,7.5]:
             outname = (
@@ -283,6 +295,60 @@ def main_hires(args):
             get_Halpha_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
                           xshift=args.xshift, outpath=outpath)
 
+
+
+def main_harps(args):
+
+    # single star; single spectrum
+    idstring = 'TOI-858'
+    specname = 'TOI-858_spec.dat'
+    spectrum_path = os.path.join(
+        DATADIR, 'HARPS', idstring, specname
+    )
+
+    if args.do_li_ew:
+
+        outdir = os.path.join(OUTDIR, 'HARPS', 'Li_EW')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        args.xshift = 0
+        args.idstring = idstring
+        for delta_wav in [2.5,5,7.5]:
+            outname = (
+                f"{args.idstring}_{specname.replace('.fits','')}_"
+                f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+            )
+            outpath = os.path.join(outdir, outname)
+            get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
+                           xshift=args.xshift, outpath=outpath)
+
+
+def main_coralie(args):
+
+    # single star; single spectrum
+    idstring = 'TOI-858A'
+    specname = 'TIC198008002_spec.dat'
+    spectrum_path = os.path.join(
+        DATADIR, 'CORALIE', idstring, specname
+    )
+
+    if args.do_li_ew:
+
+        outdir = os.path.join(OUTDIR, 'CORALIE', 'Li_EW')
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+
+        args.xshift = 0
+        args.idstring = idstring
+        for delta_wav in [2.5,5,7.5]:
+            outname = (
+                f"{args.idstring}_{specname.replace('.fits','')}_"
+                f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+            )
+            outpath = os.path.join(outdir, outname)
+            get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
+                           xshift=args.xshift, outpath=outpath)
 
 
 def main_neid(args):

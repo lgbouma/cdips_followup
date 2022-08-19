@@ -1394,6 +1394,20 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0,
                                     return_err=0)
         instrument = 'HIRES'
+    elif "HARPS" in spectrum_path:
+        print('WRN! Assuming Louise special format')
+        df = pd.read_csv(
+                spectrum_path, delim_whitespace=True, names=['wav', 'flx']
+        )
+        instrument = 'HARPS'
+        flx, wav = np.array(df.flx), np.array(df.wav)
+    elif "CORALIE" in spectrum_path:
+        print('WRN! Assuming Louise special format')
+        df = pd.read_csv(
+                spectrum_path, delim_whitespace=True, names=['wav', 'flx']
+        )
+        instrument = 'CORALIE'
+        flx, wav = np.array(df.flx), np.array(df.wav)
     elif "galah" in spectrum_path.lower():
         single_ccd = 3 # since we're doing Li measurements
         flx, wav = read_galah(spectrum_path, single_ccd)
