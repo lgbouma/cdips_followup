@@ -323,9 +323,10 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
 
 
 
-def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
+def explore_mag_lightcurves(data, ticid, period=None, epoch=None,
+                            do_phasefold=False):
 
-    for ykey in ['IRM1','IRM2','IRM3','PCA1','PCA2','PCA3','TFA1','TFA2','TFA3',]:
+    for ykey in ['IRM1','IRM2','IRM3','PCA1','PCA2','PCA3','TFA1','TFA2','TFA3','PCA1']:
 
         times, mags= [], []
         for ix, d in enumerate(data):
@@ -417,6 +418,59 @@ def explore_mag_lightcurves(data, ticid, period=None, epoch=None):
 
         f.savefig(savpath, dpi=300, bbox_inches='tight')
         print('made {}'.format(savpath))
+
+    x_obs = deepcopy(stimes)
+    y_obs = deepcopy(smags)
+
+    if do_phasefold:
+
+        assert isinstance(period, float) and isinstance(epoch, (float,int))
+
+        #
+        # ax: primary transit
+        #
+        phasebin = 1e-2
+        minbinelems = 2
+        plotxlims = [(-0.5, 0.5), (-0.05,0.05)]
+        xlimstrs = ['xwide','xnarrow']
+        plotylim = None # (0.994, 1.005)
+        do_vlines = False
+
+        for plotxlim, xstr in zip(plotxlims, xlimstrs):
+
+            plt.close('all')
+            fig, ax = plt.subplots(figsize=(4,3))
+
+            _make_phased_magseries_plot(ax, 0, x_obs, y_obs,
+                                        np.ones_like(y_obs)/1e4, period, epoch,
+                                        True, True, phasebin, minbinelems,
+                                        plotxlim, '', xliminsetmode=False,
+                                        magsarefluxes=True, phasems=0.8,
+                                        phasebinms=4.0, verbose=True)
+            if plotylim is not None:
+                ax.set_ylim(plotylim)
+
+            if do_vlines:
+                ax.vlines(1/6, min(plotylim), max(plotylim), color='orangered',
+                          linestyle='--', zorder=-2, lw=1, alpha=0.8)
+                ax.set_ylim(plotylim)
+
+            detrend = False
+            dstr = 'detrended' if detrend else ''
+            outdir = os.path.dirname(savpath)
+            savpath = os.path.join(
+                outdir, f'cdips_lightcurve_{dstr}_{ykey}_{xstr}_allsector_phasefold.png'
+            )
+
+            fig.savefig(savpath, dpi=400, bbox_inches='tight')
+            print(f'made {savpath}')
+
+        csvpath = savpath.replace('png','csv')
+        # sigma clipped and detrended
+        pd.DataFrame({
+            'time': x_obs, 'flux': y_obs
+        }).to_csv(csvpath, index=False)
+        print(f'made {csvpath}')
 
 
 def _get_ylim(y_obs):
