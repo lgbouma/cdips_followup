@@ -124,11 +124,13 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
         return None
 
     data = []
+    hdrs = []
     for f in lcfiles:
         hdul = fits.open(f)
         data.append(hdul[1].data)
+        hdrs.append(hdul[0].header)
 
-    return data
+    return data, hdrs
 
 
 def get_kepler_data(ticid, outdir=None):
@@ -161,22 +163,24 @@ def get_kepler_data(ticid, outdir=None):
     return data
 
 
-def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
+def explore_eleanor_lightcurves(data, hdrs, ticid, period=None, epoch=None,
                                 require_quality_zero=0, detrend=0,
-                                do_phasefold=0):
+                                do_phasefold=0, do30mincadence=1):
 
     ykey = 'CORR_FLUX'
 
     times, fluxs= [], []
     for ix, d in enumerate(data):
 
-        outdir = '../results/quicklooklc/TIC{}'.format(ticid)
-        savpath = os.path.join(outdir, 'eleanor_lightcurve_{}.png'.format(ix))
-        if detrend:
-            savpath = os.path.join(outdir, 'eleanor_lightcurve_detrended_{}.png'.format(ix))
+        hdr = hdrs[ix]
+        sectorstr = f"s{str(hdr['SECTOR']).zfill(4)}"
 
         plt.close('all')
-        f,ax = plt.subplots(figsize=(16,4))
+        if not detrend:
+            f,ax = plt.subplots(figsize=(16,4))
+            axs = [ax]
+        else:
+            f,axs = plt.subplots(figsize=(16,8), nrows=2, sharex=True)
 
         sel = (d['QUALITY'] == 0) & (d[ykey] > 0)
         if require_quality_zero:
@@ -194,8 +198,29 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
         x_obs = d['TIME'][sel]
         y_obs = d[ykey][sel]
 
+        cadence_min = np.nanmedian(np.diff(d['TIME'][sel]))*24*60
+
+        # Years >=3
+        binnedflag = ''
+        if np.round(cadence_min) < 25:
+            from astrobase.lcmath import time_bin_magseries
+            bd = time_bin_magseries(x_obs, y_obs, binsize=1800, minbinelems=3)
+            x_obs = bd['binnedtimes']
+            y_obs = bd['binnedmags']
+            binnedflag = '_30minbinned'
+
+        outdir = f'../results/quicklooklc/TIC{ticid}'
+        savpath = os.path.join(
+            outdir, f'eleanor_lightcurve_{sectorstr}{binnedflag}.png'
+        )
         if detrend:
-            ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
+            savpath = os.path.join(
+                outdir, f'eleanor_lightcurve_detrended_{sectorstr}{binnedflag}.png'
+            )
+
+        if detrend:
+            axs[0].scatter(x_obs, y_obs/np.nanmedian(y_obs), c='k', s=4,
+                           zorder=5)
 
             # # default pspline detrending
             if detrend=='pspline':
@@ -208,26 +233,60 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
                                                   window_length=0.5,
                                                   break_tolerance=0.5)
 
+            elif detrend == 'best':
+                # NOTE: window_length plays an important role in what you get!!
+                dtr_method, break_tolerance, window_length = 'best', 0.5, 0.40
+                dtr_dict = {'method':dtr_method,
+                            'break_tolerance':break_tolerance,
+                            'window_length':window_length}
+
+                starid = f"TIC{ticid}_{sectorstr}_w{window_length}_eleanor"
+                from cdips.lcproc.find_planets import run_periodograms_and_detrend
+                r, dtr_time, dtr_flux, dtr_stages_dict = run_periodograms_and_detrend(
+                    starid, x_obs, y_obs, dtr_dict, return_extras=True,
+                    magisflux=True, transit_depth_min=100e-6, orbitgap=0.5
+                )
+                trend_flux = dtr_stages_dict['trend_flux']
+                trend_time = dtr_stages_dict['trend_time']
+
             else:
                 raise NotImplementedError
 
-        if detrend:
-            ax.plot(x_obs, y_trend, c='r', lw=0.5, zorder=3)
+        if detrend == 'best':
+            axs[0].plot(trend_time, trend_flux, c='r', lw=0.5, zorder=3)
+            axs[1].scatter(dtr_time, dtr_flux, c='k', s=4, zorder=4)
+        elif detrend:
+            axs[0].plot(x_obs, y_trend, c='r', lw=0.5, zorder=3)
         else:
             ax.scatter(x_obs, y_obs, c='k', s=4, zorder=2)
 
-        ax.set_xlabel('time [bjdtdb]')
-        ax.set_ylabel(ykey)
-        ylim = ax.get_ylim()
+        if not epoch is None:
+            tra_times = epoch + np.arange(-1000,1000,1)*period - 2457000
 
-        ax.set_title(ix)
+            for ax in axs:
+                xlim = ax.get_xlim()
+                ylim = ax.get_ylim()
+
+                ax.set_ylim((min(ylim), max(ylim)))
+                ax.vlines(tra_times, min(ylim), max(ylim), color='orangered',
+                          linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+                ax.set_ylim((min(ylim), max(ylim)))
+                ax.set_xlim(xlim)
+
+        for ix, ax in enumerate(axs):
+            ax.set_ylabel(ykey)
+            if ix == 0:
+                ax.set_title(sectorstr)
+            if len(axs) > 1:
+                if ix != len(axs)-1:
+                    continue
+            ax.set_xlabel('time [bjdtdb]')
 
         f.savefig(savpath, dpi=300, bbox_inches='tight')
         print('made {}'.format(savpath))
 
         times.append(x_obs)
         fluxs.append( y_obs / np.nanmedian(y_obs) )
-
 
     times = np.hstack(np.array(times).flatten())
     fluxs = np.hstack(np.array(fluxs).flatten())
@@ -323,7 +382,7 @@ def explore_eleanor_lightcurves(data, ticid, period=None, epoch=None,
 
 
 
-def explore_mag_lightcurves(data, ticid, period=None, epoch=None,
+def explore_mag_lightcurves(data, hdrs, ticid, period=None, epoch=None,
                             do_phasefold=False):
 
     for ykey in ['IRM1','IRM2','IRM3','PCA1','PCA2','PCA3','TFA1','TFA2','TFA3','PCA1']:
@@ -331,9 +390,13 @@ def explore_mag_lightcurves(data, ticid, period=None, epoch=None,
         times, mags= [], []
         for ix, d in enumerate(data):
 
+            hdr = hdrs[ix]
+
+            sectorstr = f"s{str(hdr['SECTOR']).zfill(4)}"
+
             savpath = (
-                '../results/quicklooklc/TIC{}/mag_lightcurve_{}_{}.png'.
-                format(ticid, ykey, ix)
+                f'../results/quicklooklc/TIC{ticid}/'
+                f'mag_lightcurve_{ykey}_{sectorstr}.png'
             )
             if os.path.exists(savpath):
                 print('found {}, rewriting'.format(savpath))
