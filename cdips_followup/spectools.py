@@ -755,9 +755,19 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
 
 def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                           idstring=None, is_template=False, xshift=0,
-                          flat_path=None):
+                          flat_path=None, subtractmodel=True, viz_1d=0,
+                          labeldict=None, synth_paths=None):
     """
-    Do a visual comparison of spectra in a time-series stack.
+    Do a visual comparison of spectra in a stack.
+    (This might be the same star, with many time-series spectra.  If so,
+    subtractmodel=True)
+    (Or it could be of different stars, for which you want to compare the
+    spectra. Then subtractmodel=False).
+
+    spectrum_paths: list of HIRES spectra to compare against
+
+    synth_paths: list of synthetic spectra (PHOENIX) to compare against, if
+        subtractmodel=False
     """
 
     if not isinstance(outdir, str):
@@ -785,22 +795,23 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
             norm_flxs.append(flx/np.nanmedian(flx))
             wavs.append(wav)
 
-            outname = f'{idstring}_{k}_order{str(order).zfill(2)}.png'
-            outpath = os.path.join(outdir, outname)
-            if not os.path.exists(outpath):
-                ylim = None
-                if order == 7:
-                    # Ca-HK
-                    _flx = deepcopy(flx)
-                    viz_1d_spectrum(
-                        flx, wav, outpath.replace('.png','_normmedian.png'),
-                        ylim=[0,3], norm_median=True
-                    )
-                    flx = _flx
-                    ylim = [0,600]
-                viz_1d_spectrum(flx, wav, outpath, ylim=ylim)
-            else:
-                print(f'Found {outpath}')
+            if viz_1d:
+                outname = f'{idstring}_{k}_order{str(order).zfill(2)}.png'
+                outpath = os.path.join(outdir, outname)
+                if not os.path.exists(outpath):
+                    ylim = None
+                    if order == 7 and 'bj' in sp.lower():
+                        # Ca-HK
+                        _flx = deepcopy(flx)
+                        viz_1d_spectrum(
+                            flx, wav, outpath.replace('.png','_normmedian.png'),
+                            ylim=[0,3], norm_median=True
+                        )
+                        flx = _flx
+                        ylim = [0,600]
+                    viz_1d_spectrum(flx, wav, outpath, ylim=ylim)
+                else:
+                    print(f'Found {outpath}')
 
         flx_arr = np.array(flxs)
         norm_flx_arr = np.array(norm_flxs)
@@ -815,42 +826,185 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
     wav_arrs = np.array(wav_arrs)
 
     # model is the median over all orders.
-    model_flx = np.nanmedian(norm_flx_arrs, axis=0)
+    if subtractmodel:
+        model_flx = np.nanmedian(norm_flx_arrs, axis=0)
 
     # same viz, on the differences...
-    for sp in spectrum_paths:
-        k = os.path.basename(sp).replace('.fits','')
-        flx_2d, wav_2d = read_hires(sp, is_registered=0, return_err=0)
-        start, end = 10, -10
-        for order in range(wav_2d.shape[0]):
-            flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
-            _model_f = model_flx[order, :]
-            assert _model_f.shape == flx.shape
-            if isinstance(xshift, (float, int)):
-                wav = deepcopy(wav) - xshift
-            norm_flx = flx/np.nanmedian(flx)
+    if subtractmodel:
+        for sp in spectrum_paths:
+            k = os.path.basename(sp).replace('.fits','')
+            flx_2d, wav_2d = read_hires(sp, is_registered=0, return_err=0)
+            start, end = 10, -10
+            for order in range(wav_2d.shape[0]):
+                flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
+                _model_f = model_flx[order, :]
+                assert _model_f.shape == flx.shape
+                if isinstance(xshift, (float, int)):
+                    wav = deepcopy(wav) - xshift
+                norm_flx = flx/np.nanmedian(flx)
 
-            diff_f = norm_flx - _model_f
+                diff_f = norm_flx - _model_f
 
-            outname = f'{idstring}_{k}_order{str(order).zfill(2)}_modelsubtracted.png'
+                outname = f'{idstring}_{k}_order{str(order).zfill(2)}_modelsubtracted.png'
+                outpath = os.path.join(outdir, outname)
+                csvpath = outpath.replace('.png','.csv')
+                if not os.path.exists(outpath):
+                    ylim = [-0.5,0.5]
+                    if subtractmodel:
+                        ylabel = 'f/(med_λ(f)) - med_t(f/med_λ(f))'
+                    else:
+                        ylabel = 'f/(med_λ(f))'
+                    viz_1d_spectrum(diff_f, wav, outpath, ylim=ylim,
+                                    ylabel=ylabel)
+                else:
+                    print(f'Found {outpath}')
+
+                if not os.path.exists(csvpath):
+                    outdf = pd.DataFrame({
+                        'wav': wav,
+                        'norm_flx': norm_flx,
+                        'model_flx': _model_f,
+                        'diff_flx': diff_f
+                    })
+                    outdf.to_csv(csvpath, index=False)
+                    print(f'Made {csvpath}')
+
+    else:
+
+        if isinstance(synth_paths, list):
+
+            syn_flxs, syn_norm_flxs, syn_wavs= [], [], []
+            for sp in synth_paths:
+
+                hl = fits.open(sp)
+                dirname = os.path.dirname(sp)
+                if "HiRes" in dirname:
+                    _hl = fits.open(
+                        os.path.join(dirname,
+                                     "WAVE_PHOENIX-ACES-AGSS-COND-2011.fits")
+                    )
+                    syn_wav = _hl[0].data
+                    _hl.close()
+                elif "MedRes" in dirname:
+                    # downloaded the δλ = 1A model, fe/h=0, alpha/M=0
+                    syn_wav = np.arange(int(3e3), int(1e4), 0.1)
+                else:
+                    NotImplementedError
+                syn_flx = hl[0].data
+                hl.close()
+
+                syn_flxs.append(syn_flx)
+                # NOTE: might need to actually continuum normalize...
+                syn_norm_flxs.append(syn_flx/np.nanmedian(syn_flx))
+                syn_wavs.append(syn_wav)
+
+            # stack, take median (Nspectra x Nwavelengths)
+            syn_flx_arrs = np.array(syn_flxs)
+            syn_norm_flx_arrs = np.array(syn_norm_flxs)
+            syn_wav_arrs = np.array(syn_wav)
+
+        n_spec = flx_arrs.shape[0]
+        if isinstance(synth_paths, list):
+            n_syn_spec = syn_flx_arrs.shape[0]
+        else:
+            n_syn_spec = 0
+        n_orders = flx_arrs.shape[1]
+        n_rows = n_spec + n_syn_spec
+
+        if n_syn_spec == 0:
+            star_ids = [
+                os.path.basename(os.path.dirname(sp)) for sp in
+                spectrum_paths
+            ]
+        else:
+            synth_star_ids = [
+                os.path.basename(sp).replace(
+                    "-0.0.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits", ""
+                ) for sp in synth_paths
+            ]
+            obs_star_ids = [
+                os.path.basename(os.path.dirname(sp)) for sp in
+                spectrum_paths
+            ]
+            star_ids = synth_star_ids + obs_star_ids
+
+        obs_ids = [
+            os.path.basename(sp).replace('.fits','') for sp in
+            spectrum_paths
+        ]
+
+        from aesthetic.plot import set_style, savefig
+        from scipy.ndimage import gaussian_filter1d
+        fn = lambda x: gaussian_filter1d(x, sigma=1)
+
+        for ij in range(n_orders):
+
+            ostr = str(ij).zfill(2)
+            outname = idstring + "_".join(star_ids) + f"order{ostr}.png"
             outpath = os.path.join(outdir, outname)
-            csvpath = outpath.replace('.png','.csv')
-            if not os.path.exists(outpath):
-                ylim = [-0.5,0.5]
-                viz_1d_spectrum(diff_f, wav, outpath, ylim=ylim,
-                                ylabel='f/(med_λ(f)) - med_t(f/med_λ(f))')
-            else:
-                print(f'Found {outpath}')
 
-            if not os.path.exists(csvpath):
-                outdf = pd.DataFrame({
-                    'wav': wav,
-                    'norm_flx': norm_flx,
-                    'model_flx': _model_f,
-                    'diff_flx': diff_f
-                })
-                outdf.to_csv(csvpath, index=False)
-                print(f'Made {csvpath}')
+            plt.close("all")
+            set_style("clean")
+
+            fig, axs = plt.subplots(nrows=n_rows, figsize=(12,3*n_rows))
+            axs = axs.flatten()
+
+            # only empirically observed spectra
+            if n_syn_spec == 0:
+
+                for ix in range(n_spec):
+
+                    star_id = star_ids[ix]
+                    flx, wav = flx_arrs[ix, ij, :], wav_arrs[ix, ij, :]
+                    norm_flx = flx/np.nanmedian(flx)
+
+                    axs[ix].plot(wav, fn(np.array(norm_flx)), c='k', zorder=3, lw=0.2)
+
+                    # Star name
+                    label = labeldict[star_id]
+                    props = dict(boxstyle='square', facecolor='white', alpha=0.95,
+                                 pad=0.15, linewidth=0)
+                    axs[ix].text(0.98, 0.04, label, transform=axs[ix].transAxes,
+                                 ha='right',va='bottom', color='k', zorder=43,
+                                 fontsize='small', bbox=props)
+
+            # mixing empirical spectra and synthetic PHOENIX spectra
+            else:
+
+                for ix in range(n_rows):
+
+                    star_id = star_ids[ix]
+                    if ix < n_syn_spec:
+                        flx, wav = syn_flx_arrs[ix, :], syn_wav_arrs[:]
+                        obs_wav = wav_arrs[-1, ij, :]
+                        sel = (wav > min(obs_wav)) & (wav < max(obs_wav))
+                        flx, wav = flx[sel], wav[sel]
+                    else:
+                        flx, wav = flx_arrs[ix-n_rows, ij, :], wav_arrs[ix-n_rows, ij, :]
+
+                    norm_flx = flx/np.nanmedian(flx)
+
+                    if ix < n_syn_spec:
+                        # lte12000-4.00-0.0.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits
+                        axs[ix].plot(wav, norm_flx, c='k', zorder=3, lw=0.2)
+                        label = (
+                            synth_star_ids[ix].
+                            replace("lte", "Teff ").replace("-"," logg ")
+                        )
+                    else:
+                        # data!
+                        axs[ix].plot(wav, fn(np.array(norm_flx)), c='k', zorder=3, lw=0.2)
+                        label = labeldict[star_id]
+
+                    # Star name
+                    props = dict(boxstyle='square', facecolor='white', alpha=0.95,
+                                 pad=0.15, linewidth=0)
+                    axs[ix].text(0.98, 0.04, label, transform=axs[ix].transAxes,
+                                 ha='right',va='bottom', color='k', zorder=43,
+                                 fontsize='small', bbox=props)
+
+            savefig(fig, outpath, dpi=300, writepdf=0)
+
 
 
 
