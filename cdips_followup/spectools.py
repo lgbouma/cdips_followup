@@ -26,7 +26,7 @@ CALCULATE:
 VISUALIZE:
     viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
     plot_orders
-    plot_stack_comparison
+    plot_stack_comparison: visual comparison of spectra in a stack.
     inspect_pfs
     specmatch_viz_compare: SME comparison of target and HIRES library spectra.
     plot_spec_vs_dwarf_library: SME ditto.
@@ -48,6 +48,7 @@ from astropy.modeling.fitting import LevMarLSQFitter
 
 from scipy.io import readsav
 from scipy.interpolate import interp1d
+import scipy.ndimage as nd
 
 from copy import deepcopy
 
@@ -754,9 +755,10 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
 
 
 def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
-                          idstring=None, is_template=False, xshift=0,
+                          idstring=None, savstr='', is_template=False, xshift=0,
                           flat_path=None, subtractmodel=True, viz_1d=0,
-                          labeldict=None, synth_paths=None):
+                          labeldict=None, synth_paths=None,
+                          rot_broadening_vsini=None):
     """
     Do a visual comparison of spectra in a stack.
     (This might be the same star, with many time-series spectra.  If so,
@@ -891,11 +893,33 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                 else:
                     NotImplementedError
                 syn_flx = hl[0].data
+                # NOTE: might want to actually continuum normalize...
+                syn_norm_flx = syn_flx/np.nanmedian(syn_flx)
                 hl.close()
 
+                if rot_broadening_vsini is not None:
+                    #FIXME this convolution turned out to be much too expensive
+                    #over synthetic model grids
+                    raise NotImplementedError
+                    # python setup.py develop from hd_34382
+                    from specmatchtools.wavsol import wav_to_dvel
+                    from specmatchtools.kernels import rot
+
+                    dvel = wav_to_dvel(syn_wav)
+                    dvel0 = dvel[0]
+
+                    if np.allclose(dvel, dvel[0], rtol=1e-3, atol=1) is False:
+                        print("wav not uniform in loglambda, using mean dvel")
+                        dvel0 = np.mean(dvel)
+
+                    n = 151 # Correct for VsinI up to ~50 km/s
+                    vsini = rot_broadening_vsini*1.
+                    varr, M = rot(n, dvel, vsini)
+                    syn_flx = nd.convolve1d(syn_flx, M)
+                    syn_norm_flx = nd.convolve1d(syn_norm_flx, M)
+
                 syn_flxs.append(syn_flx)
-                # NOTE: might need to actually continuum normalize...
-                syn_norm_flxs.append(syn_flx/np.nanmedian(syn_flx))
+                syn_norm_flxs.append(syn_norm_flx)
                 syn_wavs.append(syn_wav)
 
             # stack, take median (Nspectra x Nwavelengths)
@@ -940,7 +964,7 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
         for ij in range(n_orders):
 
             ostr = str(ij).zfill(2)
-            outname = idstring + "_".join(star_ids) + f"order{ostr}.png"
+            outname = idstring + "_".join(star_ids) + f"order{ostr}{savstr}.png"
             outpath = os.path.join(outdir, outname)
 
             plt.close("all")
@@ -959,6 +983,8 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                     norm_flx = flx/np.nanmedian(flx)
 
                     axs[ix].plot(wav, fn(np.array(norm_flx)), c='k', zorder=3, lw=0.2)
+                    if ix == 0:
+                        wav_min, wav_max = np.nanmin(wav), np.nanmax(wav)
 
                     # Star name
                     label = labeldict[star_id]
@@ -979,6 +1005,8 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                         obs_wav = wav_arrs[-1, ij, :]
                         sel = (wav > min(obs_wav)) & (wav < max(obs_wav))
                         flx, wav = flx[sel], wav[sel]
+                        if ix == 0:
+                            wav_min, wav_max = np.nanmin(wav), np.nanmax(wav)
                     else:
                         flx, wav = flx_arrs[ix-n_rows, ij, :], wav_arrs[ix-n_rows, ij, :]
 
@@ -1002,6 +1030,9 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                     axs[ix].text(0.98, 0.04, label, transform=axs[ix].transAxes,
                                  ha='right',va='bottom', color='k', zorder=43,
                                  fontsize='small', bbox=props)
+
+            for ax in axs:
+                ax.set_xlim((wav_min, wav_max))
 
             savefig(fig, outpath, dpi=300, writepdf=0)
 
