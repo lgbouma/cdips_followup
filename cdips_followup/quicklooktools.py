@@ -546,7 +546,7 @@ def _get_ylim(y_obs):
 
 
 def explore_flux_lightcurves(
-    data, ticid, outdir=None, period=None, epoch=None, pipeline=None,
+    data, hdrs, ticid, outdir=None, period=None, epoch=None, pipeline=None,
     detrend=False, window_length=None, do_phasefold=0, badtimewindows=None,
     get_lc=False, require_quality_zero=1, forceylim=None, normstitch=True,
     slideclipdict={'window_length':1, 'high':3, 'low':8},
@@ -613,12 +613,16 @@ def explore_flux_lightcurves(
     times, fluxs= [], []
     for ix, d in enumerate(data):
 
+        hdr = hdrs[ix]
+        sectorstr = f"s{str(hdr['SECTOR']).zfill(4)}"
+
         savpath = os.path.join(
-            outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{str(ix).zfill(2)}.png'
+            outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{sectorstr}.png'
         )
         if detrend:
             savpath = os.path.join(
-                outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{str(ix).zfill(2)}.png'
+                outdir,
+                f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{sectorstr}.png'
             )
 
         plt.close('all')
