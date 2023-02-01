@@ -70,3 +70,6 @@ results/LCOGT_21B_observability/
 doc/20220130_veloce_readme.docx
 results/latest_ephemerides/
 results/LCOGT_22B_observability/
+results/toi_1881*
+tests/*png
+tests/*csv
