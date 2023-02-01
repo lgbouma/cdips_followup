@@ -33,20 +33,21 @@ def main():
     # is_bin = 0
     # phase_with_prot = 1
 
-    # ticid = '59859387'
-    # is_bin = 0
-    # instrument = 'PFS'
+    ticid = '59859387'
+    is_bin = 0
+    instrument = 'CHIRON'
 
-    ticid = '268301217'
-    is_bin = 1
-    instrument = 'PFS'
+    #ticid = '268301217'
+    #is_bin = 1
+    #instrument = 'PFS'
+
     k_prior_init = 100
     log_k_prior_high = np.log(800)
     log_k_prior_low = np.log(10)
     phase_with_prot = 0
 
     do_mcmc = 0
-    allowlineartrend = 1
+    allowlineartrend = 0
 
     if not instrument in ['PFS', 'CHIRON']:
         errmsg = 'need to implement instrument specific read functions'
@@ -58,6 +59,12 @@ def main():
     timebase = np.nanmedian(rv_df.time)
 
     e = query_ephemeris(ticid=ticid)
+
+    if ticid == '59859387':
+        print(e)
+        e['period'] = 1.12036
+        e['epoch'] = 2201.8201 + 2457000
+        print(e)
 
     if phase_with_prot:
         period_mean = 3
@@ -108,8 +115,8 @@ def manual_main():
 
 
 if __name__ == "__main__":
-    automain = 0
-    manualmain = 1
+    automain = 1
+    manualmain = 0
 
     if automain:
         main()

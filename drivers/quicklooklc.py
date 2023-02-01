@@ -19,24 +19,24 @@ def quicklooklc(
     ticid,
     outdir = None,
     cdips = 0,
-    spoc = 1,
-    eleanor = 0,
+    spoc = 0,
+    eleanor = 1,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
     detrend = None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
-    do_eleanor_lcs = 0,
-    do_flux_lcs = 1,
-    do_periodogram = 1,
+    do_eleanor_lcs = 1,
+    do_flux_lcs = 0,
+    do_periodogram = 0,
     do_pf = 0,
-    require_quality_zero = 0,
+    require_quality_zero = 1,
     forceylim = None, # [0.93, 1.07]# for the flux light curves
     period = None,
     epoch = None,
     badtimewindows = None,
     slideclipdict = None, #{'window_length':5, 'high':4, 'low':4},
-    mask_orbit_edges = False
+    mask_orbit_edges = True
 ):
 
     if do_pf:
@@ -50,36 +50,38 @@ def quicklooklc(
         if v:
             pipeline = k
 
-    data = get_tess_data(ticid, outdir=outdir, cdips=cdips, spoc=spoc,
-                         cdipspre=cdipspre, eleanor=eleanor, qlp=qlp)
+    data, hdrs = get_tess_data(ticid, outdir=outdir, cdips=cdips, spoc=spoc,
+                               cdipspre=cdipspre, eleanor=eleanor, qlp=qlp)
     if data is None and kepler:
         data = get_kepler_data(ticid, outdir=outdir)
 
     if do_eleanor_lcs:
-        explore_eleanor_lightcurves(data, ticid, period=period, epoch=epoch,
+        explore_eleanor_lightcurves(data, hdrs, ticid, period=period, epoch=epoch,
                                     require_quality_zero=require_quality_zero)
         if detrend:
             explore_eleanor_lightcurves(
-                data, ticid, period=period, epoch=epoch,
+                data, hdrs, ticid, period=period, epoch=epoch,
                 require_quality_zero=require_quality_zero, detrend=detrend,
                 do_phasefold=do_pf
             )
 
     if do_mag_lcs:
-        explore_mag_lightcurves(data, ticid, period=period, epoch=epoch)
+        explore_mag_lightcurves(data, hdrs, ticid, period=period, epoch=epoch,
+                                do_phasefold=do_pf)
 
     if do_flux_lcs:
 
-        explore_flux_lightcurves(data, ticid, pipeline=pipeline, period=period,
+        explore_flux_lightcurves(data, hdrs, ticid, pipeline=pipeline, period=period,
                                  outdir=outdir,
                                  epoch=epoch,
                                  require_quality_zero=require_quality_zero,
                                  forceylim=forceylim,
                                  slideclipdict=slideclipdict,
+                                 do_phasefold=do_pf,
                                  mask_orbit_edges=mask_orbit_edges)
         if detrend:
             t, f = explore_flux_lightcurves(
-                data, ticid, pipeline=pipeline, period=period, epoch=epoch,
+                data, hdrs, ticid, pipeline=pipeline, period=period, epoch=epoch,
                 outdir=outdir,
                 detrend=detrend, do_phasefold=do_pf,
                 badtimewindows=badtimewindows,
@@ -168,6 +170,62 @@ if __name__ == "__main__":
     ticid = '99904467' # toi-1136 friend3
     ticid = '427685831' # WASP-52
     ticid = '198008005' # TOI-858
+    ticid = '268301217' # TOI 1937b
+    ticid = '1232360'
+    ticid = '2234723' # B-star complex rotator
+    ticid = '188109809' # CR in alpha-Per?
+    ticid = '26412438' # CDIPS CTOI
+    ticid = '117689799' # TOI-3504 (probably not in Alessi12)
+    ticid = '12996623'
+    ticid = '403085618' # the plx/pmra/pmdec missing alpha Per star
+    ticid = '427394876' # orion EB1
+    ticid = '427395094' # orion EB2
+    ticid = '427393298' # orion EB3
+
+    #delLyr_ticids = ['68833286', '28477591', '336409172', '425705688',
+    #                 '390058041', '425914815', '390134160', '28769219',
+    #                 '377724027', '377724518', '28765338', '28772706',
+    #                 '258279124', '258349043', '258349041', '237163448',
+    #                 '237163474', '237163213', '237185823', '237184017',
+    #                 '237183630', '237183962', '237184441', '29064620',
+    #                 '237195399', '1715456535', '237193016', '237195537',
+    #                 '237195915', '350989117', '350992827', '350992203',
+    #                 '120048930', '120097480', '120046404', '120044575',
+    #                 '120044726', '20529532', '20530184', '120098840',
+    #                 '120099346', '20534565', '120182387', '120251661',
+    #                 '120181767', '120261671', '20697988', '20818771',
+    #                 '120423937', '20988031', '399822428', '20995907',
+    #                 '399791681', '120498272', '21150335', '21149747',
+    #                 '21150307', '41867756', '41874592', '120757393',
+    #                 '120688854', '120688481', '42198961', '120896000',
+    #                 '120900020', '120972481', '121085990']
+    delLyr_ticids = ['120044575',
+                     '120044726', '20529532', '20530184', '120098840',
+                     '120099346', '20534565', '120182387', '120251661',
+                     '120181767', '120261671', '20697988', '20818771',
+                     '120423937', '20988031', '399822428', '20995907',
+                     '399791681', '120498272', '21150335', '21149747',
+                     '21150307', '41867756', '41874592', '120757393',
+                     '120688854', '120688481', '42198961', '120896000',
+                     '120900020', '120972481', '121085990']
+
+
+
+    #rsg5_ticids = ['185461568', '185668188', '185667262', '185848343',
+    #               '185847064', '185848569', '185948737', '186129360',
+    #               '378170387', '378173315', '186178469', '186140431',
+    #               '186237466', '186255176', '186237579', '295799540',
+    #               '186238215', '186253914', '186238820', '416970247',
+    #               '416972085', '406076288', '256066070', '406087385',
+    #               '256184740', '256346500', '351939704', '351937745',
+    #               '352162814', '193335018', '193539544', '278355321',
+    #               '265250815']
+    rsg5_ticids = ['416970247',
+                   '416972085', '406076288', '256066070', '406087385',
+                   '256184740', '256346500', '351939704', '351937745',
+                   '352162814', '193335018', '193539544', '278355321',
+                   '265250815']
+
 
     # # optional #
     # period = 1.395733 # None
@@ -180,7 +238,16 @@ if __name__ == "__main__":
     # epoch = 2458622.8904 #None
     # badtimewindows = [(1616.75,1617.0),(1617.6,1617.8)]
 
+    # # HD 34382 (TIC 2234723)
+    # period = 2.46156932
+    # epoch = 2459000
+
     # # Kepler1627
     # period, epoch, badtimewindows = 7.20280608, 2454953.790531, None
 
-    quicklooklc(ticid)
+    period, epoch = None, None
+    #period, epoch = 1.035844, 2458684.473340 # a little long in EM
+    #period, epoch = 1.037, 2458684.473340
+
+    for ticid in delLyr_ticids:
+        quicklooklc(ticid, period=period, epoch=epoch)
