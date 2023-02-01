@@ -39,12 +39,14 @@ from datetime import datetime
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from numpy import array as nparr
 from matplotlib.transforms import blended_transform_factory
+from os.path import join
 
 from astropy.io import fits
 from astropy import units as u, constants as const
 from astropy.modeling.polynomial import Chebyshev1D
 from astropy.modeling.models import custom_model
 from astropy.modeling.fitting import LevMarLSQFitter
+from astropy.nddata import StdDevUncertainty
 
 from scipy.io import readsav
 from scipy.interpolate import interp1d
@@ -63,9 +65,10 @@ from specmatchemp.spectrum import Spectrum
 import specmatchemp.library
 import specmatchemp.plots as smplot
 
-from aesthetic.plot import savefig, format_ax
+from aesthetic.plot import savefig, format_ax, set_style
 
 from cdips_followup import __path__
+from cdips_followup.paths import SPECDIR
 
 # usable orders in Veloce spectra. 0-based count.
 VELOCE_ORDERS = [
@@ -1516,6 +1519,22 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
 
 
 
+def _given_2d_get_1d_order(wav_2d, flx_2d, target_wav):
+
+    _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
+    viable_orders = np.argwhere(
+        (_preorder != wav_2d.shape[1]-1) & (_preorder != 0)
+    )
+    order = int(
+        viable_orders[np.argmin(
+            np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
+        )]
+    )
+
+    flx, wav = flx_2d[order, :], wav_2d[order, :]
+    return flx, wav
+
+
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
                    outpath=None, is_template=False, writecsvresults=True,
                    verbose=True, montecarlo_errors=True):
@@ -1538,7 +1557,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
         xshift: angstrom shift required to get into source frame (not vacuum
         frame).  Sign such that if `xshift = 1`, you blueshift the spectrm by 1
-        angstrom.
+        angstrom.  Can also be "find", in which case xshift will be determined
+        automatically.  This option currently only works for HIRES.
 
         delta_wav: window to do the measurement over (angstrom)
 
@@ -1624,17 +1644,7 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         # retrieve the order corresponding to target wavelength.
         # then shift the wavelength solution to source frame, if needed.
         #
-        _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
-        viable_orders = np.argwhere(
-            (_preorder != wav_2d.shape[1]-1) & (_preorder != 0)
-        )
-        order = int(
-            viable_orders[np.argmin(
-                np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
-            )]
-        )
-
-        flx, wav = flx_2d[order, :], wav_2d[order, :]
+        flx, wav = _given_2d_get_1d_order(wav_2d, flx_2d, target_wav)
 
     if instrument == 'Veloce':
         wav = wav[::-1]
@@ -1643,8 +1653,86 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         viz_1d_spectrum(flx, wav, thispath, xlim=(6700, 6725), vlines=vlines,
                         names=names)
 
+    if xshift == 'find':
+        # automate finding the xshift, by cross-correlating against CK03864,
+        # which has RV~=0, no lithium, and nice neighboring iron lines.
+        # NOTE: this procedure will probably fail on M-dwarfs.  you might want
+        # to do more careful template selection for such cases.
+
+        assert instrument == 'HIRES'
+        template_path = join(SPECDIR, "HIRES", "TEMPLATES", "ij172.1101.fits")
+        tflx_2d, twav_2d = read_hires(template_path, is_registered=0,
+                                      return_err=0)
+        tflx, twav = _given_2d_get_1d_order(twav_2d, tflx_2d, target_wav)
+
+        # clip wild positive outliers, ie cosmic rays or emission lines
+        nflx = flx/np.nanmedian(flx)
+        ntflx = tflx/np.nanmedian(tflx)
+
+        sel = nflx < 1.1
+        nflx, nwav = nflx[sel], wav[sel]
+
+        uncertainty = StdDevUncertainty(np.ones(len(nflx)))
+        tuncertainty = StdDevUncertainty(np.ones(len(tflx)))
+
+        spec = Spectrum1D(spectral_axis=nwav*u.AA,
+                          flux=nflx*u.dimensionless_unscaled,
+                          uncertainty=uncertainty)
+
+        tspec = Spectrum1D(spectral_axis=twav*u.AA,
+                          flux=ntflx*u.dimensionless_unscaled,
+                          uncertainty=tuncertainty)
+
+        from specutils.analysis import template_correlate
+
+        corr, lag = template_correlate(spec, tspec)
+
+        # TODO: add a smoother?  corr and lag can have spikes
+        shift_lag = lag[np.argmax(corr)]
+
+        shift_wvlen_arr = (lag * (target_wav*u.AA) / (const.c)).to(u.AA)
+
+        shift_wvlen = (shift_lag * (target_wav*u.AA) / (const.c)).to(u.AA)
+
+        xshift = np.round(shift_wvlen.value, 2)
+
+        MAKE_SHIFTPLOT = 0
+        if MAKE_SHIFTPLOT:
+            set_style("clean")
+            fig = plt.figure(figsize=(10,3))
+            axd = fig.subplot_mosaic(
+                """
+                AAAB
+                """
+            )
+            ax = axd['A']
+
+            ax.plot(nwav, nflx, lw=0.5, label='target')
+            ax.plot(twav, 0.5+ntflx, lw=0.5, label='template')
+            ax.plot(nwav - xshift, 1+nflx, lw=0.5, label='target (shifted)')
+            ax.legend(loc='best', fontsize='xx-small')
+            ax.update({'xlabel': 'λ [Angstrom]', 'ylabel': 'f',
+                       'ylim':[0.5, 2.1], 'xlim':[6690, 6730]})
+
+            ax = axd['B']
+            ax.plot(shift_wvlen_arr.value, corr)
+            _sel = (shift_wvlen_arr.value > -3) & (shift_wvlen_arr.value < 3)
+            ylim = [min(corr[_sel]), max(corr[_sel])]
+            ax.vlines(
+                xshift, ylim[0], ylim[1], color='C0', zorder=-1, alpha=0.7, ls=":"
+            )
+            ax.update({'xlabel': 'shift [Angstrom]', 'ylabel': 'CCF',
+                       'title': f'xshift: {xshift}', 'xlim':[-3,3],
+                       'ylim':ylim})
+
+            _outpath = outpath.replace(".png", "_auto-xshift.png")
+            savefig(fig, _outpath, writepdf=False)
+            plt.close("all")
+
+
     shiftstr = ''
     if isinstance(xshift, (float, int)):
+        print(f"Shifting by {xshift} Angstrom")
         wav = deepcopy(wav) - xshift
         shiftstr = '_shift{:.2f}'.format(float(xshift))
 
@@ -1822,31 +1910,70 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     #
     # plot the results
     #
-    f,axs = plt.subplots(nrows=4, ncols=1, figsize=(6,8))
+    set_style("science")
 
-    axs[0].plot(wav, flx, c='k', zorder=3)
+    f = plt.figure(figsize=(6, 10))
+    axd = f.subplot_mosaic(
+        """
+        AAAB
+        CCCC
+        DDDD
+        EEEE
+        FFFF
+        """
+    )
+
+    ax = axd['A']
+
+    ax.plot(nwav, nflx, lw=0.5, label='target')
+    ax.plot(twav, 0.5+ntflx, lw=0.5, label='template')
+    ax.plot(nwav - xshift, 1+nflx, lw=0.5, label='target (shifted)')
+    ax.legend(loc='best', fontsize=4)
+    ax.update({'ylabel': '$f$',
+               'ylim':[0.4, 2.1], 'xlim':[6691, 6729]})
+
+    ax = axd['B']
+    _corr = corr/np.nanmax(corr)
+    ax.plot(shift_wvlen_arr.value, _corr)
+    _sel = (shift_wvlen_arr.value > -3) & (shift_wvlen_arr.value < 3)
+    ylim = [min(_corr[_sel]), max(_corr[_sel])]
+    ax.vlines(
+        xshift, ylim[0], ylim[1], color='C0', zorder=-1, alpha=0.7, ls=":"
+    )
+    txt = f'Δx: {xshift}'
+    bbox = dict(facecolor='white', alpha=0.9, pad=0, edgecolor='white')
+    ax.text(
+        0.95, 0.95, txt, ha='right', va='top', transform=axd['B'].transAxes,
+        fontsize='xx-small', zorder=1, bbox=bbox
+    )
+    ax.update({'ylabel': 'CCF', 'xlim':[-3,3], 'ylim':ylim})
+    ax.set_yticklabels([])
+
+    ax = axd['C']
+    ax.plot(wav, flx, c='k', zorder=3)
 
     if montecarlo_errors:
-        axs[0].scatter(excised_spectrum.wavelength, excised_spectrum.flux,
+        ax.scatter(excised_spectrum.wavelength, excised_spectrum.flux,
                     c='gray', zorder=4, s=5)
 
-    axs[0].plot(wav, cont_flx, c='r', zorder=2)
+    ax.plot(wav, cont_flx, c='r', zorder=2)
 
-    axs[1].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+    ax = axd['D']
+    ax.plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
 
-    axs[2].plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+    ax = axd['E']
+    ax.plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
 
-    ylim = axs[2].get_ylim()
-    axs[2].vlines([region.lower.value, region.upper.value],
-                  min(ylim), max(ylim), color='orangered', linestyle='--',
-                  zorder=-2, lw=0.5, alpha=0.3)
+    ylim = ax.get_ylim()
+    ax.vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
+              color='orangered', linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
 
-    axs[3].plot(full_spec.wavelength, full_spec.flux, c='k')
-    axs[3].plot(x_fit, y_fit, c='g')
-    ylim = axs[3].get_ylim()
-    axs[3].vlines([region.lower.value, region.upper.value],
-                  min(ylim), max(ylim), color='g', linestyle='--', zorder=-2,
-                  lw=0.5, alpha=0.3)
+    ax = axd['F']
+    ax.plot(full_spec.wavelength, full_spec.flux, c='k')
+    ax.plot(x_fit, y_fit, c='g')
+    ylim = ax.get_ylim()
+    ax.vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
+              color='g', linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
 
     if not montecarlo_errors:
         txt = (
@@ -1867,41 +1994,40 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
             f'-{fitted_li_equiv_widths_merr*1e3:.1f}mA'
         )
 
-    axs[3].text(
-        0.95, 0.95, txt, ha='right', va='top', transform=axs[3].transAxes,
+    ax.text(
+        0.95, 0.95, txt, ha='right', va='top', transform=axd['F'].transAxes,
         fontsize='xx-small'
     )
 
-    axs[0].set_ylabel('$f$')
-    axs[1].set_ylabel('$f_\mathrm{contnorm}$')
-    axs[2].set_ylabel('$f_\mathrm{contnorm}$ [zoom]')
-    axs[3].set_ylabel('$1-f_\mathrm{contnorm}$')
+    axd['C'].set_ylabel('$f$')
+    axd['D'].set_ylabel('$f_\mathrm{contnorm}$')
+    axd['E'].set_ylabel('$f_\mathrm{contnorm}$ [zoom]')
+    axd['F'].set_ylabel('$1-f_\mathrm{contnorm}$')
 
     assert isinstance(xlim, list)
-    for ax in axs:
+    for ax in [axd['C'], axd['D'], axd['E'], axd['F']]:
         ax.set_xlim(xlim)
 
     # Plot known lines
     if isinstance(vlines, list):
         sel = (nparr(vlines)>min(xlim)) & (nparr(vlines)<max(xlim))
         vlines, names = nparr(vlines)[sel], nparr(names)[sel]
-        ylim = axs[0].get_ylim()
+        ylim = axd['C'].get_ylim()
         delta_y = 0.9*(max(ylim) - min(ylim))
-        axs[0].vlines(vlines, min(ylim)+delta_y, max(ylim), zorder=-3,
+        axd['C'].vlines(vlines, min(ylim)+delta_y, max(ylim), zorder=-3,
                       linestyles=':', color='k', lw=0.3)
-        axs[0].set_ylim(ylim)
+        axd['C'].set_ylim(ylim)
 
-        tform = blended_transform_factory(axs[0].transData, axs[0].transAxes)
+        tform = blended_transform_factory(axd['C'].transData, axd['C'].transAxes)
         for x, n in zip(vlines, names):
-            axs[0].text(x, 0.95, n, ha='center', va='top', transform=tform,
+            axd['C'].text(x, 0.95, n, ha='center', va='top', transform=tform,
                         fontsize=4)
 
     # Plot xshift diagnostic bars
     target_wav = 6707.835
     for xbar in np.arange(0, 2.0, 0.3333):
 
-        # axs0
-        for ax in [axs[0], axs[1], axs[2]]:
+        for ax in [axd['C'], axd['D'], axd['E']]:
             ylim = ax.get_ylim()
             delta_y = 0.7*(max(ylim) - min(ylim))
             ax.vlines([target_wav], min(ylim), max(ylim)-delta_y, zorder=-3,
@@ -1925,18 +2051,18 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
             ax.set_ylim(ylim)
 
 
-    axs[2].set_xlim([target_wav-1.5, target_wav+1.5])
-    axs[3].set_xlim([target_wav-1.5, target_wav+1.5])
-    axs[-1].set_xlabel('$\lambda$ [angstrom]')
+    axd['E'].set_xlim([target_wav-1.5, target_wav+1.5])
+    axd['F'].set_xlim([target_wav-1.5, target_wav+1.5])
+    axd['F'].set_xlabel('$\lambda$ [angstrom] '+ f'(xshift={xshift})')
 
-    for ax in axs:
-        format_ax(ax)
+    f.tight_layout()
 
     savefig(f, outpath, writepdf=False)
 
     if writecsvresults:
         outpath = outpath.replace('.png','_results.csv')
         outdict = {
+            'xshift': xshift,
             'LiEW_mA': np.round(li_equiv_width*1e3, 3),
             'Fitted_Li_EW_mA': np.round(fitted_li_equiv_width*1e3, 3),
             'Fitted_Li_EW_mA_perr': np.round(fitted_li_equiv_widths_perr*1e3, 3),
