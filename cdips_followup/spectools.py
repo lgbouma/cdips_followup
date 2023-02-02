@@ -61,10 +61,6 @@ from specutils.manipulation.utils import excise_regions
 
 from astropy.modeling import models
 
-from specmatchemp.spectrum import Spectrum
-import specmatchemp.library
-import specmatchemp.plots as smplot
-
 from aesthetic.plot import savefig, format_ax, set_style
 
 from cdips_followup import __path__
@@ -1119,6 +1115,9 @@ def specmatch_viz_compare(wavlim=[5160,5210]):
     Visualize HIRES spectra for dwarf stars within the wavelengths.
     """
 
+    import specmatchemp.plots as smplot
+    import specmatchemp.library
+
     lib = specmatchemp.library.read_hdf(wavlim=wavlim)
 
     cut = lib.library_params.query('radius < 1.5 and -0.25 < feh < 0.25')
@@ -1166,6 +1165,8 @@ def specmatch_viz_compare(wavlim=[5160,5210]):
 def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
                                spectrum_path=None, wvsol_path=None,
                                is_template=False):
+
+    import specmatchemp.library
 
     lib = specmatchemp.library.read_hdf(wavlim=wavlim)
     if teff < 6500:
@@ -2369,8 +2370,10 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     #
     # shift and cross-correlate w/ specmatch
     #
+    import specmatchemp.library
     lib = specmatchemp.library.read_hdf(wavlim=wavlim)
 
+    from specmatchemp.spectrum import Spectrum
     s_spectrum = Spectrum(wav, flx)
     s_spectrum.name = idstring
 
