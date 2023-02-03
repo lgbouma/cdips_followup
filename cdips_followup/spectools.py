@@ -1869,15 +1869,29 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
                 spectral_axis=x_fit,
                 flux=(1-y_fit)*u.dimensionless_unscaled
             )
-            _fitted_li_equiv_width = equivalent_width(
-                fitted_spec, regions=region
-            )
-
-            fitted_li_equiv_widths.append(
-                _fitted_li_equiv_width.to(u.angstrom).value
-            )
+            try:
+                _fitted_li_equiv_width = equivalent_width(
+                    fitted_spec, regions=region
+                )
+                fitted_li_equiv_widths.append(
+                    _fitted_li_equiv_width.to(u.angstrom).value
+                )
+            except IndexError as e:
+                txt = (
+                    f'{datetime.utcnow().isoformat()}: {spectrum_path} failed!'
+                    'Got error:\n'
+                    f'{repr(e)}'
+                )
+                print(txt)
+                fitted_li_equiv_widths.append(
+                    np.nan
+                )
 
         fitted_li_equiv_widths = nparr(fitted_li_equiv_widths)
+        # drop any nans
+        fitted_li_equiv_widths = (
+            fitted_li_equiv_widths[~pd.isnull(fitted_li_equiv_widths)]
+        )
 
         fitted_li_equiv_widths_perr = (
             np.percentile(fitted_li_equiv_widths, 84)
