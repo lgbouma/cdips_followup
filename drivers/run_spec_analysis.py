@@ -28,12 +28,12 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 0           # plot all orders
+    args.do_orders = 1           # plot all orders
     args.do_sms_analysis = 0     # run specmatch-syn analysis
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
     args.do_inspect = 0          # inspect to figure out require rest-frame shift
-    args.do_li_ew = 1            # once rest-frame shift is known
+    args.do_li_ew = 0            # once rest-frame shift is known
     args.do_halpha_ew = 0        # emission, absorption, either way!
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
@@ -43,10 +43,10 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 0
+    args.is_hires = 1
     args.is_neid = 0
     args.is_harps = 0
-    args.is_coralie = 1
+    args.is_coralie = 0
 
     if args.is_pfs:
 
@@ -234,12 +234,19 @@ def main_tres(args):
 def main_hires(args):
 
     # single star; single spectrum
-    idstring = 'KOI-3991'
-    specname = 'ij173.1400.fits'
-    #idstring = 'KOI-7913A'
-    #specname = 'ij440.75.fits'
-    #idstring = 'KOI-7913B'
-    #specname = 'ij438.81.fits'
+    idstring = 'HD_34382'
+    specname = 'bj488.337.fits'
+    specname = 'bj487.135.fits'
+    specname = 'bj486.531.fits'
+
+    idstring = 'TIC376116071'
+    specname = 'ij490.326.fits'
+
+    idstring = 'TIC146539195'
+    #specname = 'bj501.88.fits'
+    #specname = 'ij501.88.fits'
+    specname = 'rj501.88.fits'
+
     spectrum_path = os.path.join(
         DATADIR, 'HIRES', idstring, specname
     )
@@ -248,7 +255,8 @@ def main_hires(args):
         outdir = os.path.join(OUTDIR, 'HIRES', 'spec_viz_orders')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+        _idstr = idstring + "_" + specname.replace(".fits","")
+        plot_orders(spectrum_path, outdir=outdir, idstring=_idstr)
 
     if args.do_stack_comparison:
         outdir = os.path.join(OUTDIR, 'HIRES', 'stack_comparisons')
@@ -269,7 +277,7 @@ def main_hires(args):
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
-        args.xshift = None
+        args.xshift = -0.5
         args.idstring = idstring
         for delta_wav in [2.5,5,7.5]:
             outname = (
