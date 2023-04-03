@@ -233,6 +233,12 @@ def explore_eleanor_lightcurves(data, hdrs, ticid, period=None, epoch=None,
                                                   window_length=0.5,
                                                   break_tolerance=0.5)
 
+            elif detrend == 'minimal':
+                y_obs, y_trend = dtr.detrend_flux(x_obs, y_obs,
+                                                  method='biweight', cval=5,
+                                                  window_length=5,
+                                                  break_tolerance=0.5)
+
             elif detrend == 'best':
                 # NOTE: window_length plays an important role in what you get!!
                 dtr_method, break_tolerance, window_length = 'best', 0.5, 0.40
