@@ -113,7 +113,16 @@ line_d = {
     'Halpha': 6562.8, # 3->2
     'CaI_IRT_a': 8498,
     'CaI_IRT_b': 8542,
-    'CaI_IRT_c': 8662
+    'CaI_IRT_c': 8662,
+    # m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    'K I': 7665,
+    'K I': 7699,
+    'CaH': 6750,
+    'VO': 7851,
+    'Na': 8183,
+    'Na': 8195,
+    'TiO': 7666,
+    'TiO': 5446,
 }
 
 # directories
