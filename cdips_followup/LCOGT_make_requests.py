@@ -85,6 +85,7 @@ ACCEPTABILITY_DICT = {
 }
 
 # https://lco.global/observatory/process/
+# Latest possible observation times in any given semester.
 MAXTIMEDICT = {
     '19A': Time('2019-05-30 23:59:00'),
     '19B': Time('2019-11-30 23:59:00'),
@@ -93,7 +94,13 @@ MAXTIMEDICT = {
     '21A': Time('2021-07-31 23:59:00'),
     '21B': Time('2022-01-31 23:59:00'),
     '22A': Time('2022-07-31 23:59:00'),
-    '22B': Time('2023-01-31 23:59:00')
+    '22B': Time('2023-01-31 23:59:00'),
+    '23A': Time('2023-07-31 23:59:00'),
+    '23B': Time('2024-01-31 23:59:00'),
+    '24A': Time('2024-07-31 23:59:00'),
+    '24B': Time('2025-01-31 23:59:00'),
+    '25A': Time('2025-07-31 23:59:00'),
+    '25B': Time('2026-01-31 23:59:00'),
 }
 
 # ['', '', '', 'ALMA', 'ATST', 'Anglo-Australian Observatory', 'Apache Point',
@@ -138,6 +145,7 @@ MAXTIMEDICT = {
 SITEDICT = {
     'at_site': ['SAAO', 'Siding Spring Observatory',
                 'McDonald Observatory', 'Cerro Tololo',
+                'Palomar',
                 'Haleakala Observatories', 'Keck Observatory',
                 'Las Campanas Observatory', 'Cerro Paranal'],
     'of_address': ['Wise Observatory'] # for NRES
@@ -431,7 +439,7 @@ def get_requests_given_ephem(
             get_event_observability(
                 eventclass,
                 _site, ra*u.deg, dec*u.deg, targetname, epoch, period*u.day,
-                duration*u.hour, n_transits=200,
+                duration*u.hour, n_transits=1000,
                 obs_start_time=min_search_time,
                 oot_duration=oot_duration,
                 minokmoonsep=min_lunar_distance*u.deg,
@@ -523,7 +531,8 @@ def make_single_request_from_row(
         r, savstr, eventclass, ephem_dict=None,
         min_search_time=Time(dt.datetime.today().isoformat()),
         max_search_time=None, filtermode='ip', telescope_class=None,
-        sites=None, ipp_value=1.0, force_acceptability=None
+        sites=None, ipp_value=1.0, force_acceptability=None,
+        max_airmass_sched=2.0, max_airmass_submit=2.5
     ):
     #
     # require the passed dataframe row has the right format.
@@ -631,6 +640,8 @@ def make_single_request_from_row(
                                     r['duration_unc'], sites=sites,
                                     min_search_time=min_search_time,
                                     max_search_time=max_search_time,
+                                    max_airmass_sched=max_airmass_sched,
+                                    max_airmass_submit=max_airmass_submit,
                                     eventclass=eventclass,
                                     filtermode=filtermode,
                                     telescope_class=telescope_class,
