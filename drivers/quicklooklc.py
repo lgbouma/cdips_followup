@@ -19,16 +19,16 @@ def quicklooklc(
     ticid,
     outdir = None,
     cdips = 0,
-    spoc = 0,
-    eleanor = 1,
+    spoc = 1,
+    eleanor = 0,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
-    detrend = 'minimal',#'best', None, 'biweight', 'locor', 'notch', 'minimal'
+    detrend = None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
     do_eleanor_lcs = 0,
-    do_flux_lcs = 0,
-    do_periodogram = 1,
+    do_flux_lcs = 1,
+    do_periodogram = 0,
     do_pf = 0,
     require_quality_zero = 0,
     forceylim = None, # [0.93, 1.07]# for the flux light curves
@@ -219,6 +219,10 @@ if __name__ == "__main__":
     ticid = '185336364' # tabby's star
     ticid = '368129164' # brightest CPV known?
     ticid = '243921117'
+    ticid = '363445338'
+    ticid = '632499596' # UV Ceti
+    ticid = '166527623' # HIP 67522
+    ticid = '151483286' # TOI 2818
 
     # # optional #
     # period = 1.395733 # None
@@ -241,7 +245,8 @@ if __name__ == "__main__":
     period, epoch = None, None
     #period, epoch = 1.035844, 2458684.473340 # a little long in EM
     #period, epoch = 1.037, 2458684.473340
-    period, epoch = 6.44/24, 1640.
+    #period, epoch = 6.44/24, 1640.
+    #period, epoch = 9.1457/24, 2457000
 
     #for ticid in delLyr_ticids:
     quicklooklc(ticid, period=period, epoch=epoch)

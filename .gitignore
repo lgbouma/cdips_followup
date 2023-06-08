@@ -73,3 +73,5 @@ results/LCOGT_22B_observability/
 results/toi_1881*
 tests/*png
 tests/*csv
+drivers/observing_drivers/scripts/
+results/LCOGT*
