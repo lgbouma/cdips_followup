@@ -10,6 +10,8 @@ Given spectrum from PFS / Veloce / CHIRON / FEROS / TRES:
 * Run specmatch-synth (nb. this functionality requires py27 environment)
 """
 import os
+from os.path import join
+import numpy as np
 from glob import glob
 from cdips_followup import __path__
 from cdips_followup.spectools import (
@@ -43,10 +45,11 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 1
+    args.is_hires = 0
     args.is_neid = 0
     args.is_harps = 0
     args.is_coralie = 0
+    args.is_rvs = 1
 
     if args.is_pfs:
 
@@ -95,6 +98,10 @@ def main():
 
     elif args.is_coralie:
         main_coralie(args)
+
+    elif args.is_rvs:
+        main_rvs(args)
+
 
 def main_pfs(args):
 
@@ -447,6 +454,50 @@ def main_veloce(args):
             os.mkdir(outdir)
         vsini, shift, gamma = measure_veloce_vsini(
             specname, idstring, teff, outdir)
+
+
+def main_rvs(args):
+
+    ####################
+    # change these #
+    DOWNLOAD_SPECTRA = 0
+    cache_id = 'bprp_gt2_dlt10pc'
+    ####################
+
+    cachedir = f'/Users/luke/.gaia_cache/RVS/{cache_id}'
+
+    from cdips.utils.gaiaqueries import given_source_ids_get_gaia_data
+
+    if DOWNLOAD_SPECTRA:
+        from cdips.utils.gaiaqueries import run_query_to_get_rvs_spectra
+        csvpaths = run_query_to_get_rvs_spectra()
+    else:
+        csvpaths = glob(join(cachedir, "*.csv.gz"))
+
+    if args.do_orders:
+        outdir = cachedir
+        if not os.path.exists(outdir):
+            os.mkdir(outdir)
+        for spectrum_path in csvpaths:
+
+            dr3_source_id = os.path.basename(spectrum_path).split("_")[1]
+
+            gdf = given_source_ids_get_gaia_data(
+                np.array([dr3_source_id]).astype(np.int64),
+                f"gdr3_{dr3_source_id}", n_max=5, overwrite=False,
+                enforce_all_sourceids_viable=True, savstr='',
+                which_columns='*', table_name='gaia_source_lite',
+                gaia_datarelease='gaiadr3'
+            )
+
+            bp_rp = float(gdf["bp_rp"])
+            g = float(gdf["phot_g_mean_mag"])
+
+            idstring = f"bprp{bp_rp:.3f}_G{g:.3f}_gdr3_{dr3_source_id}"
+
+            plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+
+
 
 
 if __name__ == "__main__":
