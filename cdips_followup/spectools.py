@@ -79,51 +79,60 @@ VELOCE_VSINI_ORDERS_VS_NEXTGEN = [
 ]
 
 # a few common lines
-line_d = {
-    'Fe_L': 3820.44,
-    'H$\eta$': 3835.397, # 9->2
-    'H$\zeta$': 3889.096, # 8->2
-    'Ca_K': 3933.66,
-    'Ca_H': 3968.47,
-    'H$\epsilon$': 3970.075, # 7->2
-    'H$\delta$': 4101.75,
-    'H$\gamma$': 4340.47,
-    r'H$\beta$': 4861.35,
-    'FeI': 4920.51,
-    'FeI': 4957.61,
-    'FeI': 5169.00, #rough
-    'Mgb1': 5183.62,
-    'Mgb2': 5172.70,
-    'Feb3': 5168.91,
-    'Mgb4': 5167.33,
-    'CaI+FeI': 5269,
-    'Fe_E2': 5270.39,
-    'Hg_e': 5460.73,
-    'DIB': 5780.6,
-    'He': 5875.618,
-    'NaI_D2': 5889.95,
-    'NaI_D1': 5895.92,
-    'DIB': 6613.7,
-    'FeI_a': 6703.58,
-    'FeI_b': 6705.1,
-    'FeI_c': 6707.44,
-    'LiI_a': 6707.76,
-    'LiI_b': 6707.91,
-    'CaI$\lambda$': 6718,
-    'Halpha': 6562.8, # 3->2
-    'CaI_IRT_a': 8498,
-    'CaI_IRT_b': 8542,
-    'CaI_IRT_c': 8662,
-    # m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
-    'K I': 7665,
-    'K I': 7699,
-    'CaH': 6750,
-    'VO': 7851,
-    'Na': 8183,
-    'Na': 8195,
-    'TiO': 7666,
-    'TiO': 5446,
-}
+LINE_D = [
+    ['Fe_L', 3820.44],
+    ['H$\eta$', 3835.397], # 9->2
+    ['H$\zeta$', 3889.096], # 8->2
+    ['Ca_K', 3933.66],
+    ['Ca_H', 3968.47],
+    ['H$\epsilon$', 3970.075], # 7->2
+    ['H$\delta$', 4101.75],
+    ['H$\gamma$', 4340.47],
+    [r'H$\beta$', 4861.35],
+    ['FeI', 4920.51],
+    ['FeI', 4957.61],
+    ['FeI', 5169.00], #rough
+    ['Mgb1', 5183.62],
+    ['Mgb2', 5172.70],
+    ['Feb3', 5168.91],
+    ['Mgb4', 5167.33],
+    ['CaI+FeI', 5269],
+    ['Fe_E2', 5270.39],
+    ['TiO', 5446],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['Hg_e', 5460.73],
+    ['DIB', 5780.6],
+    ['He', 5875.618],
+    ['NaI_D2', 5889.95],
+    ['NaI_D1', 5895.92],
+    ['Halpha', 6562.8], # 3->2
+    ['DIB', 6613.7],
+    ['FeI_a', 6703.58],
+    ['FeI_b', 6705.1],
+    ['FeI_c', 6707.44],
+    ['LiI_a', 6707.76],
+    ['LiI_b', 6707.91],
+    ['CaI$\lambda$', 6718],
+    ['CaH', 6750],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['K I', 7665],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['TiO', 7666],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['VO', 7851],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['K I', 7699],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['Na', 8183],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['Na', 8195],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['FeI', 8470.7],
+    ['CaII(a)', 8500],
+    ['SiI', 8504.5],
+    ['FeI', 8516.3],
+    ['FeI', 8529.0],
+    ['CaII(b)', 8544],
+    ['SiI', 8559],
+    ['FeI', 8614.2],
+    ['CaII(c)', 8664.5],
+    ['FeI', 8677.1],
+    ['NI', 8685.4],
+    ['FeI' , 8691.0],
+    ['S[I]', 8696.7],
+]
 
 # directories
 DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
@@ -640,10 +649,10 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
     xmin = min(wav)
     xmax = max(wav)
 
-    this_d = {}
-    for k, v in line_d.items():
+    this_d = []
+    for k, v in LINE_D:
         if v > xmin and v<xmax:
-            this_d[k] = v
+            this_d.append([k, v])
 
     if isinstance(ylim, (list, tuple)):
         ax.set_ylim(ylim)
@@ -656,7 +665,7 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
                 transform=ax.transAxes, fontsize='small')
 
     if len(this_d) > 0:
-        for k, v in this_d.items():
+        for k, v in this_d:
             ylim = ax.get_ylim()
             delta_y = 0.9*(max(ylim) - min(ylim))
             ax.vlines(v, min(ylim)+delta_y, max(ylim), zorder=-3,
@@ -684,7 +693,7 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
             ax.text(x, 0.95, n, ha='center', va='top', transform=tform,
                     fontsize=4)
 
-    ax.grid(b=True, which='both', axis='x', zorder=-3, lw=0.3, ls='--')
+    ax.grid(which='both', axis='x', zorder=-3, lw=0.3, ls='--')
 
     format_ax(ax)
     savefig(f, outpath, writepdf=False)
@@ -727,6 +736,13 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
 
     elif 'TRES' in spectrum_path:
         flx_2d, wav_2d = read_tres(spectrum_path)
+
+    elif 'RVS' in spectrum_path:
+        # Gaia RVS
+        df = pd.read_csv(spectrum_path)
+        flx_2d = np.array(df.flux).reshape((1, len(df)))
+        wav_2d = 10*np.array(df.wavelength).reshape((1, len(df)))
+
     else:
         raise NotImplementedError
 
@@ -735,6 +751,9 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
         if 'Veloce' in spectrum_path:
             start = 200
             end = -200
+        elif "RVS" in spectrum_path:
+            start = 0
+            end = None
         else:
             start = 10
             end = -10
