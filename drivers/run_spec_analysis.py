@@ -45,11 +45,11 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 0
+    args.is_hires = 1
     args.is_neid = 0
     args.is_harps = 0
     args.is_coralie = 0
-    args.is_rvs = 1
+    args.is_rvs = 0
 
     if args.is_pfs:
 
@@ -252,18 +252,26 @@ def main_hires(args):
     idstring = 'TIC146539195'
     #specname = 'bj501.88.fits'
     #specname = 'ij501.88.fits'
-    specname = 'rj501.88.fits'
+    #specname = 'rj501.88.fits'
 
-    spectrum_path = os.path.join(
-        DATADIR, 'HIRES', idstring, specname
-    )
+    # CPVs
+    idstring = 'TIC59129133'
+    idstring = 'TIC264599508'
+    idstring = 'TIC408188366'
+    idstring = 'TIC141146667'
+
+    spectrum_paths = glob(os.path.join(
+        DATADIR, 'HIRES', idstring, '?j*fits'
+    ))
 
     if args.do_orders:
         outdir = os.path.join(OUTDIR, 'HIRES', 'spec_viz_orders')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        _idstr = idstring + "_" + specname.replace(".fits","")
-        plot_orders(spectrum_path, outdir=outdir, idstring=_idstr)
+        for spectrum_path in spectrum_paths:
+            specname = os.path.basename(spectrum_path)
+            _idstr = idstring + "_" + specname.replace(".fits","")
+            plot_orders(spectrum_path, outdir=outdir, idstring=_idstr)
 
     if args.do_stack_comparison:
         outdir = os.path.join(OUTDIR, 'HIRES', 'stack_comparisons')
@@ -461,7 +469,8 @@ def main_rvs(args):
     ####################
     # change these #
     DOWNLOAD_SPECTRA = 0
-    cache_id = 'bprp_gt2_dlt10pc'
+    #cache_id = 'bprp_gt2_dlt20pc'
+    cache_id = '20230411_good_CPV_dlt150pc_hasRVS'
     ####################
 
     cachedir = f'/Users/luke/.gaia_cache/RVS/{cache_id}'
