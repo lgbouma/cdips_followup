@@ -10,6 +10,7 @@ READ:
     read_galah: Read GALAH (DR3) spectrum FITS file.
         read_galah_given_sobject_id
     read_gaiaeso: Read GAIA-ESO (DR4) spectrum FITS file. (GIRAFFE and UVES)
+    read_winered: Read WINERED 1d FITS file.
 
 SPECMATCH WRAPPERS:
     specmatch_analyze: shift+cross-correlate to get vsini, Rstar, FeH w/ SME.
@@ -151,6 +152,7 @@ def retrieve_floats(string):
     else:
         return None
 
+df = pd.read_csv(nir_csvpath)
 df['intensint'] = df['intens'].apply(retrieve_integer_digits)
 df['obs_wl_air'] = df['obs_wl_air(A)'].apply(retrieve_floats)
 
@@ -163,8 +165,6 @@ for element, wl in zip(sdf.element, sdf.obs_wl_air):
 sdf = df[df.element == 'He'].drop_duplicates('obs_wl_air')
 for element, wl in zip(sdf.element, sdf.obs_wl_air):
 	LINE_D.append([element, wl])
-
-import IPython; IPython.embed()
 
 
 # directories
@@ -353,6 +353,26 @@ def read_gaiaeso(spectrum_path):
     wav = 10*d.WAVE # convert to angstrom
     flx = d.FLUX
     return flx.flatten(), wav.flatten()
+
+def read_winered(spectrum_path):
+    # per warp/Spec1Dtools.py, in the WARP WINERED pipeline
+
+    if spectrum_path.find("fits") == -1:
+        spectrum_path += ".fits"
+
+    spfits = fits.open(spectrum_path)
+    splength = spfits[0].header["NAXIS1"]
+    spdata = spfits[0].data
+
+    rcrval1 = float(spfits[0].header["CRVAL1"])
+    rcdelt1 = float(spfits[0].header["CDELT1"])
+    rcrpix1 = float(spfits[0].header["CRPIX1"])
+
+    lamx = np.array([rcrval1 + rcdelt1 * (l - rcrpix1 + 1.) for l in range(splength)])
+    spfits.close()
+
+    return spdata, lamx
+
 
 
 def read_neid(filename, read_ccf=True,
@@ -775,6 +795,10 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
         df = pd.read_csv(spectrum_path)
         flx_2d = np.array(df.flux).reshape((1, len(df)))
         wav_2d = 10*np.array(df.wavelength).reshape((1, len(df)))
+
+    elif 'WINERED' in spectrum_path:
+        flx, wav = read_winered(spectrum_path)
+        raise NotImplementedError
 
     else:
         raise NotImplementedError
