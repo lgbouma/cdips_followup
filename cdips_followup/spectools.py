@@ -134,10 +134,43 @@ LINE_D = [
     ['S[I]', 8696.7],
 ]
 
+LINELISTDIR = join(os.path.dirname(__path__[0]), 'data/linelists')
+# from https://physics.nist.gov/PhysRefData/ASD/lines_form.html, 9000A to 12000A
+nir_csvpath = join(LINELISTDIR, "nist_linelist_9000A_to_12000A.csv")
+
+def retrieve_integer_digits(string):
+    digits = re.findall(r'\d+', string)
+    if digits:
+        return int(digits[0])
+    else:
+        return None
+def retrieve_floats(string):
+    floats = re.findall(r'\d+\.\d+', string)
+    if floats:
+        return float(floats[0])
+    else:
+        return None
+
+df['intensint'] = df['intens'].apply(retrieve_integer_digits)
+df['obs_wl_air'] = df['obs_wl_air(A)'].apply(retrieve_floats)
+
+# add hydrogen lines btwn 9000-12000A
+sdf = df[df.element == 'H'].drop_duplicates('obs_wl_air')
+for element, wl in zip(sdf.element, sdf.obs_wl_air):
+	LINE_D.append([element, wl])
+
+# add helium lines btwn 9000-12000A
+sdf = df[df.element == 'He'].drop_duplicates('obs_wl_air')
+for element, wl in zip(sdf.element, sdf.obs_wl_air):
+	LINE_D.append([element, wl])
+
+import IPython; IPython.embed()
+
+
 # directories
-DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
-OUTDIR = os.path.join(os.path.dirname(__path__[0]), 'results/spec_analysis')
-TESTOUTDIR = os.path.join(OUTDIR, 'tests')
+DATADIR = join(os.path.dirname(__path__[0]), 'data/spectra')
+OUTDIR = join(os.path.dirname(__path__[0]), 'results/spec_analysis')
+TESTOUTDIR = join(OUTDIR, 'tests')
 for d in [OUTDIR, TESTOUTDIR]:
     if not os.path.exists(d): os.mkdir(d)
 
@@ -158,7 +191,7 @@ def read_nextgen(teff=5500, vsini=5, logg=4.5, vturb=2):
     """
 
 
-    NEXTGENDIR = os.path.join(
+    NEXTGENDIR = join(
         os.path.expanduser('~'),
         'local',
         'HighResGrid'
@@ -176,7 +209,7 @@ def read_nextgen(teff=5500, vsini=5, logg=4.5, vturb=2):
         str(vsini).zfill(3)
     )
 
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         NEXTGENDIR, spectrum_name
     )
 
@@ -403,7 +436,7 @@ def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
     fits_files = [[], [], [], []]
     ccdlist = [1,2,3,4] if single_ccd is None else [single_ccd]
     for each_ccd in ccdlist:
-        globstr = os.path.join(
+        globstr = join(
                 working_directory, str(sobject_id)+str(each_ccd)+'.fits'
         )
         fits_files[each_ccd-1] = glob(globstr)
@@ -411,7 +444,7 @@ def read_galah_given_sobject_id(sobject_id, working_directory, verbose=True,
     # If not already available, try to download
     for each_ccd in ccdlist:
         if fits_files[each_ccd-1] == []:
-            globstr = os.path.join(
+            globstr = join(
                     working_directory, str(sobject_id)+str(each_ccd)+'.fits'
             )
             msg = f'Did not find {globstr}'
@@ -772,12 +805,12 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
             wav = deepcopy(wav) - xshift
 
         outname = f'{idstring}_order{str(order).zfill(2)}.png'
-        outpath = os.path.join(outdir, outname)
+        outpath = join(outdir, outname)
         viz_1d_spectrum(flx, wav, outpath)
 
         if isinstance(flat_path, str):
             outname = f'{idstring}_order{str(order).zfill(2)}_flat.png'
-            outpath = os.path.join(outdir, outname)
+            outpath = join(outdir, outname)
             viz_1d_spectrum(flat, wav, outpath)
 
 
@@ -826,7 +859,7 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
 
             if viz_1d:
                 outname = f'{idstring}_{k}_order{str(order).zfill(2)}.png'
-                outpath = os.path.join(outdir, outname)
+                outpath = join(outdir, outname)
                 if not os.path.exists(outpath):
                     ylim = None
                     if order == 7 and 'bj' in sp.lower():
@@ -875,7 +908,7 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                 diff_f = norm_flx - _model_f
 
                 outname = f'{idstring}_{k}_order{str(order).zfill(2)}_modelsubtracted.png'
-                outpath = os.path.join(outdir, outname)
+                outpath = join(outdir, outname)
                 csvpath = outpath.replace('.png','.csv')
                 if not os.path.exists(outpath):
                     ylim = [-0.5,0.5]
@@ -909,7 +942,7 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                 dirname = os.path.dirname(sp)
                 if "HiRes" in dirname:
                     _hl = fits.open(
-                        os.path.join(dirname,
+                        join(dirname,
                                      "WAVE_PHOENIX-ACES-AGSS-COND-2011.fits")
                     )
                     syn_wav = _hl[0].data
@@ -992,7 +1025,7 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
 
             ostr = str(ij).zfill(2)
             outname = idstring + "_".join(star_ids) + f"order{ostr}{savstr}.png"
-            outpath = os.path.join(outdir, outname)
+            outpath = join(outdir, outname)
 
             plt.close("all")
             set_style("clean")
@@ -1279,7 +1312,7 @@ def plot_spec_vs_dwarf_library(wavlim, teff, outdir, idstring, sm_res=None,
     plt.xlabel('Wavelength (Angstroms)')
     plt.ylabel('Normalized Flux (Arbitrary Offset)')
 
-    outpath = os.path.join(outdir, '{}_compare_speclib.png'.format(idstring))
+    outpath = join(outdir, '{}_compare_speclib.png'.format(idstring))
     savefig(fig, outpath, writepdf=False)
 
 
@@ -2191,7 +2224,7 @@ def measure_vsini(wav, flx, flxerr=None, teff=6000, logg=4.5, vturb=2, outdir=No
 
     # make a stacked spectrum plot showing target spectrum on top, and the
     # candidate model spectra below. Nice for "chi by eye"
-    outpath = os.path.join(
+    outpath = join(
         outdir, targetname+'_vsini-stack-shift{:.2f}.png'.format(best_shift)
     )
     if not os.path.exists(outpath):
@@ -2234,7 +2267,7 @@ def measure_veloce_vsini(specname, targetname, teff, outdir):
     over selected orders, and mean wavelength shift over the same.
     """
 
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'Veloce', specname
     )
 
@@ -2279,7 +2312,7 @@ def measure_veloce_vsini(specname, targetname, teff, outdir):
         'shift': o_shift,
         'chi2': o_chi2
     })
-    outpath = os.path.join(outdir, specname.replace('.fits','_vsini_fit.csv'))
+    outpath = join(outdir, specname.replace('.fits','_vsini_fit.csv'))
     out_df.to_csv(outpath, index=False)
     print('made {}'.format(outpath))
 
@@ -2391,7 +2424,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
 
     cont_norm_spec = spec / cont_flx
 
-    outpath = os.path.join(outdir, f'{idstring}_{region}_cont_norm_check.png')
+    outpath = join(outdir, f'{idstring}_{region}_cont_norm_check.png')
 
     f,axs = plt.subplots(nrows=2, ncols=1, figsize=(6,4))
     axs[0].plot(wav, flx, c='k', zorder=3, lw=0.5)
@@ -2432,7 +2465,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     except IndexError:
         match_name = sm_res.shift_ref.name
 
-    outpath = os.path.join(outdir, f'{idstring}_{region}_shift_check.png')
+    outpath = join(outdir, f'{idstring}_{region}_shift_check.png')
     fig = plt.figure(figsize=(10,5))
     sm_res.target_unshifted.plot(normalize=True, plt_kw={'color':'forestgreen'}, text='Target (unshifted)')
     sm_res.target.plot(offset=1.0, plt_kw={'color':'royalblue'}, text='Target (shifted): {}'.format(idstring))
@@ -2452,7 +2485,7 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
     sm_res.match(wavlim=wavlimshifted)
 
     # Plot chi-squared surfaces
-    outpath =  os.path.join(outdir, f'{idstring}_{region}_chisq.png')
+    outpath =  join(outdir, f'{idstring}_{region}_chisq.png')
 
     fig = plt.figure(figsize=(12, 8))
     sm_res.plot_chi_squared_surface()
