@@ -45,11 +45,12 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 1
+    args.is_hires = 0
     args.is_neid = 0
     args.is_harps = 0
     args.is_coralie = 0
     args.is_rvs = 0
+    args.is_winered = 1
 
     if args.is_pfs:
 
@@ -101,6 +102,9 @@ def main():
 
     elif args.is_rvs:
         main_rvs(args)
+
+    elif args.is_winered:
+        main_winered(args)
 
 
 def main_pfs(args):
@@ -505,6 +509,33 @@ def main_rvs(args):
             idstring = f"bprp{bp_rp:.3f}_G{g:.3f}_gdr3_{dr3_source_id}"
 
             plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
+
+
+def main_winered(args):
+
+    outputdir =(
+        '/Users/luke/Dropbox/proj/cpv/data/spectra/WINERED/'
+        #'bouma_june03_hiresy/pipeline_output_v2/'
+        'bouma_june10_hiresy/pipeline_output_v0/'
+    )
+    #object_id = 'TIC_89026133'
+    object_id = 'TIC_167664935'
+    datadir = join(outputdir, f'{object_id}_sum/VAC_norm/fsr1.05')
+
+    spectrum_paths = glob(join(datadir, '{object_id}*fits'))
+
+    if args.do_orders:
+
+        outdir = join(outputdir, 'order_plots_VAC_norm_fsr1.05')
+        if not os.path.exists(outdir): os.mkdir(outdir)
+
+        from cdips_followup.spectools import read_winered, viz_1d_spectrum
+
+        for spectrum_path in spectrum_paths:
+            flx, wav = read_winered(spectrum_path)
+            outname = os.path.basename(spectrum_path.replace('.fits','.png'))
+            outpath = join(outdir, outname)
+            viz_1d_spectrum(flx, wav, outpath, ylabel='flx [cont norm]')
 
 
 

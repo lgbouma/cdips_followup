@@ -223,6 +223,19 @@ if __name__ == "__main__":
     ticid = '632499596' # UV Ceti
     ticid = '166527623' # HIP 67522
     ticid = '151483286' # TOI 2818
+    ticid = '283410775'
+    ticid = '353011288'
+    ticid = '389423271' # speedy mic
+    ticid = '220433363' # double peak cairt RVS core
+    ticid = '405910546' # cqv
+    ticid = '193831684' # EB? or cqv
+    ticid = '5714469'   # EB? or cqv?
+    ticid = '175291727' # Pr0211b
+    ticid = '175290574' # Pr0201b
+    ticid = '149248196' # AB Dor
+    ticid = '283410775' # V374 Peg -- 0.44d M dwarf, cited in Stauffer+17
+    ticid = '5656273' # HK Aqr
+    ticid = '160633268' # LQ Lup
 
     # # optional #
     # period = 1.395733 # None
