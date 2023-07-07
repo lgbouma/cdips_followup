@@ -27,9 +27,9 @@ CALCULATE:
 
 VISUALIZE:
     viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
-    plot_orders
+        plot_orders: wrapper to viz_1d_spectrum
+        inspect_pfs: DEPRECATED
     plot_stack_comparison: visual comparison of spectra in a stack.
-    inspect_pfs
     specmatch_viz_compare: SME comparison of target and HIRES library spectra.
     plot_spec_vs_dwarf_library: SME ditto.
 
@@ -713,7 +713,8 @@ def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=5180*u.AA,
 #################
 
 def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
-                    ylim=None, norm_median=False, ylabel=None):
+                    ylim=None, norm_median=False, ylabel=None, xlabel=None,
+                    fig=None, ax=None, axtitle=None):
 
     if isinstance(xlim, list):
         xmin = xlim[0]
@@ -727,8 +728,15 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
         median_flx = np.nanmedian(flx)
         flx /= median_flx
 
-    plt.close('all')
-    f,ax = plt.subplots(figsize=(10,3))
+    FNSAVEPLOT = 1
+    if fig is None and ax is None:
+        plt.close('all')
+        fig,ax = plt.subplots(figsize=(10,3))
+    else:
+        # if you are plotting onto some axis grid, pass the figure too
+        assert not (fig is None) and not (ax is None)
+        FNSAVEPLOT = 0
+
     ax.plot(wav, flx, c='k', zorder=3, lw=0.2)
 
     y_90 = np.nanpercentile(flx, 90)
@@ -738,7 +746,12 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
 
     # ax.set_ylim( (y_median-1.1*y_diff, y_median+1.1*y_diff) )
 
-    ax.set_xlabel('wavelength [angstrom]')
+    ax.set_xlabel('λvac [Angstrom]')
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+    if xlabel == '':
+        ax.set_xticklabels([])
+
     ax.set_ylabel('flux [e-]')
     if norm_median:
         ax.set_ylabel('flux (median normalized)')
@@ -755,6 +768,9 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
 
     if isinstance(ylim, (list, tuple)):
         ax.set_ylim(ylim)
+
+    if isinstance(axtitle, str):
+        ax.set_title(axtitle)
 
     if norm_median:
         txt = f'med(f)={median_flx:.1f}e$^-$'
@@ -794,9 +810,10 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
 
     ax.grid(which='both', axis='x', zorder=-3, lw=0.3, ls='--')
 
-    format_ax(ax)
-    savefig(f, outpath, writepdf=False)
-    plt.close()
+    if FNSAVEPLOT:
+        format_ax(ax)
+        savefig(fig, outpath, writepdf=False)
+        plt.close()
 
 
 def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
@@ -1012,8 +1029,7 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
                 dirname = os.path.dirname(sp)
                 if "HiRes" in dirname:
                     _hl = fits.open(
-                        join(dirname,
-                                     "WAVE_PHOENIX-ACES-AGSS-COND-2011.fits")
+                        join(dirname, "WAVE_PHOENIX-ACES-AGSS-COND-2011.fits")
                     )
                     syn_wav = _hl[0].data
                     _hl.close()
@@ -1172,6 +1188,8 @@ def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
 def inspect_pfs(nightstr, targetline, xlim=None):
     # NIST has the Li I resonance doublet listed with one transition at 6707.76
     # and the other at 6707.91 A.
+
+    raise DeprecationWarning
 
     targetid = 'TIC268301217.01'
     datestr = '20200203_{}'.format(nightstr)

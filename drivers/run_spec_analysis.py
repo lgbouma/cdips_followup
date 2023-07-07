@@ -30,7 +30,7 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 1           # plot all orders
+    args.do_orders = 0           # plot all orders
     args.do_sms_analysis = 0     # run specmatch-syn analysis
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
@@ -39,7 +39,7 @@ def main():
     args.do_halpha_ew = 0        # emission, absorption, either way!
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
-    args.do_stack_comparison = 0 # compare versus stack
+    args.do_stack_comparison = 1 # compare versus stack
 
     args.is_pfs = 0
     args.is_veloce = 0
@@ -513,20 +513,31 @@ def main_rvs(args):
 
 def main_winered(args):
 
-    outputdir =(
-        '/Users/luke/Dropbox/proj/cpv/data/spectra/WINERED/'
-        #'bouma_june03_hiresy/pipeline_output_v2/'
-        'bouma_june10_hiresy/pipeline_output_v0/'
-    )
-    #object_id = 'TIC_89026133'
-    object_id = 'TIC_167664935'
-    datadir = join(outputdir, f'{object_id}_sum/VAC_norm/fsr1.05')
-
-    spectrum_paths = glob(join(datadir, '{object_id}*fits'))
-
     if args.do_orders:
+        # just plot the orders
+        ##########################################
+        do0 = 0
+        do1 = 1
+        if do0:
+            outputdir =(
+                '/Users/luke/Dropbox/proj/cpv/data/spectra/WINERED/'
+                'bouma_june10_hiresy/'
+                'bd-185550_WINA00039003_output_v0/'
+            )
+            object_id = 'bd-185550'
+        elif do1:
+            outputdir =(
+                '/Users/luke/Dropbox/proj/cpv/data/spectra/WINERED/'
+                'bouma_june03_hiresy/'
+                'cd-38245_WINA00037499_output_v0/'
+            )
+            object_id = 'cd-38245'
+        ##########################################
+        airvac = "VAC"
+        datadir = join(outputdir, f'{object_id}_sum/{airvac}_norm/fsr1.05')
+        spectrum_paths = glob(join(datadir, f'{object_id}*fits'))
 
-        outdir = join(outputdir, 'order_plots_VAC_norm_fsr1.05')
+        outdir = join(outputdir, f'order_plots_{airvac}_norm_fsr1.05')
         if not os.path.exists(outdir): os.mkdir(outdir)
 
         from cdips_followup.spectools import read_winered, viz_1d_spectrum
@@ -537,7 +548,81 @@ def main_winered(args):
             outpath = join(outdir, outname)
             viz_1d_spectrum(flx, wav, outpath, ylabel='flx [cont norm]')
 
+    if args.do_stack_comparison:
+        # compare science spectra against telluric refernce stars
+        ##########################################
+        do0 = 0
+        do1 = 1
+        if do0:
+            basedir = (
+                '/Users/luke/Dropbox/proj/cpv/data/spectra/WINERED/'
+                'bouma_june10_hiresy/'
+            )
+            ref_objectid = 'bd-185550'
+            ref_frameid = 'WINA00039003'
+            refdir = join(basedir, f'{ref_objectid}_{ref_frameid}_output_v0/')
+            sci_objectid = 'TIC_167664935'
+            sci_frameid = 'WINA00038979'
+            scidir = join(basedir, f'{sci_objectid}_{sci_frameid}_output_v0/')
 
+        elif do1:
+            basedir = (
+                '/Users/luke/Dropbox/proj/cpv/data/spectra/WINERED/'
+                'bouma_june03_hiresy/'
+            )
+            ref_objectid = 'cd-38245'
+            ref_frameid = 'WINA00037499'
+            refdir = join(basedir, f'{ref_objectid}_{ref_frameid}_output_v0/')
+            sci_objectid = 'TIC_89026133'
+            sci_frameid = 'WINA00037475'
+            scidir = join(basedir, f'{sci_objectid}_{sci_frameid}_output_v0/')
+
+        ##########################################
+
+        # make directories
+        airvac = "VAC"
+        outdir = join(basedir, f'stackcomparison_plots_{airvac}_norm_fsr1.05')
+        if not os.path.exists(outdir): os.mkdir(outdir)
+        outdir = join( outdir,
+            f'{sci_objectid}_{sci_frameid}_vs_{ref_objectid}_{ref_frameid}'
+        )
+        if not os.path.exists(outdir): os.mkdir(outdir)
+
+        # collect the paths
+        sci_datadir = join(scidir, f'{sci_objectid}_sum/{airvac}_norm/fsr1.05')
+        ref_datadir = join(refdir, f'{ref_objectid}_sum/{airvac}_norm/fsr1.05')
+
+        sci_sppaths = np.sort(glob(join(sci_datadir, f'{sci_objectid}*fits')))
+        ref_sppaths = np.sort(glob(join(ref_datadir, f'{ref_objectid}*fits')))
+
+        assert len(sci_sppaths) == len(ref_sppaths)
+        assert len(sci_sppaths) > 0
+
+        from cdips_followup.spectools import read_winered, viz_1d_spectrum
+        import matplotlib.pyplot as plt
+        from aesthetic.plot import set_style, savefig
+
+        for sci_sppath, ref_sppath in zip(sci_sppaths, ref_sppaths):
+
+            plt.close('all')
+            set_style("science")
+            fig,axs = plt.subplots(nrows=2, ncols=1, figsize=(10,6))
+
+            flx, wav = read_winered(ref_sppath)
+            axtitle0 = os.path.basename(ref_sppath).rstrip(".fits").replace("_fsr1.05_VAC_norm","")
+            viz_1d_spectrum(flx, wav, None, ylabel='flx [cont norm]',
+                            xlabel='', fig=fig, ax=axs[0], axtitle=axtitle0)
+
+            flx, wav = read_winered(sci_sppath)
+            axtitle1 = os.path.basename(sci_sppath).rstrip(".fits").replace("_fsr1.05_VAC_norm","")
+            viz_1d_spectrum(flx, wav, None, ylabel='flx [cont norm]',
+                            fig=fig, ax=axs[1], axtitle=axtitle1)
+
+            outname = f"sci-{axtitle1}_vs_ref-{axtitle0}.png"
+            outpath = join(outdir, outname)
+
+            fig.tight_layout()
+            savefig(fig, outpath, writepdf=0)
 
 
 if __name__ == "__main__":
