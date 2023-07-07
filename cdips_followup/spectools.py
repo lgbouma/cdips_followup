@@ -23,6 +23,7 @@ CALCULATE:
     measure_veloce_vsini: wraps below.
         measure_vsini: compares target spectrum to broadend NextGen spectra
     given_deltawvlen_get_vsys: convert Δλ to velocity.
+    air_to_vac: given air wavelengths, get vacuum wavelengths
 
 VISUALIZE:
     viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
@@ -66,6 +67,17 @@ from aesthetic.plot import savefig, format_ax, set_style
 
 from cdips_followup import __path__
 from cdips_followup.paths import SPECDIR
+
+def air_to_vac(wavelength):
+    """
+    Implements the air to vacuum wavelength conversion described in eqn 65 of
+    Griesen 2006
+
+    Requires dimensionful (air) wavelength input.
+    """
+    wlum = wavelength.to(u.um).value
+
+    return (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4)) * wavelength
 
 # usable orders in Veloce spectra. 0-based count.
 VELOCE_ORDERS = [
@@ -133,6 +145,26 @@ LINE_D = [
     ['NI', 8685.4],
     ['FeI' , 8691.0],
     ['S[I]', 8696.7],
+    ['Pa η', 9017.4], # 10->3
+    ['Pa ζ', 9231.5], # 9->3
+    ['Pa ε', 9548.6], # 8->3
+    ['Pa δ', 10052.1], # 7->3
+    ['Pa γ', 10941.1], # 6->3
+    ['Pa β', 12821.6], # 5->3
+    ['Pa α', 18756.1], # 4->3
+    #['Ca[I]', air_to_vac(10343.8194*u.angstrom).value], # Muirhead+2020,m from VALD3 database
+    ['Ti[I]', air_to_vac(10396.802*u.angstrom).value],  # ''
+    ['Ti[I]', air_to_vac(10496.113*u.angstrom).value],  # ''
+    ['Ti[I]', air_to_vac(10584.633*u.angstrom).value],  # ''
+    ['Ti[I]', air_to_vac(10677.047*u.angstrom).value],  # ''
+    ['Ti[I]', air_to_vac(10726.391*u.angstrom).value],  # ''
+    ['Ti[I]', air_to_vac(10774.866*u.angstrom).value],  # ''
+    ['[S III]', air_to_vac(9531.10052*u.angstrom).value], # http://astronomy.nmsu.edu/drewski/tableofemissionlines.html
+    ['[C I]', air_to_vac(9824.130*u.angstrom).value], #''
+    ['[C I]', air_to_vac(9850.260*u.angstrom).value], #''
+    ['[S VIII]', air_to_vac(9913.000*u.angstrom).value], #''
+    ['[Fe XIII]', air_to_vac(10746.800*u.angstrom).value], #''
+
 ]
 
 LINELISTDIR = join(os.path.dirname(__path__[0]), 'data/linelists')
@@ -159,13 +191,27 @@ df['obs_wl_air'] = df['obs_wl_air(A)'].apply(retrieve_floats)
 # add hydrogen lines btwn 9000-12000A
 sdf = df[df.element == 'H'].drop_duplicates('obs_wl_air')
 for element, wl in zip(sdf.element, sdf.obs_wl_air):
-	LINE_D.append([element, wl])
+	LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
-# add helium lines btwn 9000-12000A
-sdf = df[df.element == 'He'].drop_duplicates('obs_wl_air')
+# add sodium, calcium, potassium, magnesium, helium, silicon lines btwn 9000-12000A
+for el in ['Na', 'Ca', 'K', 'Mg', 'He', 'Si']:
+    sdf = df[df.element == el].drop_duplicates('obs_wl_air')
+    for element, wl in zip(sdf.element, sdf.obs_wl_air):
+        LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
+
+# take the top 5% strongest iron lines
+sdf = df[df.element == 'Fe'].drop_duplicates('obs_wl_air')
+fe_95 = np.nanpercentile(sdf.intensint, 95)
+sdf = sdf[sdf.intensint > fe_95]
 for element, wl in zip(sdf.element, sdf.obs_wl_air):
-	LINE_D.append([element, wl])
+    LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
+# take the top 10% strongest Ti lines
+sdf = df[df.element == 'Ti'].drop_duplicates('obs_wl_air')
+ti_90 = np.nanpercentile(sdf.intensint, 90)
+sdf = sdf[sdf.intensint > ti_90]
+for element, wl in zip(sdf.element, sdf.obs_wl_air):
+    LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
 # directories
 DATADIR = join(os.path.dirname(__path__[0]), 'data/spectra')
@@ -2536,3 +2582,4 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
         f'{idstring}_{region}',
         sm_res=sm_res
     )
+
