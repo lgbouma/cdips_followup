@@ -194,7 +194,8 @@ for element, wl in zip(sdf.element, sdf.obs_wl_air):
 	LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
 # add sodium, calcium, potassium, magnesium, helium, silicon lines btwn 9000-12000A
-for el in ['Na', 'Ca', 'K', 'Mg', 'He', 'Si']:
+#for el in ['Na', 'Ca', 'K', 'Mg', 'He', 'Si']:
+for el in ['Ca', 'He', 'Si']:
     sdf = df[df.element == el].drop_duplicates('obs_wl_air')
     for element, wl in zip(sdf.element, sdf.obs_wl_air):
         LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
