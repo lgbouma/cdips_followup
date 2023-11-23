@@ -69,23 +69,27 @@ def get_log_row(star_id, coord, vmag, exptime, counts):
     return row_oldfmt, row_newfmt
 
 def main():
+    # given TIC ID's, get HIRES info
 
-    datestr = '20220903'
-    jobstr = '22B_TOIs_v0'
+    datestr = '20231122'
+    jobstr = '23B_CPVs'
 
-    targetdir = '/Users/luke/Dropbox/Documents/proposals/2022_03_COO_TOIs_KOIs/target_lists'
+    targetdir = './targetlists/'
     targetpath = os.path.join(
         targetdir,
-        '20220903_2022B_TOIs_HIRES_TOIs_needing_22B_HIRES_CDIPS_with_ticids.csv'
+        '20231122_cpv_sciencetargets.csv'
     )
     df = pd.read_csv(targetpath)
 
     # NOTE: THIS IS THE MANUAL SELECTION STEP.
-    df = df[df.hires_priority == 2]
+    #df = df[df.hires_priority == 2]
 
     star_ids, coords, vmags, exptimes, counts = [], [], [], [], []
 
     for ticid in df.ticid:
+
+        print(42*'-')
+        print(f'Starting TIC {ticid}...')
 
         star_ids.append(f"TIC{ticid}")
 
@@ -99,13 +103,14 @@ def main():
         assert len(gdf) == 1
 
         xmatches = tic_xmatch(
-            np.array(gdf.ra), np.array(gdf.dec), radius_arcsec=2
+            np.array(gdf.ra), np.array(gdf.dec), radius_arcsec=4
         )
         with open(xmatches['cachefname'], 'r') as f:
             d = json.load(f)
         tdf = pd.DataFrame(d['data'])
 
         if len(tdf) > 1:
+            print(42*'!')
             print(f'WRN! TIC{ticid} has multiple matches.  Brightest selected...')
             print(tdf[['MatchID','GAIAmag']])
             temp = tdf.sort_values(by='GAIAmag', ascending=True)
@@ -142,6 +147,10 @@ def main():
 
         exptime_sec = exposure_time(vmag, count, iod=False)
         exptimes.append(np.round(exptime_sec, -1))
+
+        print(f'Ending TIC {ticid}...')
+        print(42*'-')
+
 
     oldlines, newlines = [], []
     for star_id, coord, vmag, exptime, count in zip(
