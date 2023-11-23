@@ -1816,6 +1816,7 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         viz_1d_spectrum(flx, wav, thispath, xlim=(6700, 6725), vlines=vlines,
                         names=names)
 
+    origxshift = deepcopy(xshift)
     if xshift == 'find':
         # automate finding the xshift, by cross-correlating against CK03864,
         # which has RV~=0, no lithium, and nice neighboring iron lines.
@@ -1892,12 +1893,17 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
             savefig(fig, _outpath, writepdf=False)
             plt.close("all")
 
+    else:
+        ntflx, nflx, nwav, twav = flx*1., flx*1., wav*1., wav*1.
+
 
     shiftstr = ''
     if isinstance(xshift, (float, int)):
         print(f"Shifting by {xshift} Angstrom")
         wav = deepcopy(wav) - xshift
         shiftstr = '_shift{:.2f}'.format(float(xshift))
+    elif isinstance(xshift, astropy.units.quantity.Quantity):
+        raise NotImplementedError('convert xshift to float or int')
 
     #
     # cut spectrum to region of interest
@@ -2090,41 +2096,53 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     set_style("science")
 
     f = plt.figure(figsize=(6, 10))
-    axd = f.subplot_mosaic(
-        """
-        AAAB
-        CCCC
-        DDDD
-        EEEE
-        FFFF
-        """
-    )
+    if origxshift == 'find':
+        axd = f.subplot_mosaic(
+            """
+            AAAB
+            CCCC
+            DDDD
+            EEEE
+            FFFF
+            """
+        )
+    else:
+        axd = f.subplot_mosaic(
+            """
+            CCCC
+            DDDD
+            EEEE
+            FFFF
+            """
+        )
 
-    ax = axd['A']
+    # only when origxshift == 'find'... show CCF vs RV
+    if origxshift == 'find':
+        # raw flux vs wavelength
+        ax = axd['A']
+        ax.plot(nwav, nflx, lw=0.5, label='target')
+        ax.plot(twav, 0.5+ntflx, lw=0.5, label='template')
+        ax.plot(nwav - xshift, 1+nflx, lw=0.5, label='target (shifted)')
+        ax.legend(loc='best', fontsize=4)
+        ax.update({'ylabel': '$f$',
+                   'ylim':[0.4, 2.1], 'xlim':[6691, 6729]})
 
-    ax.plot(nwav, nflx, lw=0.5, label='target')
-    ax.plot(twav, 0.5+ntflx, lw=0.5, label='template')
-    ax.plot(nwav - xshift, 1+nflx, lw=0.5, label='target (shifted)')
-    ax.legend(loc='best', fontsize=4)
-    ax.update({'ylabel': '$f$',
-               'ylim':[0.4, 2.1], 'xlim':[6691, 6729]})
-
-    ax = axd['B']
-    _corr = corr/np.nanmax(corr)
-    ax.plot(shift_wvlen_arr.value, _corr)
-    _sel = (shift_wvlen_arr.value > -3) & (shift_wvlen_arr.value < 3)
-    ylim = [min(_corr[_sel]), max(_corr[_sel])]
-    ax.vlines(
-        xshift, ylim[0], ylim[1], color='C0', zorder=-1, alpha=0.7, ls=":"
-    )
-    txt = f'Δx: {xshift}'
-    bbox = dict(facecolor='white', alpha=0.9, pad=0, edgecolor='white')
-    ax.text(
-        0.95, 0.95, txt, ha='right', va='top', transform=axd['B'].transAxes,
-        fontsize='xx-small', zorder=1, bbox=bbox
-    )
-    ax.update({'ylabel': 'CCF', 'xlim':[-3,3], 'ylim':ylim})
-    ax.set_yticklabels([])
+        ax = axd['B']
+        _corr = corr/np.nanmax(corr)
+        ax.plot(shift_wvlen_arr.value, _corr)
+        _sel = (shift_wvlen_arr.value > -3) & (shift_wvlen_arr.value < 3)
+        ylim = [min(_corr[_sel]), max(_corr[_sel])]
+        ax.vlines(
+            xshift, ylim[0], ylim[1], color='C0', zorder=-1, alpha=0.7, ls=":"
+        )
+        txt = f'Δx: {xshift}'
+        bbox = dict(facecolor='white', alpha=0.9, pad=0, edgecolor='white')
+        ax.text(
+            0.95, 0.95, txt, ha='right', va='top', transform=axd['B'].transAxes,
+            fontsize='xx-small', zorder=1, bbox=bbox
+        )
+        ax.update({'ylabel': 'CCF', 'xlim':[-3,3], 'ylim':ylim})
+        ax.set_yticklabels([])
 
     ax = axd['C']
     ax.plot(wav, flx, c='k', zorder=3)
@@ -2230,7 +2248,7 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
     axd['E'].set_xlim([target_wav-1.5, target_wav+1.5])
     axd['F'].set_xlim([target_wav-1.5, target_wav+1.5])
-    axd['F'].set_xlabel('$\lambda$ [angstrom] '+ f'(xshift={xshift})')
+    axd['F'].set_xlabel('$\lambda$ [angstrom] '+ f'(xshift={xshift:.4f})')
 
     f.tight_layout()
 
