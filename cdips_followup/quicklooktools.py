@@ -555,7 +555,7 @@ def explore_flux_lightcurves(
     data, hdrs, ticid, outdir=None, period=None, epoch=None, pipeline=None,
     detrend=False, window_length=None, do_phasefold=0, badtimewindows=None,
     get_lc=False, require_quality_zero=1, forceylim=None, normstitch=True,
-    slideclipdict={'window_length':1, 'high':3, 'low':8},
+    slideclipdict={'window_length':1, 'high':3, 'low':20},
     mask_orbit_edges=False
 ):
     """
@@ -800,7 +800,7 @@ def explore_flux_lightcurves(
 
     # NOTE: this call is deprecated
     stimes, smags, _ = lcmath.sigclip_magseries(
-        times, fluxs, np.ones_like(fluxs), sigclip=[20,20], iterative=True,
+        times, fluxs, np.ones_like(fluxs), sigclip=[20,50], iterative=True,
         magsarefluxes=True
     )
 
