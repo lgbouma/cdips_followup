@@ -11,6 +11,7 @@ READ:
         read_galah_given_sobject_id
     read_gaiaeso: Read GAIA-ESO (DR4) spectrum FITS file. (GIRAFFE and UVES)
     read_winered: Read WINERED 1d FITS file.
+    read_dbsp: Read DBSP 1d FITS file, extracted by PypeIt.
 
 SPECMATCH WRAPPERS:
     specmatch_analyze: shift+cross-correlate to get vsini, Rstar, FeH w/ SME.
@@ -420,6 +421,17 @@ def read_winered(spectrum_path):
 
     return spdata, lamx
 
+
+def read_dbsp(spectrum_path):
+
+    hdul = fits.open(spectrum_path)
+
+    d = hdul[1].data
+
+    wav = hdul[1].data['OPT_WAVE']
+    flx = hdul[1].data['OPT_COUNTS']
+
+    return flx.flatten(), wav.flatten()
 
 
 def read_neid(filename, read_ccf=True,
