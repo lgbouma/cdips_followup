@@ -30,7 +30,7 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 0           # plot all orders
+    args.do_orders = 1           # plot all orders
     args.do_sms_analysis = 0     # run specmatch-syn analysis
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
@@ -39,7 +39,7 @@ def main():
     args.do_halpha_ew = 0        # emission, absorption, either way!
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
-    args.do_stack_comparison = 1 # compare versus stack
+    args.do_stack_comparison = 0 # compare versus stack
 
     args.is_pfs = 0
     args.is_veloce = 0
@@ -50,7 +50,8 @@ def main():
     args.is_harps = 0
     args.is_coralie = 0
     args.is_rvs = 0
-    args.is_winered = 1
+    args.is_winered = 0
+    args.is_dbsp = 1
 
     if args.is_pfs:
 
@@ -105,6 +106,9 @@ def main():
 
     elif args.is_winered:
         main_winered(args)
+
+    elif args.is_dbsp:
+        main_dbsp(args)
 
 
 def main_pfs(args):
@@ -263,6 +267,7 @@ def main_hires(args):
     idstring = 'TIC264599508'
     idstring = 'TIC408188366'
     idstring = 'TIC141146667'
+    idstring = 'TIC402980664'
 
     spectrum_paths = glob(os.path.join(
         DATADIR, 'HIRES', idstring, '?j*fits'
@@ -568,14 +573,23 @@ def main_winered(args):
         elif do1:
             basedir = (
                 '/Users/luke/Dropbox/proj/cpv/data/spectra/WINERED/'
-                'bouma_june03_hiresy/'
+                'bouma_june10_hiresy/'
             )
-            ref_objectid = 'cd-38245'
-            ref_frameid = 'WINA00037499'
+
+            #ref_objectid = 'cd-38245'
+            #ref_frameid = 'WINA00037499'
+            #refdir = join(basedir, f'{ref_objectid}_{ref_frameid}_output_v0/')
+            #ref_objectid = 'TIC_89026133'
+            #ref_frameid = 'WINA00037475'
+            #refdir = join(basedir, f'{ref_objectid}_{ref_frameid}_output_v0/')
+
+            ref_objectid = 'bd-185550'
+            ref_frameid = 'WINA00039003'
             refdir = join(basedir, f'{ref_objectid}_{ref_frameid}_output_v0/')
+
             sci_objectid = 'TIC_89026133'
-            sci_frameid = 'WINA00037475'
-            scidir = join(basedir, f'{sci_objectid}_{sci_frameid}_output_v0/')
+            sci_frameid = 'WINA00038992'
+            scidir = join(basedir, f'{sci_objectid}_{sci_frameid}_output_v1/')
 
         ##########################################
 
@@ -611,18 +625,51 @@ def main_winered(args):
             flx, wav = read_winered(ref_sppath)
             axtitle0 = os.path.basename(ref_sppath).rstrip(".fits").replace("_fsr1.05_VAC_norm","")
             viz_1d_spectrum(flx, wav, None, ylabel='flx [cont norm]',
-                            xlabel='', fig=fig, ax=axs[0], axtitle=axtitle0)
+                            xlabel='', fig=fig, ax=axs[0], axtitle=axtitle0,
+                            ylim=[0.7,1.3])
 
             flx, wav = read_winered(sci_sppath)
-            axtitle1 = os.path.basename(sci_sppath).rstrip(".fits").replace("_fsr1.05_VAC_norm","")
+            axtitle1 = (
+                os.path.basename(sci_sppath).rstrip(".fits").replace("_fsr1.05_VAC_norm","")
+                +
+                "_"
+                +
+                sci_frameid
+            )
             viz_1d_spectrum(flx, wav, None, ylabel='flx [cont norm]',
-                            fig=fig, ax=axs[1], axtitle=axtitle1)
+                            fig=fig, ax=axs[1], axtitle=axtitle1, ylim=[0.7,1.3])
 
             outname = f"sci-{axtitle1}_vs_ref-{axtitle0}.png"
             outpath = join(outdir, outname)
 
             fig.tight_layout()
             savefig(fig, outpath, writepdf=0)
+
+
+def main_dbsp(args):
+
+    if args.do_orders:
+        # just plot the orders
+        ##########################################
+        outputdir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231111/p200_dbsp_blue_A/Viz'
+        object_id = 'LP_12-502'
+        ##########################################
+
+        datadir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231111/p200_dbsp_blue_A/Science'
+
+        spectrum_paths = glob(join(datadir, f'spec1d_blue*{object_id}*fits'))
+
+        outdir = outputdir
+
+        if not os.path.exists(outdir): os.mkdir(outdir)
+
+        from cdips_followup.spectools import read_dbsp, viz_1d_spectrum
+
+        for spectrum_path in spectrum_paths:
+            flx, wav = read_dbsp(spectrum_path)
+            outname = os.path.basename(spectrum_path.replace('.fits','.png'))
+            outpath = join(outdir, outname)
+            viz_1d_spectrum(flx, wav, outpath, ylabel='counts')
 
 
 if __name__ == "__main__":
