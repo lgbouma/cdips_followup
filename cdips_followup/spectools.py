@@ -20,7 +20,7 @@ SPECMATCH WRAPPERS:
 CALCULATE:
     fit_continuum: fits a quadratic polynomial across the order.
     get_Li_6708_EW: measure Li EW.
-    get_Halpha_EW: measure Halpha EW
+    get_line_EW: measure EW for an arbitrary line.
     measure_veloce_vsini: wraps below.
         measure_vsini: compares target spectrum to broadend NextGen spectra
     given_deltawvlen_get_vsys: convert Δλ to velocity.
@@ -2272,16 +2272,428 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         print(f'Made {outpath}')
 
 
-def get_Halpha_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
-                  outpath=None, is_template=False, writecsvresults=True,
-                  verbose=True, montecarlo_errors=True):
-    #FIXME UPDATE THE entire thing!  Probably find-replace a lot of stuff.
+def get_line_EW(spectrum_path, xshift=None, delta_wav=10, outpath=None,
+                writecsvresults=True, verbose=True, montecarlo_errors=True,
+                linewindowwidth_angstrom=1, target_wav=4861.35,
+                isemissionline=True, dintwav=4, dblock=6, linename='hbeta'):
     """
-    TODO
+    Shift the spectrum, fit a gaussian, and numerically integrate it over a
+    window (+/- `linewindowwidth_angstrom` angstrom, centered on A) to get the
+    line EW.  See e.g. get_Li_6708_EW
+
+    Args:
+
+        linecenter: in angstroms, e.g. 6562.8 for halpha.
+
+        isemissionline: sets default guess for fit line amplitude
+
+        ...rest is as in get_Li_6708_EW
+
+    Returns:
+        pandas DataFrame with keys:
+
+            'EW_mA': EW of the spectrum sans interpolation or gaussian
+            fitting.  At typical R~=20k resolution, underestimates by ~50mA.
+
+            'Fitted_EW_mA': EW of the gaussian interpolated fit. Calibrated
+            against Randich+18 for GALAH EW measurements, and agrees at >~50 mA.
+
+            'Fitted_EW_mA_perr', 'Fitted_EW_mA_merr': 84-50 percentile
+            and 50-16 percentile of the Monte-Carlo'ed `Fitted_EW_mA`.
+
+            Other keys include ['centroid_A', 'gaussian_fit_amplitude'
+            'gaussian_fit_mean', 'gaussian_fit_stddev'].
     """
 
-    raise NotImplementedError('need to write it!  likely by copy-pasting from '
-                              'Li EW implementation')
+    if not isinstance(outpath, str):
+        raise ValueError
+
+    if "DBSP" in spectrum_path:
+        flx, wav = read_dbsp(spectrum_path)
+        instrument = 'DBSP'
+    elif "HIRES" in spectrum_path:
+        print('WRN! Assuming HIRES spectrum is already deblazed')
+        flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0,
+                                    return_err=0)
+        flx, wav = _given_2d_get_1d_order(wav_2d, flx_2d, target_wav)
+        instrument = 'HIRES'
+    else:
+        raise NotImplementedError
+
+    xlim = [target_wav-delta_wav, target_wav+delta_wav]
+
+    origxshift = deepcopy(xshift)
+
+    shiftstr = ''
+    if isinstance(xshift, (float, int)):
+        print(f"Shifting by {xshift} Angstrom")
+        wav = deepcopy(wav) - xshift
+        shiftstr = '_shift{:.2f}'.format(float(xshift))
+    elif isinstance(xshift, astropy.units.quantity.Quantity):
+        raise NotImplementedError('convert xshift to float or int')
+
+    #
+    # cut spectrum to region of interest
+    #
+    if isinstance(xlim, list):
+        xmin = xlim[0]
+        xmax = xlim[1]
+        sel = (wav > xmin) & (wav < xmax)
+
+        if verbose:
+            print(f'Cutting spectrum to {xmin:.3f} - {xmax:.3f} Angstrom')
+
+        wav = wav[sel]
+        flx = flx[sel]
+
+        sel = np.isfinite(flx) & np.isfinite(wav)
+        wav, flx = wav[sel], flx[sel]
+
+        ## exclude cosmic rays, by requiring flux < median(flux) + 5*STD_MAD
+        #stdev_hat = 1.483 * np.nanmedian(np.abs(flx - np.nanmedian(flx)))
+        #sel = ~(flx>np.nanmedian(flx)+5*stdev_hat)
+
+        #wav, flx = wav[sel], flx[sel]
+
+        if verbose:
+            thispath = outpath.replace('.png', '_fittedslice.csv')
+            outdf = pd.DataFrame({
+                'wav': wav,
+                'flx': flx
+            })
+            outdf.to_csv(thispath, index=False)
+            print(f'Cacheing to {thispath}')
+
+    #
+    # fit continuum. when doing so, exclude absorption lines.
+    #
+    vlines = [target_wav]
+    names = [linename]
+    if isinstance(xlim, list):
+        exclude_regions = []
+        for _wv in vlines:
+            if xmin < _wv-dblock and xmax > _wv+dblock:
+                exclude_regions.append(
+                    SpectralRegion((_wv-dblock)*u.AA, (_wv+dblock)*u.AA)
+                )
+
+    region = SpectralRegion((target_wav-dintwav)*u.AA, (target_wav+dintwav)*u.AA)
+
+    spec = Spectrum1D(spectral_axis=wav*u.AA,
+                      flux=flx*u.dimensionless_unscaled)
+
+    cont_flx = fit_generic_continuum(
+        spec, exclude_regions=exclude_regions
+    )(spec.spectral_axis)
+
+    cont_norm_spec = spec / cont_flx
+
+    if isemissionline:
+        full_spec = Spectrum1D(spectral_axis=cont_norm_spec.wavelength,
+                               flux=(cont_norm_spec.flux-1))
+    else:
+        # to fit gaussians to absorption lines... look at 1-flux.
+        full_spec = Spectrum1D(spectral_axis=cont_norm_spec.wavelength,
+                               flux=(1-cont_norm_spec.flux))
+
+
+    # get the Li EW, assuming that the spectrum has been correctly shifted to
+    # within a `2*dintwav` Angstrom region.
+    equiv_width = equivalent_width(cont_norm_spec, regions=region)
+    _centroid = centroid(full_spec, region)
+
+    # fit a gaussian, and integrate to get ITS equivalent width
+    g_init = models.Gaussian1D(
+        amplitude=0.2*u.dimensionless_unscaled,
+        mean=target_wav*u.AA, stddev=0.5*u.AA
+    )
+    g_fit = fit_lines(
+        full_spec, g_init, window=(region.lower, region.upper)
+    )
+
+    min_x, max_x, N_x = (
+        min(full_spec.wavelength), max(full_spec.wavelength), int(1e4)
+    )
+    x_fit = np.linspace(min_x, max_x, N_x)
+    y_fit = g_fit(x_fit)
+
+    if isemissionline:
+        fitted_spec = Spectrum1D(
+            spectral_axis=x_fit, flux=(y_fit-1)*u.dimensionless_unscaled
+        )
+    else:
+        fitted_spec = Spectrum1D(
+            spectral_axis=x_fit, flux=(1-y_fit)*u.dimensionless_unscaled
+        )
+    fitted_equiv_width = equivalent_width(
+        fitted_spec, regions=region
+    )
+
+
+    if montecarlo_errors:
+        N_montecarlo = int(2e1)
+
+        if exclude_regions is not None:
+            excised_spectrum = excise_regions(spec, exclude_regions)
+            continuum_rms = np.nanstd(excised_spectrum.flux).value
+
+        fitted_equiv_widths = []
+
+        for i in range(N_montecarlo):
+            if verbose:
+                print(f'{datetime.utcnow().isoformat()}: {i}/{N_montecarlo}')
+
+            np.random.seed(i)
+            err = np.random.normal(loc=0, scale=continuum_rms, size=len(wav))
+
+            spec = Spectrum1D(spectral_axis=wav*u.AA,
+                              flux=(flx+err)*u.dimensionless_unscaled)
+
+            cont_flx = fit_generic_continuum(
+                spec, exclude_regions=exclude_regions
+            )(spec.spectral_axis)
+
+            cont_norm_spec = spec / cont_flx
+
+            # to fit gaussians, look at 1-flux.
+            # fit a gaussian, and integrate to get ITS equivalent width
+            if isemissionline:
+                full_spec = Spectrum1D(
+                    spectral_axis=cont_norm_spec.wavelength,
+                    flux=(cont_norm_spec.flux-1)
+                )
+            else:
+                full_spec = Spectrum1D(
+                    spectral_axis=cont_norm_spec.wavelength,
+                    flux=(1-cont_norm_spec.flux)
+                )
+
+            g_init = models.Gaussian1D(
+                amplitude=0.2*u.dimensionless_unscaled,
+                mean=target_wav*u.AA, stddev=0.5*u.AA
+            )
+            g_fit = fit_lines(
+                full_spec, g_init, window=(region.lower, region.upper)
+            )
+
+            y_fit = g_fit(x_fit)
+
+            if isemissionline:
+                fitted_spec = Spectrum1D(
+                    spectral_axis=x_fit,
+                    flux=(y_fit-1)*u.dimensionless_unscaled
+                )
+            else:
+                fitted_spec = Spectrum1D(
+                    spectral_axis=x_fit,
+                    flux=(1-y_fit)*u.dimensionless_unscaled
+                )
+            try:
+                _fitted_equiv_width = equivalent_width(
+                    fitted_spec, regions=region
+                )
+                fitted_equiv_widths.append(
+                    _fitted_equiv_width.to(u.angstrom).value
+                )
+            except IndexError as e:
+                txt = (
+                    f'{datetime.utcnow().isoformat()}: {spectrum_path} failed!'
+                    'Got error:\n'
+                    f'{repr(e)}'
+                )
+                print(txt)
+                fitted_equiv_widths.append(
+                    np.nan
+                )
+
+        fitted_equiv_widths = nparr(fitted_equiv_widths)
+        # drop any nans
+        fitted_equiv_widths = (
+            fitted_equiv_widths[~pd.isnull(fitted_equiv_widths)]
+        )
+
+        fitted_equiv_widths_perr = (
+            np.percentile(fitted_equiv_widths, 84)
+            -
+            np.percentile(fitted_equiv_widths, 50)
+        )
+        fitted_equiv_widths_merr = (
+            np.percentile(fitted_equiv_widths, 50)
+            -
+            np.percentile(fitted_equiv_widths, 16)
+        )
+
+    else:
+        fitted_equiv_widths_perr = np.nan
+        fitted_equiv_widths_merr = np.nan
+
+
+    #
+    # print bestfit params
+    #
+    if verbose:
+        print(42*'=')
+        print(f'got line equiv width of {equiv_width:.3f}')
+        print(f'got fitted equiv width of {fitted_equiv_width:.3f}, '
+              f'from gaussian over {min_x:.1f} - {max_x:.1f}, with '
+              f'{N_x} points. ')
+        print(f'got centroid of {_centroid:.3f}')
+        print(f'fit gaussian1d params are\n{repr(g_fit)}')
+        print(42*'=')
+
+    #
+    # plot the results
+    #
+    set_style("science")
+
+    f = plt.figure(figsize=(6, 10))
+    if origxshift == 'find':
+        axd = f.subplot_mosaic(
+            """
+            AAAB
+            CCCC
+            DDDD
+            EEEE
+            FFFF
+            """
+        )
+    else:
+        axd = f.subplot_mosaic(
+            """
+            CCCC
+            DDDD
+            EEEE
+            FFFF
+            """
+        )
+
+    ax = axd['C']
+    ax.plot(wav, flx, c='k', zorder=3)
+
+    if montecarlo_errors:
+        ax.scatter(excised_spectrum.wavelength, excised_spectrum.flux,
+                    c='gray', zorder=4, s=5)
+
+    ax.plot(wav, cont_flx, c='r', zorder=2)
+
+    ax = axd['D']
+    ax.plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+
+    ax = axd['E']
+    ax.plot(cont_norm_spec.wavelength, cont_norm_spec.flux, c='k')
+
+    ylim = ax.get_ylim()
+    ax.vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
+              color='orangered', linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+
+    ax = axd['F']
+    ax.plot(full_spec.wavelength, full_spec.flux, c='k')
+    ax.plot(x_fit, y_fit, c='g')
+    ylim = ax.get_ylim()
+    ax.vlines([region.lower.value, region.upper.value], min(ylim), max(ylim),
+              color='g', linestyle='--', zorder=-2, lw=0.5, alpha=0.3)
+
+    if not montecarlo_errors:
+        txt = (
+            f'gaussian1d\namplitude:{g_fit.amplitude.value:.3f}'
+            f'\nmean:{g_fit.mean.value:.3f}'
+            f'\nstd:{g_fit.stddev.value:.3f}'
+            f'\nEW:{(equiv_width*1e3).value:.1f}mA'
+            f'\nGaussFitEW:{(fitted_equiv_width*1e3).value:.1f}mA'
+        )
+    else:
+        txt = (
+            f'gaussian1d\namplitude:{g_fit.amplitude.value:.3f}'
+            f'\nmean:{g_fit.mean.value:.3f}'
+            f'\nstd:{g_fit.stddev.value:.3f}'
+            f'\nEW:{(equiv_width*1e3).value:.1f}mA'
+            f'\nGaussFitEW:{(fitted_equiv_width*1e3).value:.1f}'
+            f'+{fitted_equiv_widths_perr*1e3:.1f}'
+            f'-{fitted_equiv_widths_merr*1e3:.1f}mA'
+        )
+
+    ax.text(
+        0.95, 0.95, txt, ha='right', va='top', transform=axd['F'].transAxes,
+        fontsize='xx-small'
+    )
+
+    axd['C'].set_ylabel('$f$')
+    axd['D'].set_ylabel('$f_\mathrm{contnorm}$')
+    axd['E'].set_ylabel('$f_\mathrm{contnorm}$ [zoom]')
+    axd['F'].set_ylabel('$1-f_\mathrm{contnorm}$')
+
+    assert isinstance(xlim, list)
+    for ax in [axd['C'], axd['D'], axd['E'], axd['F']]:
+        ax.set_xlim(xlim)
+
+    # Plot known lines
+    if isinstance(vlines, list):
+        sel = (nparr(vlines)>min(xlim)) & (nparr(vlines)<max(xlim))
+        vlines, names = nparr(vlines)[sel], nparr(names)[sel]
+        ylim = axd['C'].get_ylim()
+        delta_y = 0.9*(max(ylim) - min(ylim))
+        axd['C'].vlines(vlines, min(ylim)+delta_y, max(ylim), zorder=-3,
+                      linestyles=':', color='k', lw=0.3)
+        axd['C'].set_ylim(ylim)
+
+        tform = blended_transform_factory(axd['C'].transData, axd['C'].transAxes)
+        for x, n in zip(vlines, names):
+            axd['C'].text(x, 0.95, n, ha='center', va='top', transform=tform,
+                        fontsize=4)
+
+    ## Plot xshift diagnostic bars
+    ##target_wav = 6707.835
+    #for xbar in np.arange(0, 2.0, 0.3333):
+
+    #    for ax in [axd['C'], axd['D'], axd['E']]:
+    #        ylim = ax.get_ylim()
+    #        delta_y = 0.7*(max(ylim) - min(ylim))
+    #        ax.vlines([target_wav], min(ylim), max(ylim)-delta_y, zorder=-3,
+    #                  linestyles=':', color='C0', lw=0.6)
+    #        ax.vlines([target_wav-0.5], min(ylim), max(ylim)-delta_y, zorder=-3,
+    #                  linestyles=':', color='C1', lw=0.6)
+    #        ax.vlines([target_wav+0.5], min(ylim), max(ylim)-delta_y, zorder=-3,
+    #                  linestyles=':', color='C1', lw=0.6)
+    #        ymid = np.mean([min(ylim), max(ylim)-delta_y])
+    #        ax.vlines([target_wav-1.0], min(ylim), max(ylim)-delta_y, zorder=-3,
+    #                  linestyles=':', color='C2', lw=0.3)
+    #        ax.vlines([target_wav+1.0], min(ylim), max(ylim)-delta_y, zorder=-3,
+    #                  linestyles=':', color='C2', lw=0.3)
+    #        ax.plot(
+    #            [target_wav - xbar, target_wav + xbar],
+    #            [ymid, ymid],
+    #            c='C0',
+    #            lw=5,
+    #            alpha=0.2
+    #        )
+    #        ax.set_ylim(ylim)
+
+
+    axd['E'].set_xlim([target_wav-dblock, target_wav+dblock])
+    axd['F'].set_xlim([target_wav-dblock, target_wav+dblock])
+    axd['F'].set_xlabel('$\lambda$ [angstrom] '+ f'(xshift={xshift:.4f})')
+
+    f.tight_layout()
+
+    savefig(f, outpath, writepdf=False)
+
+    if writecsvresults:
+        outpath = outpath.replace('.png','_results.csv')
+        outdict = {
+            'xshift': xshift,
+            'EW_mA': np.round(equiv_width*1e3, 3),
+            'Fitted_EW_mA': np.round(fitted_equiv_width*1e3, 3),
+            'Fitted_EW_mA_perr': np.round(fitted_equiv_widths_perr*1e3, 3),
+            'Fitted_EW_mA_merr': np.round(fitted_equiv_widths_merr*1e3, 3),
+            'centroid_A': np.round(_centroid, 3),
+            'gaussian_fit_amplitude': np.round(g_fit.amplitude.value, 4),
+            'gaussian_fit_mean': np.round(g_fit.mean.value, 4),
+            'gaussian_fit_stddev': np.round(g_fit.stddev.value, 4)
+        }
+        outdf = pd.DataFrame(outdict, index=[0])
+        outdf.to_csv(outpath, index=False)
+        print(f'Made {outpath}')
+
 
 
 def measure_vsini(wav, flx, flxerr=None, teff=6000, logg=4.5, vturb=2, outdir=None,
