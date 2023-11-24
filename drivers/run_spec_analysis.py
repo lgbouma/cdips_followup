@@ -15,13 +15,13 @@ import numpy as np
 from glob import glob
 from cdips_followup import __path__
 from cdips_followup.spectools import (
-    get_Li_6708_EW, get_Halpha_EW, inspect_pfs, specmatch_viz_compare,
+    get_Li_6708_EW, get_line_EW, inspect_pfs, specmatch_viz_compare,
     specmatch_analyze, plot_orders, plot_spec_vs_dwarf_library,
     plot_stack_comparison, measure_veloce_vsini, get_Ca_HK_emission
 )
 
-DATADIR = os.path.join(os.path.dirname(__path__[0]), 'data/spectra')
-OUTDIR = os.path.join(os.path.dirname(__path__[0]), 'results/spec_analysis')
+DATADIR = join(os.path.dirname(__path__[0]), 'data/spectra')
+OUTDIR = join(os.path.dirname(__path__[0]), 'results/spec_analysis')
 
 class argclass(object):
     pass
@@ -30,16 +30,16 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 1           # plot all orders
+    args.do_orders = 0           # plot all orders
     args.do_sms_analysis = 0     # run specmatch-syn analysis
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
     args.do_inspect = 0          # inspect to figure out require rest-frame shift
     args.do_li_ew = 0            # once rest-frame shift is known
-    args.do_halpha_ew = 0        # emission, absorption, either way!
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
     args.do_stack_comparison = 0 # compare versus stack
+    args.do_balmer_ew = 1        # measure EWs of all available Balmer lines
 
     args.is_pfs = 0
     args.is_veloce = 0
@@ -113,19 +113,19 @@ def main():
 
 def main_pfs(args):
 
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'PFS', '{}'.format(args.spectrum_name)
     )
-    wvsol_path = os.path.join(
+    wvsol_path = join(
         DATADIR, 'PFS', '{}'.format(args.wvsol_name)
     )
     if isinstance(args.flat_name, str):
-        flat_path = os.path.join(
+        flat_path = join(
         DATADIR, 'PFS', '{}'.format(args.flat_name)
     )
 
     if args.do_orders:
-        outdir = os.path.join(OUTDIR, 'PFS', 'spec_viz_orders')
+        outdir = join(OUTDIR, 'PFS', 'spec_viz_orders')
         plot_orders(spectrum_path, wvsol_path=wvsol_path,
                     outdir=outdir, idstring=args.idstring,
                     is_template=args.is_template, xshift=args.xshift,
@@ -144,11 +144,11 @@ def main_pfs(args):
             inspect_pfs(night, 'Mgb1', xlim)
 
     if args.do_li_ew:
-        outdir = os.path.join(OUTDIR, 'PFS', 'Li_EW')
+        outdir = join(OUTDIR, 'PFS', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         for deltawav in [7.5, 10]:
-            outpath = os.path.join(
+            outpath = join(
                 outdir,
                 f'{args.idstring}_Li_EW_shift{args.xshift:.2f}_deltawav{deltawav}.png'
             )
@@ -157,10 +157,10 @@ def main_pfs(args):
                            is_template=args.is_template, delta_wav=deltawav)
 
     if args.do_ca_hk:
-        outdir = os.path.join(OUTDIR, 'PFS', 'Ca_HK')
+        outdir = join(OUTDIR, 'PFS', 'Ca_HK')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        outpath = os.path.join(
+        outpath = join(
             outdir,
             '{}_Ca_HK_shift{:.2f}.png'.format(args.idstring, args.xshift)
         )
@@ -170,7 +170,7 @@ def main_pfs(args):
 
 
     if args.do_sme_analysis:
-        outdir = os.path.join(OUTDIR, 'PFS', 'specmatch')
+        outdir = join(OUTDIR, 'PFS', 'specmatch')
         plot_spec_vs_dwarf_library([5160, 5210], args.teff, outdir,
                                    args.idstring, spectrum_path=spectrum_path,
                                    wvsol_path=wvsol_path,
@@ -192,7 +192,7 @@ def main_pfs(args):
 def main_fies(args):
 
     specname = 'F4_TOI-1000_FICj170127_2019-10-18T05-51-50.779.spec.fits'
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'FIES', 'toi_1000', specname
     )
     idstring = 'toi1000'
@@ -218,24 +218,24 @@ def main_tres(args):
     specname = 'TRES_spectrum_Kepler1627.fits'
     specname = 'KOI_7368_ab20150601.fits'
 
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'TRES', specname
     )
     idstring = 'KOI_7368'
 
     if args.do_orders:
-        outdir = os.path.join(OUTDIR, 'TRES', 'spec_viz_orders')
+        outdir = join(OUTDIR, 'TRES', 'spec_viz_orders')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
 
     if args.do_li_ew:
-        outdir = os.path.join(OUTDIR, 'TRES', 'Li_EW')
+        outdir = join(OUTDIR, 'TRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         args.xshift = -0.3
         args.idstring = idstring
-        outpath = os.path.join(
+        outpath = join(
             outdir,
             '{}_Li_EW_shift{:.2f}.png'.format(args.idstring, args.xshift)
         )
@@ -269,12 +269,12 @@ def main_hires(args):
     idstring = 'TIC141146667'
     idstring = 'TIC402980664'
 
-    spectrum_paths = glob(os.path.join(
+    spectrum_paths = glob(join(
         DATADIR, 'HIRES', idstring, '?j*fits'
     ))
 
     if args.do_orders:
-        outdir = os.path.join(OUTDIR, 'HIRES', 'spec_viz_orders')
+        outdir = join(OUTDIR, 'HIRES', 'spec_viz_orders')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         for spectrum_path in spectrum_paths:
@@ -283,11 +283,11 @@ def main_hires(args):
             plot_orders(spectrum_path, outdir=outdir, idstring=_idstr)
 
     if args.do_stack_comparison:
-        outdir = os.path.join(OUTDIR, 'HIRES', 'stack_comparisons')
+        outdir = join(OUTDIR, 'HIRES', 'stack_comparisons')
         #NOTE: with iodine, Kep1627 2021/08/09.
         # bj: CaHK, ij: Halpha, Li. rj: Na D and Mg b.
         specglob = 'ij423*.fits'
-        spectrum_paths = glob(os.path.join(
+        spectrum_paths = glob(join(
             '/Users/luke/Dropbox/proj/rudolf/data/spec/20210807_HIRES/CKS_REDUC',
             specglob
         ))
@@ -297,7 +297,7 @@ def main_hires(args):
 
     if args.do_li_ew:
 
-        outdir = os.path.join(OUTDIR, 'HIRES', 'Li_EW')
+        outdir = join(OUTDIR, 'HIRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
@@ -308,39 +308,22 @@ def main_hires(args):
                 f"{args.idstring}_{specname.replace('.fits','')}_"
                 f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
             )
-            outpath = os.path.join(outdir, outname)
+            outpath = join(outdir, outname)
             get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
                            xshift=args.xshift, outpath=outpath)
-
-    if args.do_halpha_ew:
-        outdir = os.path.join(OUTDIR, 'HIRES', 'Halpha_EW')
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
-        args.xshift = -0.05
-        args.idstring = idstring
-        for delta_wav in [2.5,5,7.5]:
-            outname = (
-                f"{args.idstring}_{specname.replace('.fits','')}_"
-                f"Halpha_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
-            )
-            outpath = os.path.join(outdir, outname)
-            get_Halpha_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
-                          xshift=args.xshift, outpath=outpath)
-
-
 
 def main_harps(args):
 
     # single star; single spectrum
     idstring = 'TOI-858'
     specname = 'TOI-858_spec.dat'
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'HARPS', idstring, specname
     )
 
     if args.do_li_ew:
 
-        outdir = os.path.join(OUTDIR, 'HARPS', 'Li_EW')
+        outdir = join(OUTDIR, 'HARPS', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
@@ -351,7 +334,7 @@ def main_harps(args):
                 f"{args.idstring}_{specname.replace('.fits','')}_"
                 f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
             )
-            outpath = os.path.join(outdir, outname)
+            outpath = join(outdir, outname)
             get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
                            xshift=args.xshift, outpath=outpath)
 
@@ -361,13 +344,13 @@ def main_coralie(args):
     # single star; single spectrum
     idstring = 'TOI-858A'
     specname = 'TIC198008002_spec.dat'
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'CORALIE', idstring, specname
     )
 
     if args.do_li_ew:
 
-        outdir = os.path.join(OUTDIR, 'CORALIE', 'Li_EW')
+        outdir = join(OUTDIR, 'CORALIE', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
@@ -378,7 +361,7 @@ def main_coralie(args):
                 f"{args.idstring}_{specname.replace('.fits','')}_"
                 f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
             )
-            outpath = os.path.join(outdir, outname)
+            outpath = join(outdir, outname)
             get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
                            xshift=args.xshift, outpath=outpath)
 
@@ -388,23 +371,23 @@ def main_neid(args):
     # single star; single spectrum
     idstring = 'TOI4145'
     specname = 'TOI4145S-sy20211128-neidL2.fits'
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'NEID', idstring, specname
     )
 
     if args.do_orders:
-        outdir = os.path.join(OUTDIR, 'NEID', 'spec_viz_orders')
+        outdir = join(OUTDIR, 'NEID', 'spec_viz_orders')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         plot_orders(spectrum_path, outdir=outdir, idstring=idstring)
 
     if args.do_li_ew:
-        outdir = os.path.join(OUTDIR, 'NEID', 'Li_EW')
+        outdir = join(OUTDIR, 'NEID', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
         args.xshift = 1.80
         args.idstring = idstring
-        outpath = os.path.join(
+        outpath = join(
             outdir,
             '{}_{}_Li_EW_shift{:.2f}.png'.format(
                 args.idstring, specname.replace('.fits',''), args.xshift)
@@ -428,7 +411,7 @@ def main_veloce(args):
     # shift = -0.02
 
     specname = '{}_Bouma_final_combined.fits'.format(idstring)
-    spectrum_path = os.path.join(
+    spectrum_path = join(
         DATADIR, 'Veloce', specname
     )
 
@@ -459,7 +442,7 @@ def main_veloce(args):
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
-        outpath = os.path.join(
+        outpath = join(
             outdir, '{}_Li_EW_shift{:.2f}.png'.format(idstring, shift)
         )
 
@@ -648,29 +631,62 @@ def main_winered(args):
 
 def main_dbsp(args):
 
+    basedir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231112/p200_dbsp_blue_A/'
+    object_id = 'LP_12-502'
+    vizdir = join(basedir, 'Viz')
+    datadir = join(basedir, 'Science')
+    spectrum_paths = glob(join(datadir, f'spec1d_blue*{object_id}*fits'))
+
+    if args.do_balmer_ew:
+        DO_HBETA = 1
+        DO_HGAMMA = 1
+
+    ##########################################
+
     if args.do_orders:
         # just plot the orders
-        ##########################################
-        outputdir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231111/p200_dbsp_blue_A/Viz'
-        object_id = 'LP_12-502'
-        ##########################################
-
-        datadir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231111/p200_dbsp_blue_A/Science'
-
-        spectrum_paths = glob(join(datadir, f'spec1d_blue*{object_id}*fits'))
-
-        outdir = outputdir
-
+        outdir = vizdir
         if not os.path.exists(outdir): os.mkdir(outdir)
-
         from cdips_followup.spectools import read_dbsp, viz_1d_spectrum
-
         for spectrum_path in spectrum_paths:
             flx, wav = read_dbsp(spectrum_path)
             outname = os.path.basename(spectrum_path.replace('.fits','.png'))
             outpath = join(outdir, outname)
             viz_1d_spectrum(flx, wav, outpath, ylabel='counts')
 
+    if args.do_balmer_ew:
+        outdir = join(basedir, 'Balmer_EWs')
+        if not os.path.exists(outdir): os.mkdir(outdir)
+
+        args.xshift = -0.1
+        args.idstring = object_id
+        for spectrum_path in spectrum_paths:
+            specname = os.path.basename(spectrum_path)
+            for delta_wav in [10]:
+
+                # HGAMMA
+                if DO_HGAMMA:
+                    outname = (
+                        f"{args.idstring}_HGamma_{specname.replace('.fits','')}_"
+                        f"Balmer_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+                    )
+                    outpath = join(outdir, outname)
+                    get_line_EW(spectrum_path, delta_wav=delta_wav,
+                                xshift=args.xshift, outpath=outpath,
+                                target_wav=4340.47, isemissionline=True, dintwav=4,
+                                dblock=6, linename='hgamma')
+
+                # HBeta
+                if DO_HBETA:
+                    outname = (
+                        f"{args.idstring}_HBeta_{specname.replace('.fits','')}_"
+                        f"Balmer_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+                    )
+                    outpath = join(outdir, outname)
+                    get_line_EW(spectrum_path, delta_wav=delta_wav,
+                                xshift=args.xshift, outpath=outpath,
+                                target_wav=4861.35, isemissionline=True, dintwav=4,
+                                dblock=6, linename='hbeta')
 
 if __name__ == "__main__":
     main()
