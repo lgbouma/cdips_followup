@@ -80,6 +80,15 @@ def air_to_vac(wavelength):
 
     return (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4)) * wavelength
 
+def vac_to_air(wavelength):
+    """
+    Griesen 2006 reports that the error in naively inverting Eqn 65 is less
+    than 10^-9 and therefore acceptable.  This is therefore eqn 67
+    """
+    wlum = wavelength.to(u.um).value
+    nl = (1+1e-6*(287.6155+1.62887/wlum**2+0.01360/wlum**4))
+    return wavelength/nl
+
 # usable orders in Veloce spectra. 0-based count.
 VELOCE_ORDERS = [
     6, 7, 8, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
@@ -92,8 +101,18 @@ VELOCE_VSINI_ORDERS_VS_NEXTGEN = [
     26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36
 ]
 
-# a few common lines
+# a few common lines, in air...
 LINE_D = [
+    ['H19->2', 3686.3],
+    ['H18->2', 3691.1],
+    ['H17->2', 3696.7],
+    ['H16->2', 3703.4],
+    ['H15->2', 3711.5],
+    ['H14->2', 3721.4],
+    ['H13->2', 3733.9],
+    ['H12->2', 3749.7],
+    ['H11->2', 3770.1],
+    ['H10->2', 3797.4],
     ['Fe_L', 3820.44],
     ['H$\eta$', 3835.397], # 9->2
     ['H$\zeta$', 3889.096], # 8->2
@@ -105,11 +124,11 @@ LINE_D = [
     [r'H$\beta$', 4861.35],
     ['FeI', 4920.51],
     ['FeI', 4957.61],
-    ['FeI', 5169.00], #rough
-    ['Mgb1', 5183.62],
-    ['Mgb2', 5172.70],
+    #['FeI', 5169.00], #rough
     ['Feb3', 5168.91],
     ['Mgb4', 5167.33],
+    ['Mgb1', 5183.62],
+    ['Mgb2', 5172.70],
     ['CaI+FeI', 5269],
     ['Fe_E2', 5270.39],
     ['TiO', 5446],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
