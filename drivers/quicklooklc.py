@@ -19,16 +19,17 @@ def quicklooklc(
     ticid,
     outdir = None,
     cdips = 0,
-    spoc = 1,
+    spoc = 0,
     eleanor = 0,
+    unpopular = 1,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
-    detrend = None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
+    detrend = None,#None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
     do_eleanor_lcs = 0,
-    do_flux_lcs = 1,
-    do_periodogram = 0,
+    do_flux_lcs = 0,
+    do_periodogram = 1,
     do_pf = 0,
     require_quality_zero = 0,
     forceylim = None, # [0.93, 1.07]# for the flux light curves
@@ -45,13 +46,15 @@ def quicklooklc(
         )
 
     pipedict = {'cdips': cdips, 'spoc':spoc, 'eleanor':eleanor,
-                'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp}
+                'cdipspre': cdipspre, 'kepler':kepler, 'qlp':qlp,
+                'unpopular':unpopular}
     for k,v in pipedict.items():
         if v:
             pipeline = k
 
     data, hdrs = get_tess_data(ticid, outdir=outdir, cdips=cdips, spoc=spoc,
-                               cdipspre=cdipspre, eleanor=eleanor, qlp=qlp)
+                               cdipspre=cdipspre, eleanor=eleanor, qlp=qlp,
+                               unpopular=unpopular)
     if data is None and kepler:
         data = get_kepler_data(ticid, outdir=outdir)
 
@@ -70,7 +73,7 @@ def quicklooklc(
                                 do_phasefold=do_pf)
 
     if do_flux_lcs:
-
+        assert not unpopular # unpopular pipeline makes quicklook lc plots already
         explore_flux_lightcurves(data, hdrs, ticid, pipeline=pipeline, period=period,
                                  outdir=outdir,
                                  epoch=epoch,
@@ -97,6 +100,8 @@ def quicklooklc(
             _data = {'time': time, 'flux': flux, 'err': err}
             _data = [_data]
         elif pipeline in ['spoc', 'kepler']:
+            _data = data
+        elif pipeline == 'unpopular':
             _data = data
         else:
             raise NotImplementedError
@@ -236,6 +241,57 @@ if __name__ == "__main__":
     ticid = '283410775' # V374 Peg -- 0.44d M dwarf, cited in Stauffer+17
     ticid = '5656273' # HK Aqr
     ticid = '160633268' # LQ Lup
+    ticid = '268971806' # HD 64740
+    ticid = '236785891' # Jerome TOI
+    ticid = '220531502'  #n/a
+    ticid = '424048289'
+    ticid = '234719931'
+    ticid = '447743918'
+
+    ticid = '11400909' # HD 37776
+    ticid = '366598434' # HD 32633 / HZ Aur - listed by Kochukhov2011 as high-order -> just a 8 day normal spot LC (except hot!)
+    ticid = '122162363' # HR lup, hd 133880, strong multipole from bailey2013 -> small high order wiggles, good, tho not as epic as hd 64740
+    ticid = '205175750' # tau Sco / hd 149438, another complex B-star -> long P, stochastic not obvious
+    ticid = '446954324' # HD 137509 / NN Aps -  kochukhov06 high order, listed in kochukhov2011 intro.  double-hump spot LC.
+
+    ticid = '144808518'
+    ticid = '177860391' # hd 54879
+    ticid = '243921117' # wasp-80
+    ticid = '427685831' # wasp-52
+    ticid = '89026133' # CQV winered june03 2023
+    ticid = '167664935' # CQV winered june10 2023
+    ticid = '39903405' # HAT-P-2 for JJ Zanazzi
+    ticid = '220531502' # HR 5907 B star sigma ori E analog
+    ticid = '424048289' # HD 345439 sigma ori E analog
+    ticid = '245868207' # from luisa
+    ticid = '2234723' # hd 34382
+    ticid = '365858559' # II Peg
+    ticid = '468240308' # Cen X-3, first xray pulsar / V779 Cen
+    ticid = '203822419' # usco cqv K2
+
+    # Famous nearby M dwarfs with ZDI spectra reported in Kochukhov+21
+    ticids = ['256419669', '52183206', '632499596', '632499595', '452763353',
+              '50726077', '68581262', '266744225', '3664898', '259999047',
+              '95431305', '55099399', '97488127', '252803606', '389356212',
+              '160197982', '165916579', '88138162', '258105174', '355793860',
+              '274127413', '467254810', '283410775', '292987389', '154101678',
+              '247985094', '247985093', '352593978']
+
+    ticid = '224283342' # interesting CPV
+
+    ticid = '68833286'
+
+    # CepHer tic id's w/ HIRES spectra...
+    ticids = ["68833286", "425705688", "390058041", "425914815", "390134160",
+              "28772706", "237163448", "237163474", "237183630", "237184441",
+              "350992827", "120044726", "120098840", "20995907", "120498272",
+              "41867756", "120688481", "42198961", "120972481", "185461568",
+              "185667262", "185848343", "185847064", "186129360", "378170387",
+              "378173315", "186140431", "186237466", "186255176", "295799540",
+              "186238215", "186253914", "186238820", "416970247", "416972085",
+              "406076288", "256066070", "406087385", "256184740", "256346500",
+              "351939704", "352162814", "193335018", "193539544", "278355321",
+              "265250815"]
 
     # # optional #
     # period = 1.395733 # None
@@ -260,6 +316,11 @@ if __name__ == "__main__":
     #period, epoch = 1.037, 2458684.473340
     #period, epoch = 6.44/24, 1640.
     #period, epoch = 9.1457/24, 2457000
+    #period, epoch = 1.00639, 2459500.5
+
+    #period, epoch = 2.4619, 2458819.56
+
 
     #for ticid in delLyr_ticids:
-    quicklooklc(ticid, period=period, epoch=epoch)
+    for ticid in ticids:
+        quicklooklc(ticid, period=period, epoch=epoch)
