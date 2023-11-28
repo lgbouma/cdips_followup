@@ -27,6 +27,8 @@ import cdips.utils.lcutils as lcu
 
 from wotan import slide_clip
 
+from os.path import join
+
 from numpy.polynomial.legendre import Legendre
 
 from astrobase.services.tesslightcurves import (
@@ -63,7 +65,7 @@ LCKEYDICT = {
 
 
 def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
-                  qlp=0):
+                  qlp=0, unpopular=0):
     """
     High-level wrapper to download available TESS data for `ticid` to `outdir`.
     A few different formats are implemented.  If nothing is found, returns
@@ -77,7 +79,7 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
     """
 
     if outdir is None:
-        outdir = os.path.join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
+        outdir = join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
@@ -87,6 +89,7 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
         and (not eleanor)
         and (not cdipspre)
         and (not qlp)
+        and (not unpopular)
     ):
         print(
             '..........'
@@ -98,27 +101,36 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
 
     if cdipspre:
         # e.g., 5996151172781298304_llc.fits
-        lcfiles = glob(os.path.join(outdir,'*_llc.fits'))
+        lcfiles = glob(join(outdir,'*_llc.fits'))
 
     if cdips:
-        lcfiles = glob(os.path.join(outdir,'hlsp_cdips*fits'))
+        lcfiles = glob(join(outdir,'hlsp_cdips*fits'))
         if len(lcfiles) == 0:
             lcfiles = get_hlsp_lightcurves(ticid, hlsp_products=['CDIPS'],
                                            download_dir=outdir, verbose=True)
 
     if spoc:
-        lcfiles = glob(os.path.join(outdir,'*','TESS',f'*tess*{ticid}*','tess*lc.fits'))
+        lcfiles = glob(join(outdir,'*','TESS',f'*tess*{ticid}*','tess*lc.fits'))
         if len(lcfiles) == 0:
             lcfiles = get_two_minute_spoc_lightcurves(ticid, download_dir=outdir)
 
     if eleanor:
-        lcfiles = glob(os.path.join(outdir,'hlsp_eleanor*fits'))
+        lcfiles = glob(join(outdir,'hlsp_eleanor*fits'))
         if len(lcfiles) == 0:
             lcfiles = get_eleanor_lightcurves(ticid, download_dir=outdir)
 
     if qlp:
         # manually downloaded from MAST portal.
-        lcfiles = glob(os.path.join(outdir, 'QLP', 'hlsp_qlp*fits'))
+        lcfiles = glob(join(outdir, 'QLP', 'hlsp_qlp*fits'))
+
+    if unpopular:
+        from astrobase.services.tesslightcurves import get_unpopular_lightcurve
+        from cdips_followup.paths import FFICACHEDIR
+        lcfiles = glob(join(outdir,f'*tess*{ticid}*lc.csv'))
+        if len(lcfiles) == 0:
+            lcfiles = get_unpopular_lightcurve(
+                ticid, ffi_dir=FFICACHEDIR, overwrite=False, lc_dir=outdir
+            )
 
     if lcfiles is None:
         return None
@@ -126,9 +138,14 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
     data = []
     hdrs = []
     for f in lcfiles:
-        hdul = fits.open(f)
-        data.append(hdul[1].data)
-        hdrs.append(hdul[0].header)
+        if f.endswith(".fits"):
+            hdul = fits.open(f)
+            data.append(hdul[1].data)
+            hdrs.append(hdul[0].header)
+        elif f.endswith(".csv"):
+            df = pd.read_csv(f)
+            data.append(df)
+            hdrs.append([])
 
     return data, hdrs
 
@@ -145,12 +162,12 @@ def get_kepler_data(ticid, outdir=None):
     """
 
     if outdir is None:
-        outdir = os.path.join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
+        outdir = join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
     lcfiles = glob(
-        os.path.join(outdir,'MAST*','Kepler','kplr*lc*','kplr*llc.fits')
+        join(outdir,'MAST*','Kepler','kplr*lc*','kplr*llc.fits')
     )
     if len(lcfiles) == 0:
         raise NotImplementedError
@@ -210,11 +227,11 @@ def explore_eleanor_lightcurves(data, hdrs, ticid, period=None, epoch=None,
             binnedflag = '_30minbinned'
 
         outdir = f'../results/quicklooklc/TIC{ticid}'
-        savpath = os.path.join(
+        savpath = join(
             outdir, f'eleanor_lightcurve_{sectorstr}{binnedflag}.png'
         )
         if detrend:
-            savpath = os.path.join(
+            savpath = join(
                 outdir, f'eleanor_lightcurve_detrended_{sectorstr}{binnedflag}.png'
             )
 
@@ -302,11 +319,11 @@ def explore_eleanor_lightcurves(data, hdrs, ticid, period=None, epoch=None,
         magsarefluxes=True
     )
 
-    savpath = os.path.join(
+    savpath = join(
         outdir, f'eleanor_lightcurve_{ykey}_allsector.png'
     )
     if detrend:
-        savpath = os.path.join(
+        savpath = join(
             outdir, f'eleanor_lightcurve_detrended_{ykey}_allsector.png'
         )
 
@@ -371,7 +388,7 @@ def explore_eleanor_lightcurves(data, hdrs, ticid, period=None, epoch=None,
                 ax.set_ylim(plotylim)
 
             dstr = 'detrended' if detrend else ''
-            savpath = os.path.join(
+            savpath = join(
                 outdir, f'eleanor_lightcurve_{dstr}_{ykey}_{xstr}_allsector_phasefold.png'
             )
 
@@ -527,7 +544,7 @@ def explore_mag_lightcurves(data, hdrs, ticid, period=None, epoch=None,
             detrend = False
             dstr = 'detrended' if detrend else ''
             outdir = os.path.dirname(savpath)
-            savpath = os.path.join(
+            savpath = join(
                 outdir, f'cdips_lightcurve_{dstr}_{ykey}_{xstr}_allsector_phasefold.png'
             )
 
@@ -614,7 +631,7 @@ def explore_flux_lightcurves(
     inst = LCKEYDICT[pipeline]['inst']
 
     if outdir is None:
-        outdir = os.path.join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
+        outdir = join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
 
     times, fluxs= [], []
     for ix, d in enumerate(data):
@@ -622,11 +639,11 @@ def explore_flux_lightcurves(
         hdr = hdrs[ix]
         sectorstr = f"s{str(hdr['SECTOR']).zfill(4)}"
 
-        savpath = os.path.join(
+        savpath = join(
             outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{sectorstr}.png'
         )
         if detrend:
-            savpath = os.path.join(
+            savpath = join(
                 outdir,
                 f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{sectorstr}.png'
             )
@@ -804,11 +821,11 @@ def explore_flux_lightcurves(
         magsarefluxes=True
     )
 
-    savpath = os.path.join(
+    savpath = join(
         outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{str(ykey).zfill(2)}_allsector.png'
     )
     if detrend:
-        savpath = os.path.join(
+        savpath = join(
             outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{detrend}_{str(ykey).zfill(2)}_allsector.png'
         )
 
@@ -904,7 +921,7 @@ def explore_flux_lightcurves(
                 ax.set_ylim(plotylim)
 
             dstr = detrend if detrend else ''
-            savpath = os.path.join(
+            savpath = join(
                 outdir, f'TIC{ticid}_{prov}_{inst}_lightcurve_{dstr}_{ykey}_{xstr}_allsector_phasefold.png'
             )
 
@@ -939,6 +956,10 @@ def make_periodogram(data, ticid, pipeline, id_str=None, outdir=None, period_min
         time = data['time']
         flux = data['flux']
         err = data['err']
+    elif pipeline == 'unpopular':
+        time = data['time']
+        flux = 1+data['dtr_flux']
+        err = 1e-4*flux
     else:
         raise NotImplementedError
 
@@ -975,7 +996,7 @@ def make_periodogram(data, ticid, pipeline, id_str=None, outdir=None, period_min
 
     tstr = f'LS period = {ls_period_0:.6f} d'
     ax.set_title(tstr)
-    ax.set_yscale('log')
+    ax.set_yscale('linear')
     ax.set_xscale('log')
 
     ax.set_xlabel('period [d]')
@@ -984,7 +1005,7 @@ def make_periodogram(data, ticid, pipeline, id_str=None, outdir=None, period_min
     if outdir is None:
         outdir = '../results/quicklooklc/TIC{}'.format(ticid)
     s = '' if id_str is None else f'_{id_str}'
-    savpath = os.path.join(outdir, f'ls_periodogram{s}.png')
+    savpath = join(outdir, f'ls_periodogram{s}.png')
     fig.savefig(savpath, dpi=300, bbox_inches='tight')
     print('made {}'.format(savpath))
 
@@ -1055,7 +1076,7 @@ def make_periodogram(data, ticid, pipeline, id_str=None, outdir=None, period_min
     fig.tight_layout()
 
     s = '' if id_str is None else f'_{id_str}'
-    savpath = os.path.join(outdir, f'ls_models_resids{s}.png')
+    savpath = join(outdir, f'ls_models_resids{s}.png')
     fig.savefig(savpath, dpi=300, bbox_inches='tight')
     print('made {}'.format(savpath))
 
@@ -1092,7 +1113,7 @@ def make_periodogram(data, ticid, pipeline, id_str=None, outdir=None, period_min
         plt.plot(results.periods, results.power, color='black', lw=0.5)
         plt.xlim(0, max(results.periods))
 
-        savpath = os.path.join(outdir, 'tls_periodogram.png')
+        savpath = join(outdir, 'tls_periodogram.png')
         fig.savefig(savpath, dpi=300, bbox_inches='tight')
         print('made {}'.format(savpath))
 
@@ -1121,7 +1142,7 @@ def make_periodogram(data, ticid, pipeline, id_str=None, outdir=None, period_min
         delta_y = (10/6)*np.abs(pct_80 - pct_20)
         plt.ylim(( center-0.7*delta_y, center+0.7*delta_y ))
 
-        savpath = os.path.join(outdir, 'phasefold.png')
+        savpath = join(outdir, 'phasefold.png')
         fig.savefig(savpath, dpi=300, bbox_inches='tight')
         print('made {}'.format(savpath))
 
