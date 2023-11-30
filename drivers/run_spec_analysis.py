@@ -248,35 +248,26 @@ def main_tres(args):
 
 def main_hires(args):
 
-    # single star; single spectrum
-    idstring = 'HD_34382'
-    specname = 'bj488.337.fits'
-    specname = 'bj487.135.fits'
-    specname = 'bj486.531.fits'
-
-    idstring = 'TIC376116071'
-    specname = 'ij490.326.fits'
-
-    idstring = 'TIC146539195'
-    #specname = 'bj501.88.fits'
-    #specname = 'ij501.88.fits'
-    #specname = 'rj501.88.fits'
-
     # CPVs
-    idstring = 'TIC59129133'
-    idstring = 'TIC264599508'
-    idstring = 'TIC408188366'
-    idstring = 'TIC141146667'
     idstring = 'TIC402980664'
+    datadir = "/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/TIC402980664_RDX"
+    outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
 
-    spectrum_paths = glob(join(
-        DATADIR, 'HIRES', idstring, '?j*fits'
-    ))
+    idstring = 'TIC353730181'
+    datadir = f"/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/{idstring}"
+    outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
+
+    #datadir = join( DATADIR, 'HIRES', idstring )
+    #outdir = join(OUTDIR, 'HIRES')
+
+
+    spectrum_paths = glob(join(datadir, '?j*fits'))
 
     if args.do_orders:
-        outdir = join(OUTDIR, 'HIRES', 'spec_viz_orders')
-        if not os.path.exists(outdir):
-            os.mkdir(outdir)
+        outdir = join(outdir, 'spec_viz_orders')
+        if not os.path.exists(outdir): os.mkdir(outdir)
+        outdir = join(outdir, idstring)
+        if not os.path.exists(outdir): os.mkdir(outdir)
         for spectrum_path in spectrum_paths:
             specname = os.path.basename(spectrum_path)
             _idstr = idstring + "_" + specname.replace(".fits","")
@@ -631,15 +622,18 @@ def main_winered(args):
 
 def main_dbsp(args):
 
-    basedir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231112/p200_dbsp_blue_A/'
+    basedir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231111/p200_dbsp_red_A/'
     object_id = 'LP_12-502'
     vizdir = join(basedir, 'Viz')
     datadir = join(basedir, 'Science')
-    spectrum_paths = glob(join(datadir, f'spec1d_blue*{object_id}*fits'))
+    spectrum_paths = np.sort(
+        glob(join(datadir, f'spec1d_red*{object_id}*fits'))
+    )
 
     if args.do_balmer_ew:
-        DO_HBETA = 1
-        DO_HGAMMA = 1
+        DO_HBETA = 0
+        DO_HGAMMA = 0
+        DO_HALPHA = 1
 
     ##########################################
 
@@ -664,7 +658,6 @@ def main_dbsp(args):
             specname = os.path.basename(spectrum_path)
             for delta_wav in [10]:
 
-                # HGAMMA
                 if DO_HGAMMA:
                     outname = (
                         f"{args.idstring}_HGamma_{specname.replace('.fits','')}_"
@@ -676,7 +669,6 @@ def main_dbsp(args):
                                 target_wav=4340.47, isemissionline=True, dintwav=4,
                                 dblock=6, linename='hgamma')
 
-                # HBeta
                 if DO_HBETA:
                     outname = (
                         f"{args.idstring}_HBeta_{specname.replace('.fits','')}_"
@@ -687,6 +679,19 @@ def main_dbsp(args):
                                 xshift=args.xshift, outpath=outpath,
                                 target_wav=4861.35, isemissionline=True, dintwav=4,
                                 dblock=6, linename='hbeta')
+
+                if DO_HALPHA:
+                    outname = (
+                        f"{args.idstring}_HAlpha_{specname.replace('.fits','')}_"
+                        f"Balmer_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+                    )
+                    outpath = join(outdir, outname)
+                    get_line_EW(spectrum_path, delta_wav=delta_wav,
+                                xshift=args.xshift, outpath=outpath,
+                                target_wav=6562.8, isemissionline=True,
+                                dintwav=7.5, dblock=10, linename='halpha')
+
+
 
 if __name__ == "__main__":
     main()
