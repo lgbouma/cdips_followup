@@ -45,13 +45,13 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 0
+    args.is_hires = 1
     args.is_neid = 0
     args.is_harps = 0
     args.is_coralie = 0
     args.is_rvs = 0
     args.is_winered = 0
-    args.is_dbsp = 1
+    args.is_dbsp = 0
 
     if args.is_pfs:
 
@@ -252,16 +252,16 @@ def main_hires(args):
     idstring = 'TIC402980664'
     datadir = "/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/TIC402980664_RDX"
     outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
+    datestr = 'j533'
 
-    idstring = 'TIC353730181'
-    datadir = f"/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/{idstring}"
-    outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
+    #idstring = 'TIC353730181'
+    #datadir = f"/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/{idstring}"
+    #outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
 
     #datadir = join( DATADIR, 'HIRES', idstring )
     #outdir = join(OUTDIR, 'HIRES')
 
-
-    spectrum_paths = glob(join(datadir, '?j*fits'))
+    spectrum_paths = glob(join(datadir, f'?{datestr}*fits'))
 
     if args.do_orders:
         outdir = join(outdir, 'spec_viz_orders')
@@ -302,6 +302,63 @@ def main_hires(args):
             outpath = join(outdir, outname)
             get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
                            xshift=args.xshift, outpath=outpath)
+
+
+    if args.do_balmer_ew:
+        DO_HALPHA = 1
+        DO_HGAMMA = 1
+        DO_HBETA = 0 # not accessible on hires
+
+        outdir = join(outdir, 'Balmer_EWs')
+        if not os.path.exists(outdir): os.mkdir(outdir)
+
+        args.xshift = -0.1
+        args.idstring = idstring
+        for spectrum_path in spectrum_paths:
+            specname = os.path.basename(spectrum_path)
+            for delta_wav in [10]:
+
+                if DO_HGAMMA:
+                    if '/bj' not in spectrum_path:
+                        pass
+                    else:
+                        outname = (
+                            f"{args.idstring}_HGamma_{specname.replace('.fits','')}_"
+                            f"Balmer_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+                        )
+                        outpath = join(outdir, outname)
+                        get_line_EW(spectrum_path, delta_wav=delta_wav,
+                                    xshift=args.xshift, outpath=outpath,
+                                    target_wav=4340.47, isemissionline=True, dintwav=4,
+                                    dblock=6, linename='hgamma')
+
+                if DO_HBETA:
+                    outname = (
+                        f"{args.idstring}_HBeta_{specname.replace('.fits','')}_"
+                        f"Balmer_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+                    )
+                    outpath = join(outdir, outname)
+                    get_line_EW(spectrum_path, delta_wav=delta_wav,
+                                xshift=args.xshift, outpath=outpath,
+                                target_wav=4861.35, isemissionline=True, dintwav=4,
+                                dblock=6, linename='hbeta')
+
+                if DO_HALPHA:
+                    if '/ij' not in spectrum_path:
+                        pass
+                    else:
+                        outname = (
+                            f"{args.idstring}_HAlpha_{specname.replace('.fits','')}_"
+                            f"Balmer_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+                        )
+                        outpath = join(outdir, outname)
+                        get_line_EW(spectrum_path, delta_wav=delta_wav,
+                                    xshift=args.xshift, outpath=outpath,
+                                    target_wav=6563, isemissionline=True,
+                                    dintwav=3.5, dblock=5, linename='halpha')
+
+
+
 
 def main_harps(args):
 
@@ -622,7 +679,7 @@ def main_winered(args):
 
 def main_dbsp(args):
 
-    basedir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231111/p200_dbsp_red_A/'
+    basedir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231112/p200_dbsp_red_A/'
     object_id = 'LP_12-502'
     vizdir = join(basedir, 'Viz')
     datadir = join(basedir, 'Science')
@@ -688,8 +745,8 @@ def main_dbsp(args):
                     outpath = join(outdir, outname)
                     get_line_EW(spectrum_path, delta_wav=delta_wav,
                                 xshift=args.xshift, outpath=outpath,
-                                target_wav=6562.8, isemissionline=True,
-                                dintwav=7.5, dblock=10, linename='halpha')
+                                target_wav=6565, isemissionline=True,
+                                dintwav=3.5, dblock=5, linename='halpha')
 
 
 
