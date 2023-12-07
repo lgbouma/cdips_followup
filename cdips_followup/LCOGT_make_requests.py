@@ -145,7 +145,7 @@ MAXTIMEDICT = {
 SITEDICT = {
     'at_site': ['SAAO', 'Siding Spring Observatory',
                 'McDonald Observatory', 'Cerro Tololo',
-                'Palomar',
+                'Palomar', 'Whipple Observatory',
                 'Haleakala Observatories', 'Keck Observatory',
                 'Las Campanas Observatory', 'Cerro Paranal'],
     'of_address': ['Wise Observatory'] # for NRES
@@ -355,7 +355,7 @@ def get_requests_given_ephem(
     max_search_time=None,
     max_airmass_sched=2.0,
     max_airmass_submit=2.5,
-    min_lunar_distance=20,
+    min_lunar_distance=50,
     oot_duration=45*u.minute,
     eventclass='OIBEO',
     sites=None,
