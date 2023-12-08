@@ -24,7 +24,7 @@ def main():
 
     ##########################################
     # CHANGE BELOW
-    savstr = '20230419_tic402980664_23B' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20231206_lp12502_diptwo' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 0
     submit = 0
@@ -47,7 +47,8 @@ def main():
 
     raise_error = False # raise an error if max_duration_error flag raised.
     max_duration_error = 30 # the submitted LCOGT request must match requested durn to within this difference [minutes]
-    sites = ['Palomar'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+    #sites = ['Palomar'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+    sites = ['Whipple Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
     #sites = ['Keck Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
     #sites = ['Cerro Paranal'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
 
@@ -67,11 +68,12 @@ def main():
         source_id = tic_to_gaiadr2(tic_id)
 
     if manual_ephemeris:
-        period = 18.559/24
-        period_unc = 0.001/24
-        epoch = 2457000 + 1791.2972827806442
+        period = 18.5611/24
+        period_unc = 0.0001/24
+        # epoch = 2460259.861 # 2457000 + 1791.2972827806442
+        epoch = 2460260.25 # half an orbit later
         epoch_unc = 1e-5
-        duration = 1.04
+        duration = 3.5 # hr
 
     else:
         # get ephemeris from ephemerides.csv
