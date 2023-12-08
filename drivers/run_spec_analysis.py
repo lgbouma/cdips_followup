@@ -45,13 +45,13 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 1
+    args.is_hires = 0
     args.is_neid = 0
     args.is_harps = 0
     args.is_coralie = 0
     args.is_rvs = 0
     args.is_winered = 0
-    args.is_dbsp = 0
+    args.is_dbsp = 1
 
     if args.is_pfs:
 
@@ -679,18 +679,24 @@ def main_winered(args):
 
 def main_dbsp(args):
 
-    basedir = '/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231112/p200_dbsp_red_A/'
+    color = 'red'
+    basedir = f'/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231207/p200_dbsp_{color}_A/'
     object_id = 'LP_12-502'
     vizdir = join(basedir, 'Viz')
     datadir = join(basedir, 'Science')
     spectrum_paths = np.sort(
-        glob(join(datadir, f'spec1d_red*{object_id}*fits'))
+        glob(join(datadir, f'spec1d_{color}*{object_id}*fits'))
     )
 
     if args.do_balmer_ew:
-        DO_HBETA = 0
-        DO_HGAMMA = 0
-        DO_HALPHA = 1
+        if color == 'blue':
+            DO_HBETA = 1
+            DO_HGAMMA = 1
+            DO_HALPHA = 0
+        elif color == 'red':
+            DO_HBETA = 0
+            DO_HGAMMA = 0
+            DO_HALPHA = 1
 
     ##########################################
 
