@@ -153,10 +153,13 @@ LINE_D = [
     ['LiI_b', 6707.91],
     ['CaI$\lambda$', 6718],
     ['CaH', 6750],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['O [b]', 6860], # fraunhoffer oxygen
     ['K I', 7665],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
     ['TiO', 7666],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
     ['VO', 7851],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
     ['K I', 7699],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
+    ['Rb I', 7800], # Rubidium I resonance line
+    ['Rb I', 7947], # Rubidium I resonance line
     ['Na', 8183],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
     ['Na', 8195],# m-dwarfs https://www.stsci.edu/~inr/ldwarf.html
     ['FeI', 8470.7],
