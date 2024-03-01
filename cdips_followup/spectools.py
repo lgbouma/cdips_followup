@@ -756,7 +756,16 @@ def given_deltawvlen_get_vsys(deltawvlen=2.3*u.AA, wvlen_0=5180*u.AA,
 
 def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
                     ylim=None, norm_median=False, ylabel=None, xlabel=None,
-                    fig=None, ax=None, axtitle=None):
+                    fig=None, ax=None, axtitle=None, show_vel=0, wav0=None):
+    """
+    Only nonintuitive kwargs:
+
+        show_vel (bool): whether to transform to velocity on x-axis.  If so,
+        requires wav0, the reference wavelength, in angstrom.
+    """
+
+    if show_vel:
+        assert isinstance(wav0, (float, int))
 
     if isinstance(xlim, list):
         xmin = xlim[0]
@@ -779,7 +788,17 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
         assert not (fig is None) and not (ax is None)
         FNSAVEPLOT = 0
 
-    ax.plot(wav, flx, c='k', zorder=3, lw=0.2)
+    if show_vel:
+        def get_vel(wav, wav0):
+            deltawvlen = ( wav - wav0 )
+            delta_v = const.c * (deltawvlen / wav0)
+            delta_v_kms = delta_v.to(u.km/u.s)
+            return delta_v_kms.value
+        xvals = get_vel(wav, wav0)
+    else:
+        xvals = wav
+
+    ax.plot(xvals, flx, c='k', zorder=3, lw=0.2)
 
     y_90 = np.nanpercentile(flx, 90)
     y_10 = np.nanpercentile(flx, 10)
@@ -788,7 +807,11 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
 
     # ax.set_ylim( (y_median-1.1*y_diff, y_median+1.1*y_diff) )
 
-    ax.set_xlabel('λvac [Angstrom]')
+    if not show_vel:
+        ax.set_xlabel('λvac [Angstrom]')
+    else:
+        ax.set_xlabel('Δv [km/s]')
+
     if xlabel is not None:
         ax.set_xlabel(xlabel)
     if xlabel == '':
@@ -800,8 +823,12 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
     if ylabel:
         ax.set_ylabel(ylabel)
 
-    xmin = min(wav)
-    xmax = max(wav)
+    if isinstance(xlim, (list, tuple)):
+        xmin = xlim[0]
+        xmax = xlim[1]
+    else:
+        xmin = min(xvals)
+        xmax = max(xvals)
 
     this_d = []
     for k, v in LINE_D:
@@ -825,30 +852,45 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
         for k, v in this_d:
             ylim = ax.get_ylim()
             delta_y = 0.9*(max(ylim) - min(ylim))
-            ax.vlines(v, min(ylim)+delta_y, max(ylim), zorder=-3,
-                      linestyles=':', color='k', lw=0.3)
             ax.set_ylim(ylim)
 
             tform = blended_transform_factory(ax.transData, ax.transAxes)
-            ax.text(v, 0.95, k, ha='center', va='top', transform=tform,
-                    fontsize=4)
+            if show_vel:
+                ax.vlines(get_vel(v,wav0), min(ylim)+delta_y, max(ylim), zorder=-3,
+                          linestyles=':', color='k', lw=0.3)
+                ax.text(get_vel(v,wav0), 0.95, k, ha='center', va='top',
+                        transform=tform, fontsize=4)
+            else:
+                ax.vlines(v, min(ylim)+delta_y, max(ylim), zorder=-3,
+                          linestyles=':', color='k', lw=0.3)
+                ax.text(v, 0.95, k, ha='center', va='top', transform=tform,
+                        fontsize=4)
 
     if isinstance(xlim, (list, tuple)):
-        ax.set_xlim(xlim)
+        if not show_vel:
+            ax.set_xlim(xlim)
 
     if isinstance(vlines, list):
         sel = (nparr(vlines)>min(xlim)) & (nparr(vlines)<max(xlim))
         vlines, names = nparr(vlines)[sel], nparr(names)[sel]
         ylim = ax.get_ylim()
         delta_y = 0.9*(max(ylim) - min(ylim))
-        ax.vlines(vlines, min(ylim)+delta_y, max(ylim), zorder=-3,
-                  linestyles=':', color='k', lw=0.3)
+        if show_vel:
+            ax.vlines(get_vel(vlines,wav0), min(ylim)+delta_y, max(ylim),
+                      zorder=-3, linestyles=':', color='k', lw=0.3)
+        else:
+            ax.vlines(vlines, min(ylim)+delta_y, max(ylim), zorder=-3,
+                      linestyles=':', color='k', lw=0.3)
         ax.set_ylim(ylim)
 
         tform = blended_transform_factory(ax.transData, ax.transAxes)
         for x, n in zip(vlines, names):
-            ax.text(x, 0.95, n, ha='center', va='top', transform=tform,
-                    fontsize=4)
+            if show_vel:
+                ax.text(get_vel(x,wav0), 0.95, n, ha='center', va='top',
+                        transform=tform, fontsize=4)
+            else:
+                ax.text(x, 0.95, n, ha='center', va='top', transform=tform,
+                        fontsize=4)
 
     ax.grid(which='both', axis='x', zorder=-3, lw=0.3, ls='--')
 
