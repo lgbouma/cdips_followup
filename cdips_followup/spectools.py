@@ -50,6 +50,7 @@ from astropy.modeling.polynomial import Chebyshev1D
 from astropy.modeling.models import custom_model
 from astropy.modeling.fitting import LevMarLSQFitter
 from astropy.nddata import StdDevUncertainty
+from astropy.modeling.fitting import NonFiniteValueError
 
 from scipy.io import readsav
 from scipy.interpolate import interp1d
@@ -1993,6 +1994,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         sel = np.isfinite(flx) & np.isfinite(wav)
         wav, flx = wav[sel], flx[sel]
 
+        assert len(wav) >= 5
+        assert len(flx) >= 5
+
         # exclude cosmic rays, by requiring flux < median(flux) + 5*STD_MAD
         stdev_hat = 1.483 * np.nanmedian(np.abs(flx - np.nanmedian(flx)))
         sel = ~(flx>np.nanmedian(flx)+5*stdev_hat)
@@ -2098,9 +2102,21 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
                 amplitude=0.2*u.dimensionless_unscaled,
                 mean=target_wav*u.AA, stddev=0.5*u.AA
             )
-            g_fit = fit_lines(
-                full_spec, g_init, window=(region.lower, region.upper)
-            )
+            try:
+                g_fit = fit_lines(
+                    full_spec, g_init, window=(region.lower, region.upper)
+                )
+            except NonFiniteValueError as e:
+                txt = (
+                    f'{datetime.utcnow().isoformat()}: {spectrum_path} failed!'
+                    'Got error:\n'
+                    f'{repr(e)}'
+                )
+                print(txt)
+                fitted_li_equiv_widths.append(
+                    np.nan
+                )
+                continue
 
             y_fit = g_fit(x_fit)
 
