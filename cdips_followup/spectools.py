@@ -319,6 +319,8 @@ def read_veloce(spectrum_path, start=0, end=None, return_err=False):
     flux_err = hdul[1].data[:, start:end]
     wav = hdul[2].data[:, start:end]
 
+    hdul.close()
+
     if return_err:
         return flux, wav, flux_err
     else:
@@ -338,6 +340,8 @@ def read_fies(spectrum_path, start=0, end=None, return_err=False):
     flux = hdul[0].data[0, :, start:end]
     wav = hdul[0].data[1, :, start:end]
     flux_err = hdul[0].data[2, :, start:end]
+
+    hdul.close()
 
     if return_err:
         return flux, wav, flux_err
@@ -385,6 +389,8 @@ def read_hires(spectrum_path, start=0, end=None, is_registered=1, return_err=1):
         flux_err = hdul[1].data[:, start:end]
         wav = hdul[2].data[:, start:end]
 
+    hdul.close()
+
     if return_err:
         return flux, wav, flux_err
     else:
@@ -421,6 +427,7 @@ def read_feros(spectrum_path):
     d = hdul[0].data
     wav = d[0,0]
     flx = d[3,0]
+    hdul.close()
     return flx, wav
 
 
@@ -430,6 +437,7 @@ def read_gaiaeso(spectrum_path):
     d = hdul[1].data
     wav = 10*d.WAVE # convert to angstrom
     flx = d.FLUX
+    hdul.close()
     return flx.flatten(), wav.flatten()
 
 def read_winered(spectrum_path):
@@ -460,6 +468,8 @@ def read_dbsp(spectrum_path):
 
     wav = hdul[1].data['OPT_WAVE']
     flx = hdul[1].data['OPT_COUNTS']
+
+    hdul.close()
 
     return flx.flatten(), wav.flatten()
 
@@ -1870,8 +1880,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     target_wav = 6707.835
     # "~" here is not a line -- it's a spacer to ensure we don't cut the
     # continuum too closer.
-    vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6708.1, 6710.2, 6713.1, 6718]
-    names = ['FeI', 'FeI', 'FeI', 'Li', 'Li', '~', 'FeI', '?', 'CaI$\lambda$']
+    vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6708.1,
+              6710.2, 6713.1, 6718, 6711, 6713.65]
+    names = ['FeI', 'FeI', 'FeI', 'Li', 'Li', '~', 'FeI', '?',
+             'CaI$\lambda$', '?', "?"]
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
 
     if instrument in ['Veloce', 'TRES', 'PFS', 'HIRES', 'NEID']:
@@ -2034,7 +2046,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
     cont_norm_spec = spec / cont_flx
 
+    #
     # to fit gaussians, look at 1-flux.
+    #
     full_spec = Spectrum1D(spectral_axis=cont_norm_spec.wavelength,
                            flux=(1-cont_norm_spec.flux))
 
@@ -2345,7 +2359,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         outpath = outpath.replace('.png','_results.csv')
         outdict = {
             'xshift': xshift,
+            # LiEW_mA: result from adding up the flux
             'LiEW_mA': np.round(li_equiv_width*1e3, 3),
+            # Fitted_Li_EW_mA: result from Gaussian fit
             'Fitted_Li_EW_mA': np.round(fitted_li_equiv_width*1e3, 3),
             'Fitted_Li_EW_mA_perr': np.round(fitted_li_equiv_widths_perr*1e3, 3),
             'Fitted_Li_EW_mA_merr': np.round(fitted_li_equiv_widths_merr*1e3, 3),
