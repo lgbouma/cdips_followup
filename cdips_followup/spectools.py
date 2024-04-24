@@ -1881,9 +1881,9 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     # "~" here is not a line -- it's a spacer to ensure we don't cut the
     # continuum too closer.
     vlines = [6703.58, 6705.1, 6707.44, 6707.76, 6707.91, 6708.1,
-              6710.2, 6713.1, 6718, 6711, 6713.65]
+              6710.2, 6713.1, 6718, 6711, 6713.65, 6715.9]
     names = ['FeI', 'FeI', 'FeI', 'Li', 'Li', '~', 'FeI', '?',
-             'CaI$\lambda$', '?', "?"]
+             'CaI$\lambda$', '?', "?", "?"]
     xlim = [target_wav-delta_wav, target_wav+delta_wav]
 
     if instrument in ['Veloce', 'TRES', 'PFS', 'HIRES', 'NEID']:
