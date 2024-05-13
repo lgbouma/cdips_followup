@@ -12,7 +12,10 @@ def get_log_row(star_id, coord, vmag, exptime, counts):
 
     ra_hms = coord.split(' ')[0]
     dec_dms = coord.split(' ')[1]
-    exptime = int(min([exptime, 1800]))
+    try:
+        exptime = int(min([exptime, 1800]))
+    except ValueError:
+        exptime = 1800
     max_exptime = int(min([np.round(exptime+300,-1), 1800]))
     ra_str = ra_hms.replace('h',' ').replace('m',' ').replace('s','')
     dec_str = dec_dms.replace('d',' ').replace('m',' ').replace('s','')
@@ -71,13 +74,13 @@ def get_log_row(star_id, coord, vmag, exptime, counts):
 def main():
     # given TIC ID's, get HIRES info
 
-    datestr = '20231122'
-    jobstr = '23B_CPVs'
+    datestr = '20240516'
+    jobstr = '24A_kepler'
 
     targetdir = './targetlists/'
     targetpath = os.path.join(
         targetdir,
-        '20231122_cpv_sciencetargets.csv'
+        f'{datestr}_kepler_targets.csv'
     )
     df = pd.read_csv(targetpath)
 
@@ -102,9 +105,15 @@ def main():
 
         assert len(gdf) == 1
 
+        radius = 4
+        if dr2_source_id == '1450067137649449728':
+            radius = 10
+
         xmatches = tic_xmatch(
-            np.array(gdf.ra), np.array(gdf.dec), radius_arcsec=4
+            np.array(gdf.ra), np.array(gdf.dec), radius_arcsec=radius
         )
+        if xmatches is None:
+            import IPython; IPython.embed()
         with open(xmatches['cachefname'], 'r') as f:
             d = json.load(f)
         tdf = pd.DataFrame(d['data'])
