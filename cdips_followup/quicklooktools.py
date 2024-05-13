@@ -573,7 +573,7 @@ def explore_flux_lightcurves(
     detrend=False, window_length=None, do_phasefold=0, badtimewindows=None,
     get_lc=False, require_quality_zero=1, forceylim=None, normstitch=True,
     slideclipdict={'window_length':1, 'high':3, 'low':20},
-    mask_orbit_edges=False
+    mask_orbit_edges=False, bintime=None
 ):
     """
     Given a list of SPOC 2 minute data FITS tables, stitch them across sectors
@@ -766,12 +766,20 @@ def explore_flux_lightcurves(
                     x_obs, y_obs, c='darkgray', s=1, zorder=1, alpha=0.4
                 )
                 from astrobase.lcmath import time_bin_magseries
+
+                if isinstance(bintime, (int,float)):
+                    pass
+                    s = 12
+                else:
+                    bintime = 1800.
+                    s = 4
+
                 bin_dict = time_bin_magseries(
-                    x_obs, y_obs, binsize=1800., minbinelems=2
+                    x_obs, y_obs, binsize=bintime, minbinelems=2
                 )
                 ax.scatter(
                     bin_dict['binnedtimes'], bin_dict['binnedmags'], c='k',
-                    s=4, zorder=2
+                    s=s, zorder=2
                 )
 
         times.append( x_obs )
@@ -843,12 +851,19 @@ def explore_flux_lightcurves(
             edgecolors='darkgray', marker='.'
         )
         from astrobase.lcmath import time_bin_magseries
+        if isinstance(bintime, (int,float)):
+            pass
+            s = 5
+        else:
+            bintime = 3600.
+            s = 1
+
         bin_dict = time_bin_magseries(
-            stimes, smags, binsize=3600., minbinelems=2
+            stimes, smags, binsize=bintime, minbinelems=2
         )
         ax.scatter(
             bin_dict['binnedtimes'], bin_dict['binnedmags'], c='k',
-            s=1, zorder=2
+            s=s, zorder=2
         )
 
     if not epoch is None:
