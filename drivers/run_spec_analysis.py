@@ -217,11 +217,12 @@ def main_tres(args):
     # specname = '269-003518_2017-01-19_04h03m24s_cb.spec.fits'
     specname = 'TRES_spectrum_Kepler1627.fits'
     specname = 'KOI_7368_ab20150601.fits'
+    specname= 'KOI-5447Si-ab20140717.fits'
 
     spectrum_path = join(
         DATADIR, 'TRES', specname
     )
-    idstring = 'KOI_7368'
+    idstring = 'KOI_5447'
 
     if args.do_orders:
         outdir = join(OUTDIR, 'TRES', 'spec_viz_orders')
@@ -233,7 +234,7 @@ def main_tres(args):
         outdir = join(OUTDIR, 'TRES', 'Li_EW')
         if not os.path.exists(outdir):
             os.mkdir(outdir)
-        args.xshift = -0.3
+        args.xshift = -0.4
         args.idstring = idstring
         outpath = join(
             outdir,
@@ -249,10 +250,10 @@ def main_tres(args):
 def main_hires(args):
 
     # CPVs
-    idstring = 'TIC402980664'
-    datadir = "/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/TIC402980664_RDX"
+    idstring = 'TIC141146667'
+    datadir = "/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/TIC141146667_RDX"
     outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
-    datestr = 'j533'
+    datestr = 'j537'
 
     #idstring = 'TIC353730181'
     #datadir = f"/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/{idstring}"
@@ -680,8 +681,10 @@ def main_winered(args):
 def main_dbsp(args):
 
     color = 'red'
-    basedir = f'/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20231207/p200_dbsp_{color}_A/'
-    object_id = 'LP_12-502'
+    basedir = f'/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20240428/p200_dbsp_{color}_A/'
+    #object_id = 'LP_12-502'
+    object_id = 'DG_CVn'
+    ylim = [0,20000] # None
     vizdir = join(basedir, 'Viz')
     datadir = join(basedir, 'Science')
     spectrum_paths = np.sort(
@@ -709,7 +712,7 @@ def main_dbsp(args):
             flx, wav = read_dbsp(spectrum_path)
             outname = os.path.basename(spectrum_path.replace('.fits','.png'))
             outpath = join(outdir, outname)
-            viz_1d_spectrum(flx, wav, outpath, ylabel='counts')
+            viz_1d_spectrum(flx, wav, outpath, ylabel='counts', ylim=ylim)
 
     if args.do_balmer_ew:
         outdir = join(basedir, 'Balmer_EWs')
@@ -749,7 +752,7 @@ def main_dbsp(args):
                         f"Balmer_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
                     )
                     outpath = join(outdir, outname)
-                    get_line_EW(spectrum_path, delta_wav=delta_wav,
+                    get_line_EW(spectrum_path, delta_wav=1.5*delta_wav,
                                 xshift=args.xshift, outpath=outpath,
                                 target_wav=6565, isemissionline=True,
                                 dintwav=3.5, dblock=5, linename='halpha')
