@@ -104,6 +104,7 @@ VELOCE_VSINI_ORDERS_VS_NEXTGEN = [
 
 # a few common lines, in air...
 LINE_D = [
+    ['BalmerLimit', 3645],
     ['H30', 3662.22],
     ['H29', 3663.41],
     ['H28', 3664.65],
