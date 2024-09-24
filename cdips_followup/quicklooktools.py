@@ -122,6 +122,9 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
     if qlp:
         # manually downloaded from MAST portal.
         lcfiles = glob(join(outdir, 'QLP', 'hlsp_qlp*fits'))
+        if len(lcfiles) == 0:
+            lcfiles = get_hlsp_lightcurves(ticid, hlsp_products=['QLP'],
+                                           download_dir=outdir, verbose=True)
 
     if unpopular:
         from astrobase.services.tesslightcurves import get_unpopular_lightcurve
@@ -132,8 +135,8 @@ def get_tess_data(ticid, outdir=None, cdips=0, spoc=0, eleanor=0, cdipspre=0,
                 ticid, ffi_dir=FFICACHEDIR, overwrite=False, lc_dir=outdir
             )
 
-    if lcfiles is None:
-        return None
+    if lcfiles is None or lcfiles == []:
+        return None, None
 
     data = []
     hdrs = []
