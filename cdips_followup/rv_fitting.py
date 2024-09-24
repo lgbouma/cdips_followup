@@ -50,7 +50,20 @@ def convert_vels_to_radvel_ready(ticid, is_bin, instrument):
             names = ['time','mnvel','errvel']
         else:
             names = ['time','mnvel','errvel','idk0','idk1','idk2','exptime']
-        df = pd.read_csv(velspath, delim_whitespace=True, names=names)
+
+        neednames = True
+        with open(velspath, 'r') as f:
+            lines = f.readlines()
+        if 'BJD' in lines[0]:
+            neednames = False
+
+        if neednames:
+            df = pd.read_csv(velspath, sep='\s+', names=names)
+        else:
+            df = pd.read_csv(velspath, sep='\s+')
+            df = df.rename({'BJD':'time', 'RV':'mnvel', 'eRV':'errvel'},
+                           axis='columns')
+
         outdir = os.path.join(DATADIR, 'PFS', 'radvel_vels', today_YYYYMMDD())
 
     elif instrument == 'CHIRON':
@@ -59,7 +72,7 @@ def convert_vels_to_radvel_ready(ticid, is_bin, instrument):
         datadir = os.path.join(DATADIR, 'CHIRON', 'Zhou')
         velspath = os.path.join(datadir, name)
         names = ['time','mnvel','errvel']
-        df = pd.read_csv(velspath, delim_whitespace=True, names=names)
+        df = pd.read_csv(velspath, sep='\s+', names=names)
         df.mnvel *= 1e3
         df.errvel *= 1e3
         outdir = os.path.join(DATADIR, 'CHIRON', 'radvel_vels', today_YYYYMMDD())
