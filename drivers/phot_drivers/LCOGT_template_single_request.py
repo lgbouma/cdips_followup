@@ -24,12 +24,12 @@ def main():
 
     ##########################################
     # CHANGE BELOW
-    savstr = '20231206_lp12502_diptwo' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20240923_hip67522c_25a' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 0
     submit = 0
 
-    tic_id = '402980664' # '120105470'
+    tic_id = '166527623' # '120105470'
     source_id = None # '6113920619134019456' # can use instead of TIC
 
     filtermode = 'ip'# 'zs', 'gp', 'ip'
@@ -37,18 +37,19 @@ def main():
     telescope_class = 'special' # '1m0', '2m0', 'special'
     ipp_value = 1 # usually 1
     #max_search_time = Time('2022-12-31 23:59:00')
-    max_search_time = Time('2024-01-31 23:59:00')
+    max_search_time = Time('2028-01-31 23:59:00')
 
     verify_ephemeris_uncertainty = 1 # require t_tra uncertainty < 2 hours
     inflate_duration = 0 # if t_tra uncertainty > 1 hour, inflate tdur by +/- 45 minutes per side
 
-    transit_type = 'totals' # see above
+    transit_type = 'totals' # 'totals', 'partials', 'all', 'fulltotals' -- see above
     max_n_events = 99 # else None. n_events is per eventclass.
 
     raise_error = False # raise an error if max_duration_error flag raised.
     max_duration_error = 30 # the submitted LCOGT request must match requested durn to within this difference [minutes]
     #sites = ['Palomar'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
-    sites = ['Whipple Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+    sites = ['Las Campanas Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
+    #sites = ['Whipple Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
     #sites = ['Keck Observatory'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
     #sites = ['Cerro Paranal'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
 
@@ -57,7 +58,7 @@ def main():
     # CHANGE ABOVE
     ##########################################
 
-    max_airmass_sched = 2.5
+    max_airmass_sched = 2.5 # FIXME usually 2.5
     manual_ephemeris = False
     manual_ephemeris = True # FIXME
     create_eventclasses = TRANSITTYPEDICT[transit_type]
@@ -68,12 +69,13 @@ def main():
         source_id = tic_to_gaiadr2(tic_id)
 
     if manual_ephemeris:
-        period = 18.5611/24
-        period_unc = 0.0001/24
-        # epoch = 2460259.861 # 2457000 + 1791.2972827806442
-        epoch = 2460260.25 # half an orbit later
-        epoch_unc = 1e-5
-        duration = 3.5 # hr
+        period = 14.334894
+        period_unc = 1.23e-5
+        epoch = 2457000 + 1602.50236 #  2460259.861 # 2457000 + 1791.2972827806442
+        #epoch = 2460260.25 # half an orbit later
+        #epoch = 2460286.71 # the new dip
+        epoch_unc = 8e-4
+        duration = 4 # hr
 
     else:
         # get ephemeris from ephemerides.csv
