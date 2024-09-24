@@ -101,6 +101,8 @@ MAXTIMEDICT = {
     '24B': Time('2025-01-31 23:59:00'),
     '25A': Time('2025-07-31 23:59:00'),
     '25B': Time('2026-01-31 23:59:00'),
+    '26A': Time('2026-07-31 23:59:00'),
+    '26B': Time('2027-01-31 23:59:00'),
 }
 
 # ['', '', '', 'ALMA', 'ATST', 'Anglo-Australian Observatory', 'Apache Point',
