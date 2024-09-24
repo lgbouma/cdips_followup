@@ -33,17 +33,21 @@ def main():
     # is_bin = 0
     # phase_with_prot = 1
 
-    ticid = '59859387'
-    is_bin = 0
-    instrument = 'CHIRON'
+    #ticid = '59859387'
+    #is_bin = 0
+    #instrument = 'CHIRON'
 
     #ticid = '268301217'
     #is_bin = 1
     #instrument = 'PFS'
 
-    k_prior_init = 100
-    log_k_prior_high = np.log(800)
-    log_k_prior_low = np.log(10)
+    ticid = '167913198' # == GJ 710 / Gliese 710
+    is_bin = 0
+    instrument = 'PFS'
+
+    k_prior_init = 5
+    log_k_prior_high = np.log(33)
+    log_k_prior_low = np.log(0.1)
     phase_with_prot = 0
 
     do_mcmc = 0
@@ -65,6 +69,12 @@ def main():
         e['period'] = 1.12036
         e['epoch'] = 2201.8201 + 2457000
         print(e)
+    if ticid == '167913198':
+        e = {}
+        e['period'] = 30
+        e['period_unc'] = 20
+        e['epoch'] = 2458674.60105
+        e['epoch_unc'] = 100
 
     if phase_with_prot:
         period_mean = 3
@@ -102,21 +112,21 @@ def manual_main():
         os.path.dirname(__path__[0]),
         'drivers',
         'radvel_drivers',
-        '20211014', 'HIP67522_CHIRON.py'
+        '20240924', 'TIC167913198.py'
     )
 
     RVRESULTDIR = os.path.join(os.path.dirname(__path__[0]), 'results',
-                               'spec_analysis', 'multi_instrument',
-                               'phased_RVs_CHIRON')
+                               'spec_analysis', 'PFS',
+                               'phased_RVs')
     if not os.path.exists(RVRESULTDIR):
         os.mkdir(RVRESULTDIR)
 
-    run_radvel(driver_path, RVRESULTDIR)
+    run_radvel(driver_path, RVRESULTDIR, do_mcmc=0)
 
 
 if __name__ == "__main__":
-    automain = 1
-    manualmain = 0
+    automain = 0
+    manualmain = 1
 
     if automain:
         main()
