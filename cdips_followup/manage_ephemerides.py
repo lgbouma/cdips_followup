@@ -248,6 +248,12 @@ def query_ephemeris(source_id=None, ticid=None):
 
     if isinstance(ticid, str):
         df.ticid = df.ticid.astype(str)
+
+        if (df.ticid == ticid).sum() == 0:
+            msg = f'Failed to get ephemeris for {source_id}'
+            print(msg)
+            return None
+
         seldf = df[df.ticid == ticid].iloc[-1]
 
     return dict(seldf)
