@@ -10,6 +10,9 @@ import numpy as np, pandas as pd, matplotlib.pyplot as plt
 
 from cdips.utils.lcutils import _given_mag_get_flux
 
+from cdips_followup.paths import RESULTSDIR
+from os.path import join
+
 from cdips_followup.quicklooktools import (
     get_tess_data, explore_flux_lightcurves, explore_eleanor_lightcurves,
     explore_mag_lightcurves, make_periodogram, get_kepler_data
@@ -20,19 +23,20 @@ def quicklooklc(
     outdir = None,
     cdips = 0,
     spoc = 0,
-    eleanor = 0,
-    unpopular = 1,
+    eleanor = 1,
+    unpopular = 0,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
     detrend = None,#None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
-    do_eleanor_lcs = 0,
+    do_eleanor_lcs = 1,
     do_flux_lcs = 0,
-    do_periodogram = 1,
+    do_periodogram = 0,
     do_pf = 0,
     require_quality_zero = 0,
-    forceylim = None, # [0.93, 1.07]# for the flux light curves
+    forceylim = None, #[0.975, 1.03], #[0.998, 1.002], #[0.7,1.1], # [0.93, 1.07]# for the flux light curves
+    bintime = None,
     period = None,
     epoch = None,
     badtimewindows = None,
@@ -57,6 +61,9 @@ def quicklooklc(
                                unpopular=unpopular)
     if data is None and kepler:
         data = get_kepler_data(ticid, outdir=outdir)
+    if data is None:
+        print(f'TIC {ticid} got no data, continue')
+        return
 
     if do_eleanor_lcs:
         explore_eleanor_lightcurves(data, hdrs, ticid, period=period, epoch=epoch,
@@ -79,6 +86,7 @@ def quicklooklc(
                                  epoch=epoch,
                                  require_quality_zero=require_quality_zero,
                                  forceylim=forceylim,
+                                 bintime=bintime,
                                  slideclipdict=slideclipdict,
                                  do_phasefold=do_pf,
                                  mask_orbit_edges=mask_orbit_edges)
@@ -282,9 +290,13 @@ if __name__ == "__main__":
     ticid = '68833286'
 
     # CepHer tic id's w/ HIRES spectra...
-    ticids = ["68833286", "425705688", "390058041", "425914815", "390134160",
-              "28772706", "237163448", "237163474", "237183630", "237184441",
-              "350992827", "120044726", "120098840", "20995907", "120498272",
+    ticids = [#"68833286", "425705688", "390058041", "425914815", "390134160",
+              #"28772706", "237163448",
+              # "237163474",
+              #"237183630",   #NOTE: failed b/c of a single wonky sector...
+              #"237184441",
+              #"350992827",
+              "120044726", "120098840", "20995907", "120498272",
               "41867756", "120688481", "42198961", "120972481", "185461568",
               "185667262", "185848343", "185847064", "186129360", "378170387",
               "378173315", "186140431", "186237466", "186255176", "295799540",
@@ -292,6 +304,40 @@ if __name__ == "__main__":
               "406076288", "256066070", "406087385", "256184740", "256346500",
               "351939704", "352162814", "193335018", "193539544", "278355321",
               "265250815"]
+
+    ticid = '152321616'
+    ticid = '70652803'
+
+    ticids = [
+        # '308749877',
+        '161612652',
+        '166743309',
+        #'590241',
+        #'371372421',
+        #'167303776',
+        '424470353'
+    ]
+
+    ticid = '106590363'
+    ticid = '61230756' # CI Tau
+    ticid = '322807371' # NGTS 30
+    ticid = '122295410'
+    ticid = '396740648'
+    ticid = '361948797' # Babcock's star
+    ticid = '355807959' # Prot=8d, big Bmax/Bmin of 2.25 from Hubrig+2024
+    ticid = '107012050'
+    ticid = '149248196'
+    ticid = '179413040'
+    ticid = '141146667'
+    ticid = '427395300'
+    ticid = '58108662' # LkCa 4
+    ticid = '2234723' # hd 34382
+    ticid = '15693497'
+    ticid = '245392284'
+    ticid = '169138338'
+    ticid = '432234964'
+    ticid = '234284556' # ptof cousin
+    ticid = '167913198' # gliese 710
 
     # # optional #
     # period = 1.395733 # None
@@ -320,7 +366,26 @@ if __name__ == "__main__":
 
     #period, epoch = 2.4619, 2458819.56
 
+    #df = pd.read_csv('nearest100mdwarfs.csv')
+    #df = pd.read_csv('nearest100halo.csv')
+    #ticids = np.array(df[~pd.isnull(df.ticid)].ticid).astype(np.int64).astype(str)
 
     #for ticid in delLyr_ticids:
+    ticids = [ticid]
+
     for ticid in ticids:
-        quicklooklc(ticid, period=period, epoch=epoch)
+        print(ticid)
+
+        # skip cached
+        outdir = join(RESULTSDIR, 'quicklooklc', f'TIC{ticid}')
+        pngfiles = glob(join(outdir, '*png'))
+        if len(pngfiles) > 0:
+            continue
+
+        if ticid == '':
+            continue
+        try:
+            quicklooklc(ticid, outdir=outdir, period=period, epoch=epoch)
+        except (TypeError, ValueError) as e:
+            print(e)
+            continue
