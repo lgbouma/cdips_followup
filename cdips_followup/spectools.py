@@ -25,6 +25,7 @@ CALCULATE:
         measure_vsini: compares target spectrum to broadend NextGen spectra
     given_deltawvlen_get_vsys: convert Δλ to velocity.
     air_to_vac: given air wavelengths, get vacuum wavelengths
+    get_naive_rv: order-by-order CCF synthetic template match RV
 
 VISUALIZE:
     viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
@@ -62,6 +63,11 @@ from specutils import Spectrum1D, SpectralRegion
 from specutils.fitting import fit_generic_continuum, fit_lines
 from specutils.analysis import equivalent_width, centroid
 from specutils.manipulation.utils import excise_regions
+from specutils.manipulation import (
+    FluxConservingResampler, LinearInterpolatedResampler,
+    SplineInterpolatedResampler
+)
+from specutils.analysis import correlation
 
 from astropy.modeling import models
 
@@ -234,7 +240,7 @@ df['obs_wl_air'] = df['obs_wl_air(A)'].apply(retrieve_floats)
 # add hydrogen lines btwn 9000-12000A
 sdf = df[df.element == 'H'].drop_duplicates('obs_wl_air')
 for element, wl in zip(sdf.element, sdf.obs_wl_air):
-	LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
+    LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
 # add sodium, calcium, potassium, magnesium, helium, silicon lines btwn 9000-12000A
 #for el in ['Na', 'Ca', 'K', 'Mg', 'He', 'Si']:
@@ -407,6 +413,37 @@ def read_hires(spectrum_path, start=0, end=None, is_registered=1, return_err=1):
         return flux, wav, flux_err
     else:
         return flux, wav
+
+
+def _get_full_hires_spectrum(spectrum_path):
+
+    k = os.path.basename(spectrum_path).replace('.fits','')
+    flxs, norm_flxs, wavs= [], [], []
+    print('WRN! Assuming HIRES spectrum is already deblazed')
+    flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0, return_err=0)
+    start = 10
+    end = -10
+    for order in range(wav_2d.shape[0]):
+        flx, wav = flx_2d[order, start:end], wav_2d[order, start:end]
+        flxs.append(flx)
+        norm_flxs.append(flx/np.nanmedian(flx))
+        wavs.append(wav)
+
+    flx_arr = np.array(flxs)
+    norm_flx_arr = np.array(norm_flxs)
+    wav_arr = np.array(wavs)
+
+    # get date time RA DEC for barycorr.
+    hdul = fits.open(spectrum_path)
+    hdr = hdul[0].header
+    dateobs = hdr['DATE-OBS']
+    utc_time = hdr['UTC']
+    mjd = hdr['MJD']
+    dec = hdr['DEC']
+    ra = hdr['RA']
+    hdul.close()
+
+    return flx_arr, norm_flx_arr, wav_arr, mjd, ra, dec
 
 
 def read_pfs(spectrum_path, wvlen_soln, verbose=False, is_template=False):
@@ -2905,6 +2942,362 @@ def measure_vsini(wav, flx, flxerr=None, teff=6000, logg=4.5, vturb=2, outdir=No
         print('found {}'.format(outpath))
 
     return best_vsini, best_shift, best_chi2
+
+
+def get_synth_spectrum(synth_path):
+
+    hl = fits.open(synth_path)
+    dirname = os.path.dirname(synth_path)
+    if "HiRes" in dirname:
+        _hl = fits.open(
+            os.path.join(dirname,
+                         "WAVE_PHOENIX-ACES-AGSS-COND-2011.fits")
+        )
+        syn_wav = _hl[0].data
+        _hl.close()
+    elif "MedRes" in dirname:
+        # downloaded the δλ = 1A model, fe/h=0, alpha/M=0
+        syn_wav = np.arange(int(3e3), int(1e4), 0.1)
+    else:
+        NotImplementedError
+    syn_flx = hl[0].data
+    # NOTE: might want to actually continuum normalize...
+    syn_norm_flx = syn_flx/np.nanmedian(syn_flx)
+    hl.close()
+
+    return syn_flx, syn_wav
+
+
+def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
+    """
+    Given a target HIRES spectrum `spectrum_path` and a PHOENIX model spectrum
+    `synth_path` guess the RV using an order-by-order CCF.
+
+    Example PHOENIX spectra at
+    /Users/luke/Dropbox/proj/hd_34382/data/synthetic_spectra/PHOENIX_MedRes
+    # downloaded the δλ = 1A model, fe/h=0, alpha/M=0
+    """
+
+    tname = os.path.basename(spectrum_path).replace(".fits", "")
+    sname = os.path.basename(synth_path).replace(".PHOENIX-ACES-AGSS-COND-2011-HiRes.fits", "")
+
+    outdir = os.path.join(outdir, tname+"_v_"+sname)
+    print(f"naive_rv: Will write to {outdir}")
+    if not os.path.exists(outdir): os.mkdir(outdir)
+
+    # get the relevant spectra
+    flx_2d, norm_flx_2d, wav_2d, mjd, ra, dec = _get_full_hires_spectrum(spectrum_path)
+    from astropy.coordinates import SkyCoord
+    coord = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
+    ra, dec = coord.ra.deg, coord.dec.deg
+    print(ra, dec)
+
+    syn_flx, syn_wav = get_synth_spectrum(synth_path)
+
+    # barycentric correction:
+    # account for position and velocity of the Earth geocenter
+    # with respect to the Solar System barycenter, and Earth's rotation, and
+    # drop higher order terms.
+    from barycorrpy import get_BC_vel
+    jd = float(mjd) + 2400000.5
+    epoch = 2451545.0
+    rv = 0
+    pmra = 0
+    pmdec = 0
+    px = 1
+    bcresult = get_BC_vel(JDUTC=jd, obsname='Keck', ephemeris='de430',
+                          zmeas=0.0, ra=ra, dec=dec, pmra=pmra, pmdec=pmdec,
+                          px=px, rv=rv, predictive=True)
+    bc_ms = bcresult[0] # barycentric correction in m/s
+    bc_kms = bc_ms / 1e3
+
+
+    # iterate over orders and fit for the RV
+    n_order = flx_2d.shape[0]
+    orders, rvs_ccf, rvs_chisq = [], [], []
+
+    outcsvpath = os.path.join(outdir, f'rv_{tname}_{sname}.csv')
+    if os.path.exists(outcsvpath):
+        print(f"Found {outcsvpath}, return.")
+        return pd.read_csv(outcsvpath)
+
+    #good_orders = [1,2,6,19]
+    all_orders = range(n_order)
+    iterable = all_orders # NOTE can tweak
+    for ix in iterable:
+
+        wav = wav_2d[ix, :]
+        flx = norm_flx_2d[ix, :] / np.nanmedian(norm_flx_2d[ix, :])
+        obs_sel = np.isfinite(wav) & np.isfinite(flx)
+        wav, flx = wav[obs_sel], flx[obs_sel]
+        min_wav, max_wav = np.nanmin(wav), np.nanmax(wav)
+        wav_0 = np.nanmean(wav)*u.AA
+
+        syn_sel = (syn_wav > min_wav) & (syn_wav < max_wav)
+        sflx = syn_flx[syn_sel] / np.nanmedian(syn_flx[syn_sel])
+        swav = syn_wav[syn_sel]
+
+        # define object spectrum, smooth, and continuum normalize
+
+        # smooth
+        from scipy.ndimage import gaussian_filter1d
+        fn = lambda x: gaussian_filter1d(x, sigma=1)
+        flx = fn(flx)
+
+        from cdips.utils.lcutils import p2p_rms
+        o_unc = StdDevUncertainty(
+            np.ones_like(flx)*p2p_rms(flx)*u.dimensionless_unscaled
+        )
+
+        o_spec = Spectrum1D(spectral_axis = wav*u.AA,
+                            flux = fn(flx)*u.dimensionless_unscaled,
+                            uncertainty = o_unc,
+                            velocity_convention = 'doppler_optical',
+                            rest_value = wav_0)
+
+        # continuum normalize
+        cont_flx = fit_generic_continuum(o_spec)(o_spec.spectral_axis)
+        cont_norm_spec = o_spec / cont_flx
+        std_data = np.nanstd(cont_norm_spec.flux)
+        o_spec = Spectrum1D(spectral_axis = wav*u.AA,
+                            flux = cont_norm_spec.flux,
+                            uncertainty = o_unc,
+                            velocity_convention = 'doppler_optical',
+                            rest_value = wav_0)
+
+        # template spectrum (tiny uncertainty)
+        t_unc = StdDevUncertainty(
+            1e-3*np.ones_like(sflx)*p2p_rms(sflx)*u.dimensionless_unscaled
+        )
+        t_spec = Spectrum1D(spectral_axis = swav*u.AA,
+                            flux = sflx*u.dimensionless_unscaled,
+                            uncertainty = t_unc)
+
+        # continuum normalize, and match stdevn of data
+        cont_flx = fit_generic_continuum(t_spec)(t_spec.spectral_axis)
+        cont_norm_spec = t_spec / cont_flx
+        std_model = np.nanstd(cont_norm_spec.flux)
+        fudge = std_data/std_model
+        t_spec = Spectrum1D(spectral_axis = swav*u.AA,
+                            flux = fudge*cont_norm_spec.flux,
+                            uncertainty = t_unc)
+
+        # object spectrum resampled onto the template wavelength scale
+        spl = SplineInterpolatedResampler()
+        ospl_spec = spl(o_spec, swav*u.AA)
+
+        # degrade object spectrum resolution to ~1Å (FWHM=1Å)
+        dw = np.median(np.diff(swav))
+        sigma_pix = 1.0 / (2.355 * dw)  # convert 1Å FWHM into pixels
+        print(f'Degrading target by {sigma_pix:.1f} px to 1angstrom resolution')
+        degraded_flux = gaussian_filter1d(ospl_spec.flux.value, sigma_pix)
+        ospl_spec = Spectrum1D(
+            spectral_axis=ospl_spec.spectral_axis,
+            flux=degraded_flux*u.dimensionless_unscaled,
+            uncertainty=ospl_spec.uncertainty,
+            velocity_convention=ospl_spec.velocity_convention,
+            rest_value=ospl_spec.rest_value
+        )
+
+        # template vs object cross-correlation
+        # NOTE default 0.5 apodization_window.. what if 1? should this number
+        # matter?
+        corr, lag = correlation.template_correlate(
+            ospl_spec, t_spec, apodization_window=0.5
+        )
+
+        # negative RV: blueshifted, star coming towards you
+        # ccf-based RV
+        rv_ccf = lag[np.argmax(corr)]
+
+        equiv = u.doppler_optical(wav_0)
+        ccf_shifted_mean = rv_ccf.to(u.AA, equivalencies=equiv)
+        ccf_shift = wav_0 - ccf_shifted_mean # positive = redshift
+
+        ospl_shift_spec = Spectrum1D(
+            spectral_axis = ospl_spec.wavelength + ccf_shift,
+            flux = ospl_spec.flux
+        )
+
+        # inverse approach.  try a grid of shifts... and chi^2 minimize.
+        # +/- ~240km/s, or +/- 3 angstrom
+
+        run_in_parallel = True
+
+        if not run_in_parallel:
+
+            # NOTE 100 points ->  5km/s floating point resolution...
+            # NOTE 1000 points ->  0.5km/s floating point resolution...
+            # NOTE 10000 points ->  0.05km/s floating point resolution...
+            wav_shift_grid = np.linspace(-4,4,int(1e3))
+            rv_shift_grid = (wav_0 + wav_shift_grid*u.AA).to(u.km/u.s, equivalencies=equiv)
+            chi_sqs = []
+
+            fluxcon = FluxConservingResampler()
+            linear = LinearInterpolatedResampler()
+
+            N_tot = len(wav_shift_grid)
+
+            for _ix, wav_shift, rv_shift in (
+                zip(range(N_tot), wav_shift_grid, rv_shift_grid)
+            ):
+
+                # redefine data to ensure correct trimming
+                _wav = ospl_spec.wavelength + wav_shift*u.AA
+                _flx = ospl_spec.flux
+
+                sel = (
+                    (_wav > min(t_spec.wavelength)) &
+                    (_wav < max(t_spec.wavelength))
+                )
+                _wav, _flx = _wav[sel], _flx[sel]
+                _unc = np.ones_like(_flx) * p2p_rms(_flx)
+
+                # resample, since the default "shift" produces odd pixelation
+                # effects
+                o_unc = StdDevUncertainty(
+                     _unc * u.dimensionless_unscaled
+                )
+                ospl_shift_spec = linear(ospl_spec, _wav)
+
+                # define model
+                # sum((data-model)^2/unc^2)
+                data = ospl_shift_spec.flux
+                unc = ospl_shift_spec.uncertainty.array
+                _sel = (
+                    (t_spec.wavelength > min(ospl_shift_spec.wavelength))
+                    &
+                    (t_spec.wavelength > max(ospl_shift_spec.wavelength))
+                )
+                model = t_spec.flux[sel]
+
+                chi_sq = np.sum((data-model)**2/(unc**2))
+
+                chi_sqs.append(chi_sq)
+
+                if _ix == 0:
+                    best_shift_spec = ospl_shift_spec
+                else:
+                    if chi_sq < np.nanmin(chi_sqs):
+                        best_shift_spec = ospl_shift_spec
+
+                if _ix % 10 == 0:
+                    print(f"{_ix}/{N_tot}, {wav_shift:.4f}, {rv_shift:.2f}, χ^2={chi_sq:.1f}...")
+
+            rv_chisq = rv_shift_grid[np.argmin(np.array(chi_sqs))]
+            shift_chisq = wav_shift_grid[np.argmin(np.array(chi_sqs))]
+
+            orders.append(ix)
+            rvs_chisq.append(rv_chisq.value)
+            rvs_ccf.append(rv_ccf.value)
+
+        else:
+
+            # TODO
+            raise NotImplementedError
+
+
+        if make_plot:
+            set_style('science')
+            plt.close("all")
+            fig = plt.figure(figsize=(16, 4))
+            axd = fig.subplot_mosaic(
+                """
+                AAAAAABB
+                AAAAAACC
+                """
+            )
+
+            ax = axd['A']
+            ax.plot(best_shift_spec.spectral_axis-shift_chisq*u.AA,
+                    best_shift_spec.flux,
+                    lw=0.5, label=tname + " Δλ=1A best-shift")
+
+            dflux = 0.3*(
+                np.nanmax(best_shift_spec.flux) -
+                np.nanmin(best_shift_spec.flux)
+            )
+
+            ax.plot(ospl_spec.spectral_axis,
+                    ospl_spec.flux - dflux,
+                    lw=0.5, label=tname + " Δλ=1A observed")
+
+            ax.plot(t_spec.spectral_axis, t_spec.flux - 2*dflux, lw=0.5,
+                    label=sname)
+
+            tstr = (
+                f'order {ix}: RVccf={rv_ccf:.2f} RVχ2={rv_chisq:.2f}, '
+                f'datashift (χ2) λ={shift_chisq:.3f}'
+            )
+            ax.set_title(tstr)
+            ax.grid(True, which='both', ls='--', lw=0.3)
+            ax.set_xlabel('Wavelength [Angstrom]')
+            ax.set_ylabel('Relative flux')
+
+            ax.legend(loc='lower right', fontsize='x-small')
+
+            ax = axd['B']
+            ax.plot(lag, corr)
+            ax.set_xlim([-250,250])
+            ax.set_xlabel('Velocity [km/s]')
+            ax.set_ylabel('CCF')
+            ax.grid(True, which='both', ls='--', lw=0.3)
+
+            ax = axd['C']
+            ax.plot(rv_shift_grid, chi_sqs)
+            ax.set_xlim([-250,250])
+            ax.set_xlabel('Velocity [km/s]')
+            ax.set_ylabel('χ^2')
+            ax.grid(True, which='both', ls='--', lw=0.3)
+
+            fig.tight_layout()
+            ostr = str(ix).zfill(2)
+            outpath = os.path.join(
+                outdir, f"shiftcompare_ord{ostr}_{tname}_{sname}.png"
+            )
+            savefig(fig, outpath, writepdf=False, dpi=300)
+
+        DEBUG = 0
+
+        if DEBUG:
+            plt.close("all")
+            fig, ax = plt.subplots()
+            ax.plot(o_spec.spectral_axis, o_spec.flux)
+            ax.plot(ospl_spec.spectral_axis, ospl_spec.flux)
+            plt.savefig("temp_resample.png", dpi=300)
+
+        if DEBUG:
+            plt.close("all")
+            fig, ax = plt.subplots()
+            ax.plot(lag, corr)
+            ax.set_xlim([-300,300])
+            plt.savefig("temp_correlate.png", dpi=300)
+
+    outdf = pd.DataFrame({
+        'order': orders,
+        'rv_ccf_kms': np.round(rvs_ccf, 4),
+        'rv_chisq_kms': np.round(rvs_chisq, 4),
+        'bc_kms': np.round(np.ones(len(orders))*bc_kms, 4),
+    })
+
+    # note: the correction is defined s.t. you subtract it off the measured
+    # redshift.
+    outdf['rv_chisq_minus_bc_kms'] = np.round(
+        outdf['rv_chisq_kms'] - outdf['bc_kms'], 4
+    )
+
+    rvs = np.array(outdf['rv_chisq_minus_bc_kms'])
+
+    rchip_good_orders = [0,2,3,4,5,6,11] # previous: [0,2,3,4,5,6,10,11,13]
+    sel_rvs = rvs[np.array(rchip_good_orders)]
+
+    outdf['meangoodorder_rv_chisq_minus_bc_kms'] = np.round(np.nanmean(sel_rvs), 4)
+
+    outdf.to_csv(outcsvpath, index=False)
+    print(f"wrote {outcsvpath}")
+
+    return pd.read_csv(outcsvpath)
+
 
 
 def measure_veloce_vsini(specname, targetname, teff, outdir):
