@@ -3356,7 +3356,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1,
             )
 
             ax = axd['A']
-            ax.plot(best_shift_spec.spectral_axis-shift_chisq*u.AA,
+            ax.plot(best_shift_spec.spectral_axis,#-shift_chisq*u.AA,
                     best_shift_spec.flux,
                     lw=0.5, label=tname + " Δλ=1A best-shift")
 
