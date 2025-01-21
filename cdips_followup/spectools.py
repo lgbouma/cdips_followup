@@ -44,6 +44,7 @@ import numpy as np, pandas as pd, matplotlib.pyplot as plt
 from numpy import array as nparr
 from matplotlib.transforms import blended_transform_factory
 from os.path import join
+from typing import Tuple
 
 from astropy.io import fits
 from astropy import units as u, constants as const
@@ -63,10 +64,6 @@ from specutils import Spectrum1D, SpectralRegion
 from specutils.fitting import fit_generic_continuum, fit_lines
 from specutils.analysis import equivalent_width, centroid
 from specutils.manipulation.utils import excise_regions
-from specutils.manipulation import (
-    FluxConservingResampler, LinearInterpolatedResampler,
-    SplineInterpolatedResampler
-)
 from specutils.analysis import correlation
 
 from astropy.modeling import models
@@ -75,6 +72,15 @@ from aesthetic.plot import savefig, format_ax, set_style
 
 from cdips_followup import __path__
 from cdips_followup.paths import SPECDIR
+
+from cdips.utils.lcutils import p2p_rms
+
+from specutils.manipulation import (
+    FluxConservingResampler, LinearInterpolatedResampler,
+    SplineInterpolatedResampler
+)
+fluxcon = FluxConservingResampler()
+linear = LinearInterpolatedResampler()
 
 def air_to_vac(wavelength):
     """
@@ -2968,7 +2974,61 @@ def get_synth_spectrum(synth_path):
     return syn_flx, syn_wav
 
 
-def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
+def _compute_chi_sq(
+    args: Tuple[int, float, float, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    ) -> Tuple[int, float, np.ndarray, np.ndarray]:
+    """
+    Computes chi squared between a shifted observed spectrum and
+    the template spectrum, returning only primitive types/arrays.
+
+    Args:
+        args: (index, wav_shift, rv_shift, obs_wav, obs_flx, tpl_wav, tpl_flx)
+            index (int): index of this shift
+            wav_shift (float): wavelength shift in Angstrom
+            rv_shift (float): radial velocity shift (not used inside, but included
+                for clarity)
+            obs_wav (np.ndarray): 1D array of the object wavelength
+            obs_flx (np.ndarray): 1D array of the object flux
+            tpl_wav (np.ndarray): 1D array of the template wavelength
+            tpl_flx (np.ndarray): 1D array of the template flux
+
+    Returns:
+        (index, chi_sq, shifted_wav, shifted_flx)
+    """
+    (_ix, wav_shift, _rv_shift,
+     obs_wav, obs_flx, tpl_wav, tpl_flx) = args
+
+    # Shift the observation
+    _wav = obs_wav + wav_shift
+
+    # Make a selection so we only compare in region overlapping the template
+    sel = (_wav > np.min(tpl_wav)) & (_wav < np.max(tpl_wav))
+    _wav = _wav[sel]
+    _flx = obs_flx[sel]
+
+    # For demonstration: simple “uncertainty” as the scatter of obs
+    _unc = np.ones_like(_flx) * np.std(_flx)
+
+    # Interpolate the shifted obs onto the same grid as the template
+    # NOTE: do a quick-and-dirty linear interpolation
+    #       (you could do a more elaborate resampler if you want).
+    interp_flx = np.interp(tpl_wav, _wav, _flx, left=np.nan, right=np.nan)
+    interp_unc = np.interp(tpl_wav, _wav, _unc, left=np.nan, right=np.nan)
+
+    # Compute chi^2
+    # Only compare finite overlap region
+    finite_sel = ~np.isnan(interp_flx) & ~np.isnan(tpl_flx)
+    data = interp_flx[finite_sel]
+    model = tpl_flx[finite_sel]
+    unc = interp_unc[finite_sel]
+    chi_sq = np.sum((data - model)**2 / (unc**2))
+
+    # Return arrays and floats only
+    return _ix, chi_sq, tpl_wav[finite_sel], data
+
+
+def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1,
+                 run_in_parallel=0):
     """
     Given a target HIRES spectrum `spectrum_path` and a PHOENIX model spectrum
     `synth_path` guess the RV using an order-by-order CCF.
@@ -2982,7 +3042,6 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
     sname = os.path.basename(synth_path).replace(".PHOENIX-ACES-AGSS-COND-2011-HiRes.fits", "")
 
     outdir = os.path.join(outdir, tname+"_v_"+sname)
-    print(f"naive_rv: Will write to {outdir}")
     if not os.path.exists(outdir): os.mkdir(outdir)
 
     # get the relevant spectra
@@ -3021,6 +3080,8 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
         print(f"Found {outcsvpath}, return.")
         return pd.read_csv(outcsvpath)
 
+    print(f"naive_rv: Will write to {outdir}")
+
     #good_orders = [1,2,6,19]
     all_orders = range(n_order)
     iterable = all_orders # NOTE can tweak
@@ -3044,7 +3105,6 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
         fn = lambda x: gaussian_filter1d(x, sigma=1)
         flx = fn(flx)
 
-        from cdips.utils.lcutils import p2p_rms
         o_unc = StdDevUncertainty(
             np.ones_like(flx)*p2p_rms(flx)*u.dimensionless_unscaled
         )
@@ -3122,19 +3182,21 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
         # inverse approach.  try a grid of shifts... and chi^2 minimize.
         # +/- ~240km/s, or +/- 3 angstrom
 
-        run_in_parallel = True
+        # Serial implementation has been tested to be good to ~5km/s, but SLOW
+        #
+        # 100 points ->  5km/s grid resolution...
+        # 1000 points ->  0.5km/s grid resolution...
+        # 10000 points ->  0.05km/s grid resolution...
+        #
+        # Parallel implementation running...
+
+        N_grid = int(1e4)
 
         if not run_in_parallel:
 
-            # NOTE 100 points ->  5km/s floating point resolution...
-            # NOTE 1000 points ->  0.5km/s floating point resolution...
-            # NOTE 10000 points ->  0.05km/s floating point resolution...
-            wav_shift_grid = np.linspace(-4,4,int(1e3))
+            wav_shift_grid = np.linspace(-4, 4, N_grid)
             rv_shift_grid = (wav_0 + wav_shift_grid*u.AA).to(u.km/u.s, equivalencies=equiv)
             chi_sqs = []
-
-            fluxcon = FluxConservingResampler()
-            linear = LinearInterpolatedResampler()
 
             N_tot = len(wav_shift_grid)
 
@@ -3181,7 +3243,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
                     if chi_sq < np.nanmin(chi_sqs):
                         best_shift_spec = ospl_shift_spec
 
-                if _ix % 10 == 0:
+                if _ix % 1000 == 0:
                     print(f"{_ix}/{N_tot}, {wav_shift:.4f}, {rv_shift:.2f}, χ^2={chi_sq:.1f}...")
 
             rv_chisq = rv_shift_grid[np.argmin(np.array(chi_sqs))]
@@ -3193,8 +3255,93 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1):
 
         else:
 
-            # TODO
-            raise NotImplementedError
+            # Explanation: Why we pass only NumPy arrays into multiprocessing
+            #
+            # Python’s multiprocessing uses “pickling” to send data from the main
+            # process to worker processes. NumPy arrays are straightforward to pickle
+            # because NumPy provides a well-defined interface for serializing array
+            # metadata (shape, strides, dtype) and the raw memory buffer. Hence, it’s
+            # easy for Python to re-create the same array in each worker process.
+            #
+            # On the other hand, complex objects like Spectrum1D may contain internal
+            # references to C/C++ code, custom data structures, or Python-callable
+            # attributes that are not pickle-friendly. These objects cannot be
+            # automatically decomposed and reassembled by the pickle module. Thus,
+            # the workaround is to pass only primitive data (arrays, floats, etc.)
+            # to multiprocessing, and then rebuild or reconstruct any specialized
+            # objects in the parent process as needed.
+
+            ###################################################
+            # 1) Extract your arrays from the Spectrum1D objects
+            ###################################################
+            #   E.g. “ospl_spec” might be your object spectrum,
+            #   while “t_spec” is the template.  Convert them
+            #   into arrays that can be passed to multiprocessing:
+            ###################################################
+            obs_wav_arr = ospl_spec.wavelength.value  # 1D numpy array
+            obs_flx_arr = ospl_spec.flux.value
+            tpl_wav_arr = t_spec.wavelength.value
+            tpl_flx_arr = t_spec.flux.value
+
+            ###################################################
+            # 2) Define your shift grids as normal
+            ###################################################
+            wav_shift_grid = np.linspace(-4, 4, N_grid)
+            rv_shift_grid = (
+                (wav_0 + wav_shift_grid*u.AA)
+                .to(u.km/u.s, equivalencies=equiv)
+            )
+            N_tot = len(wav_shift_grid)
+
+            from multiprocessing import Pool
+
+            args_list = [
+                (i,
+                 wav_shift_grid[i],
+                 rv_shift_grid[i].value,     # pass as float
+                 obs_wav_arr,
+                 obs_flx_arr,
+                 tpl_wav_arr,
+                 tpl_flx_arr)
+                for i in range(N_tot)
+            ]
+
+            chi_sqs = []
+            min_chi = np.inf
+            best_result = None
+
+            # Start pool
+            with Pool() as pool:
+                results = pool.map(_compute_chi_sq, args_list)
+
+            # results is a list of tuples: (_ix, chi_sq, shifted_wav, shifted_flx)
+            for _ix, chi_sq, shifted_wav, shifted_flx in results:
+                chi_sqs.append(chi_sq)
+                if chi_sq < min_chi:
+                    min_chi = chi_sq
+                    best_result = (shifted_wav, shifted_flx)
+
+                if _ix % 1000 == 0:
+                    print(f"{_ix}/{N_tot}, {wav_shift_grid[_ix]:.4f}, "
+                          f"{rv_shift_grid[_ix]:.2f} km/s, chi^2={chi_sq:.1f}...")
+
+            # pick best solution
+            best_ix = np.argmin(chi_sqs)
+            rv_chisq = rv_shift_grid[best_ix]
+            shift_chisq = wav_shift_grid[best_ix]
+
+            # Rebuild a Spectrum1D only for the best shift
+            best_wav, best_flx = best_result
+            best_unc = StdDevUncertainty(np.std(best_flx)*np.ones_like(best_flx))
+            best_shift_spec = Spectrum1D(
+                spectral_axis=best_wav*u.AA,
+                flux=best_flx*u.dimensionless_unscaled,
+                uncertainty=best_unc
+            )
+
+            orders.append(ix)
+            rvs_chisq.append(-1. * rv_chisq.value) # not sure why, but needed.
+            rvs_ccf.append(rv_ccf.value)
 
 
         if make_plot:
