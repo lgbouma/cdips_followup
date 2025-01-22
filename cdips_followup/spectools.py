@@ -3027,7 +3027,7 @@ def _compute_chi_sq(
     return _ix, chi_sq, tpl_wav[finite_sel], data
 
 
-def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1,
+def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
                  run_in_parallel=0, vbroad=0):
     """
     Given a target HIRES spectrum `spectrum_path` and a PHOENIX model spectrum
@@ -3323,7 +3323,10 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1,
             best_result = None
 
             # Start pool
-            with Pool() as pool:
+            from multiprocessing import cpu_count
+            num_processes = cpu_count() // 2
+
+            with Pool(processes=num_processes) as pool:
                 results = pool.map(_compute_chi_sq, args_list)
 
             # results is a list of tuples: (_ix, chi_sq, shifted_wav, shifted_flx)
@@ -3447,8 +3450,11 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1,
 
     rvs = np.array(outdf['rv_chisq_minus_bc_kms'])
 
-    rchip_good_orders = [0,2,3,4,5,6,11] # previous: [0,2,3,4,5,6,10,11,13]
-    sel_rvs = rvs[np.array(rchip_good_orders)]
+    if chip == 'r':
+        chip_good_orders = [0,2,3,4,5,6,11] # previous: [0,2,3,4,5,6,10,11,13]
+    elif chip == 'i':
+        chip_good_orders = [4,8] # previous: [0,2,3,4,5,6,10,11,13]
+    sel_rvs = rvs[np.array(chip_good_orders)]
 
     outdf['meangoodorder_rv_chisq_minus_bc_kms'] = np.round(np.nanmean(sel_rvs), 4)
 
