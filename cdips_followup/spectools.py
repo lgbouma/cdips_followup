@@ -3028,7 +3028,7 @@ def _compute_chi_sq(
 
 
 def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1,
-                 run_in_parallel=0):
+                 run_in_parallel=0, vbroad=0):
     """
     Given a target HIRES spectrum `spectrum_path` and a PHOENIX model spectrum
     `synth_path` guess the RV using an order-by-order CCF.
@@ -3138,8 +3138,20 @@ def get_naive_rv(spectrum_path, synth_path, outdir, make_plot=1,
         cont_norm_spec = t_spec / cont_flx
         std_model = np.nanstd(cont_norm_spec.flux)
         fudge = std_data/std_model
+
+        template_flux = 1.*cont_norm_spec.flux
+        if vbroad > 0:
+            # degrade template spectrum resolution to requested broadening
+            # velocity, assumed in kms
+            _wvlen0 = 5000 # angstrom
+            dlam = vbroad / (3e5) * _wvlen0
+            dw = np.median(np.diff(swav))
+            sigma_pix = dlam / (2.355 * dw)  # convert broadening FWHM into pixels
+            print(f'Degrading template by {sigma_pix:.1f} px to {dlam:.1f} angstrom resolution')
+            template_flux = gaussian_filter1d(template_flux, sigma_pix)
+
         t_spec = Spectrum1D(spectral_axis = swav*u.AA,
-                            flux = fudge*cont_norm_spec.flux,
+                            flux = fudge*template_flux,
                             uncertainty = t_unc)
 
         # object spectrum resampled onto the template wavelength scale
