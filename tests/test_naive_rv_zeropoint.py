@@ -2,14 +2,15 @@ import os
 from os.path import join
 import numpy as np, matplotlib.pyplot as plt
 from cdips_followup.spectools import get_naive_rv
+from cdips_followup.paths import RESULTSDIR, DATADIR
 
 ####################
 # change these
 run_in_parallel = 1
-chip = 'i'
+chip = 'r'
 ####################
 
-outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/naive_rv_test_results'
+outdir = join(RESULTSDIR, 'spec_analysis/naive_rv_test_results')
 if not os.path.exists(outdir): os.mkdir(outdir)
 outdir = join(outdir, f"{chip}_chip")
 if not os.path.exists(outdir): os.mkdir(outdir)
@@ -47,11 +48,12 @@ def main():
 
         fitsname, teff, logg, rv_expected = v
 
-        spectrum_path = (f'/Users/luke/Dropbox/proj/cdips_followup/data/'
-                         f'spectra/HIRES/{starname}/{fitsname}')
-        synth_path = (f'/Users/luke/local/synthetic_spectra/PHOENIX_MedRes/'
-                      f'lte0{teff:d}-{logg:.2f}-0.0'
-                      f'.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits')
+        spectrum_path = join(DATADIR, f'spectra/HIRES/{starname}/{fitsname}')
+        localdir = join(os.path.expanduser('~'), 'local')
+        synth_path = join(localdir,
+                          f'synthetic_spectra/PHOENIX_MedRes/'
+                          f'lte0{teff:d}-{logg:.2f}-0.0'
+                          f'.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits')
 
         df = get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
                           run_in_parallel=run_in_parallel)
