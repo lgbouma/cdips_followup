@@ -69,7 +69,10 @@ def main():
 
         rvs = rvs - bc + ZP  # this is the systemic RV!!! (at the order level)
         if chip == 'r':
-            chip_good_orders = [0,2,3,4,5,6,11] # previous: [0,2,3,4,5,6,10,11,13]
+            if teff >= 4000:
+                chip_good_orders = [0,2,3,4,5,6,11]
+            elif teff < 4000:
+                chip_good_orders = [0,2,3,4,5,6]
         elif chip == 'i':
             if teff >= 4000:
                 chip_good_orders = [1]
