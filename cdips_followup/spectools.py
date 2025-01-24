@@ -3206,7 +3206,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
 
         if not run_in_parallel:
 
-            wav_shift_grid = np.linspace(-4, 4, N_grid)
+            wav_shift_grid = np.linspace(-5, 5, N_grid)
             rv_shift_grid = (wav_0 + wav_shift_grid*u.AA).to(u.km/u.s, equivalencies=equiv)
             chi_sqs = []
 
