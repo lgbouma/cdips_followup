@@ -64,7 +64,11 @@ def main():
         if chip == 'r':
             chip_good_orders = [0,2,3,4,5,6,11] # previous: [0,2,3,4,5,6,10,11,13]
         elif chip == 'i':
-            chip_good_orders = [1] # previous: [0,2,3,4,5,6,10,11,13]
+            if teff >= 4000:
+                chip_good_orders = [1]
+            elif teff < 4000:
+                # TiO and K 7700 order 8
+                chip_good_orders = [4] # previous: [0,2,3,4,5,6,10,11,13]
 
         sel_rvs = rvs[np.array(chip_good_orders)]
         df['meangoodorder_rv_chisq_minus_bc_kms'] = np.round(np.nanmean(sel_rvs), 4)

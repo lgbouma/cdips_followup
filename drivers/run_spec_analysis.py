@@ -30,7 +30,7 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 0           # plot all orders
+    args.do_orders = 1           # plot all orders
     args.do_sms_analysis = 0     # run specmatch-syn analysis
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
@@ -39,19 +39,19 @@ def main():
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
     args.do_stack_comparison = 0 # compare versus stack
-    args.do_balmer_ew = 1        # measure EWs of all available Balmer lines
+    args.do_balmer_ew = 0        # measure EWs of all available Balmer lines
 
     args.is_pfs = 0
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 0
+    args.is_hires = 1
     args.is_neid = 0
     args.is_harps = 0
     args.is_coralie = 0
     args.is_rvs = 0
     args.is_winered = 0
-    args.is_dbsp = 1
+    args.is_dbsp = 0
 
     if args.is_pfs:
 
@@ -254,6 +254,11 @@ def main_hires(args):
     datadir = "/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/TIC141146667_RDX"
     outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
     datestr = 'j537'
+
+    #idstring = 'GJ699' # Barnard's
+    #datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/GJ699'
+    #outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
+    #datestr = 'j130'
 
     #idstring = 'TIC353730181'
     #datadir = f"/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/{idstring}"
@@ -681,10 +686,9 @@ def main_winered(args):
 def main_dbsp(args):
 
     color = 'red'
-    basedir = f'/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20240428/p200_dbsp_{color}_A/'
-    #object_id = 'LP_12-502'
-    object_id = 'DG_CVn'
-    ylim = [0,20000] # None
+    basedir = f'/Users/luke/Dropbox/proj/cpv/data/spectra/DBSP_REDUX/20241108/p200_dbsp_{color}_A/'
+    object_id = 'LP_12-502' # 'DG_CVn'
+    ylim = None # [0,20000] # None
     vizdir = join(basedir, 'Viz')
     datadir = join(basedir, 'Science')
     spectrum_paths = np.sort(
