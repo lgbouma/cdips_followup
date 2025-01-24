@@ -3119,6 +3119,11 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
         cont_flx = fit_generic_continuum(o_spec)(o_spec.spectral_axis)
         cont_norm_spec = o_spec / cont_flx
         std_data = np.nanstd(cont_norm_spec.flux)
+        a9505_data = (
+            np.nanpercentile(cont_norm_spec.flux, 95)
+            -
+            np.nanpercentile(cont_norm_spec.flux, 5)
+        )
         o_spec = Spectrum1D(spectral_axis = wav*u.AA,
                             flux = cont_norm_spec.flux,
                             uncertainty = o_unc,
@@ -3129,6 +3134,13 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
         t_unc = StdDevUncertainty(
             1e-3*np.ones_like(sflx)*p2p_rms(sflx)*u.dimensionless_unscaled
         )
+        # terribly-modeled regions of the spectra
+        MANUAL_TEMPLATE_MASKS = [
+            (swav > 6706) & (swav < 6711), # Li6708 large and variable
+        ]
+        for mask in MANUAL_TEMPLATE_MASKS:
+            sflx[mask] = np.nan
+
         t_spec = Spectrum1D(spectral_axis = swav*u.AA,
                             flux = sflx*u.dimensionless_unscaled,
                             uncertainty = t_unc)
@@ -3137,7 +3149,14 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
         cont_flx = fit_generic_continuum(t_spec)(t_spec.spectral_axis)
         cont_norm_spec = t_spec / cont_flx
         std_model = np.nanstd(cont_norm_spec.flux)
-        fudge = std_data/std_model
+        a9505_model = (
+            np.nanpercentile(cont_norm_spec.flux, 95)
+            -
+            np.nanpercentile(cont_norm_spec.flux, 5)
+        )
+
+        fudge = a9505_data / a9505_model
+        #fudge = std_data/std_model
 
         template_flux = 1.*cont_norm_spec.flux
         if vbroad > 0:
@@ -3206,7 +3225,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
 
         if not run_in_parallel:
 
-            wav_shift_grid = np.linspace(-5, 5, N_grid)
+            wav_shift_grid = np.linspace(-6, 6, N_grid)
             rv_shift_grid = (wav_0 + wav_shift_grid*u.AA).to(u.km/u.s, equivalencies=equiv)
             chi_sqs = []
 
@@ -3298,7 +3317,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
             ###################################################
             # 2) Define your shift grids as normal
             ###################################################
-            wav_shift_grid = np.linspace(-4, 4, N_grid)
+            wav_shift_grid = np.linspace(-6, 6, N_grid)
             rv_shift_grid = (
                 (wav_0 + wav_shift_grid*u.AA)
                 .to(u.km/u.s, equivalencies=equiv)
