@@ -7,7 +7,7 @@ from cdips_followup.paths import RESULTSDIR, DATADIR
 ####################
 # change these
 run_in_parallel = 1
-chip = 'r'
+chip = 'i'
 ####################
 
 outdir = join(RESULTSDIR, 'spec_analysis/naive_rv_test_results')
@@ -61,7 +61,12 @@ def main():
         # recalculate!
         rvs = np.array(df['rv_chisq_kms'])
         bc = np.array(df['bc_kms'])
-        ZP = 81.527 # HIRES instrumental velocity ZP on r-chip is 81.527 +/- 0.664 km/s
+        ZEROPOINTS = {
+            'r': 81.527, # HIRES instrumental velocity ZP on r-chip is 81.527 +/- 0.664 km/s
+            'i': 81.527+5.443, # shift based on M dwarf TiO bands; makes scales consistent
+        }
+        ZP = ZEROPOINTS[chip]
+
         rvs = rvs - bc + ZP  # this is the systemic RV!!! (at the order level)
         if chip == 'r':
             chip_good_orders = [0,2,3,4,5,6,11] # previous: [0,2,3,4,5,6,10,11,13]
@@ -100,14 +105,20 @@ def main():
     wstd = np.sqrt(1.0 / np.sum(weights))
 
     zeropoint = 1. * wmean  + ZP
-    zerpoint_unc = 1. * wstd
+    zeropoint_unc = 1. * wstd
+
+    # single order case
+    if np.isnan(zeropoint):
+        zeropoint = ZP
+        zeropoint_unc = 0.664
 
     plt.close("all")
     fig, ax = plt.subplots()
-    ax.errorbar(np.arange(len(drvs)), drvs, yerr=std_rvs, ls=":", c='k', markersize=2)
+    ax.errorbar(np.arange(len(drvs)), drvs, yerr=std_rvs, ls=":", c='k',
+                markersize=2, marker='o')
     ax.set_xlabel("star index (G8 left, M4.5 right)")
     ax.set_ylabel("expected RV - my RV - zeropoint")
-    title = f'zeropoint = {zeropoint:.3f} +/- {zerpoint_unc:.3f} km/s'
+    title = f'zeropoint ({chip} chip) = {zeropoint:.3f} +/- {zeropoint_unc:.3f} km/s'
     ax.set_title(title)
     outpath = os.path.join(outdir, "zeropoint.png")
     fig.savefig(outpath, bbox_inches='tight', dpi=300)
