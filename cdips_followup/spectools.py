@@ -421,11 +421,12 @@ def read_hires(spectrum_path, start=0, end=None, is_registered=1, return_err=1):
         return flux, wav
 
 
-def _get_full_hires_spectrum(spectrum_path):
+def _get_full_hires_spectrum(spectrum_path, verbose=0):
 
     k = os.path.basename(spectrum_path).replace('.fits','')
     flxs, norm_flxs, wavs= [], [], []
-    print('WRN! Assuming HIRES spectrum is already deblazed')
+    if verbose:
+        print('WRN! Assuming HIRES spectrum is already deblazed')
     flx_2d, wav_2d = read_hires(spectrum_path, is_registered=0, return_err=0)
     start = 10
     end = -10
@@ -3028,7 +3029,7 @@ def _compute_chi_sq(
 
 
 def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
-                 run_in_parallel=0, vbroad=0):
+                 run_in_parallel=0, vbroad=0, verbose=0):
     """
     Given a target HIRES spectrum `spectrum_path` and a PHOENIX model spectrum
     `synth_path` guess the RV using an order-by-order CCF.
@@ -3045,7 +3046,9 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
     if not os.path.exists(outdir): os.mkdir(outdir)
 
     # get the relevant spectra
-    flx_2d, norm_flx_2d, wav_2d, mjd, ra, dec = _get_full_hires_spectrum(spectrum_path)
+    flx_2d, norm_flx_2d, wav_2d, mjd, ra, dec = _get_full_hires_spectrum(
+        spectrum_path, verbose=verbose
+    )
     from astropy.coordinates import SkyCoord
     coord = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
     ra, dec = coord.ra.deg, coord.dec.deg
@@ -3077,7 +3080,8 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
 
     outcsvpath = os.path.join(outdir, f'rv_{tname}_{sname}.csv')
     if os.path.exists(outcsvpath):
-        print(f"Found {outcsvpath}, return.")
+        if verbose:
+            print(f"Found {outcsvpath}, return.")
         return pd.read_csv(outcsvpath)
 
     print(f"naive_rv: Will write to {outdir}")

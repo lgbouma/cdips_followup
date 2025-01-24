@@ -89,7 +89,6 @@ def main():
 
         print(42*'*')
         print(f"{starname} {fitsname}: drv = {drv:.1f}")
-        print(42*'*')
 
         rv_list.append(rv)
         drvs.append(drv)
