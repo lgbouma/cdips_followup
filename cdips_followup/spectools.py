@@ -3140,6 +3140,10 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
         ]
         for mask in MANUAL_TEMPLATE_MASKS:
             sflx[mask] = np.nan
+            sel = ~np.isnan(sflx)
+            sflx = sflx[sel]
+            swav = swav[sel]
+            t_unc = t_unc[sel]
 
         t_spec = Spectrum1D(spectral_axis = swav*u.AA,
                             flux = sflx*u.dimensionless_unscaled,

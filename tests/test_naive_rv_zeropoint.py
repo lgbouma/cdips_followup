@@ -7,7 +7,7 @@ from cdips_followup.paths import RESULTSDIR, DATADIR
 ####################
 # change these
 run_in_parallel = 1
-chip = 'i'
+chip = 'r'
 ####################
 
 outdir = join(RESULTSDIR, 'spec_analysis/naive_rv_test_results')
