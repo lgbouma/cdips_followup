@@ -7,7 +7,7 @@ from cdips_followup.paths import RESULTSDIR, DATADIR
 ####################
 # change these
 run_in_parallel = 1
-chip = 'r'
+chip = 'i'
 ####################
 
 outdir = join(RESULTSDIR, 'spec_analysis/naive_rv_test_results')
@@ -21,8 +21,8 @@ TESTDICT = {
     #'HD39881': [f'{chip}j63.450.fits', 5700, 4.50, 0.32], # G5 DROP - struggles
     #'WASP-4': [f'{chip}j161.506.fits', 5400, 4.50, 58.84], # technically nonstandard, G7 good: 0,2,3,4,5,6, 11. (nb cf did fine?)
     'HD101259': [f'{chip}j152.901.fits', 5000, 3.50, 96.812], # G6 good: 0-6,8, 9, 10,11,13
-    'HD97658': [f'{chip}j124.477.fits', 5100, 4.50, -1.71], # K1 good: 0-6, 10,11,13
-    'HD139323': [f'{chip}j122.698.fits', 5100, 4.50, -67.105], # K3 good: 0-6, 10,11,13
+    #'HD97658': [f'{chip}j124.477.fits', 5100, 4.50, -1.71], # K1 good: 0-6, 10,11,13
+    #'HD139323': [f'{chip}j122.698.fits', 5100, 4.50, -67.105], # K3 good: 0-6, 10,11,13
     'HD32147': [f'{chip}j246.514.fits', 4600, 4.50, 21.54], # K3 good: 0-6, 10,11,13
     'HD36003': [f'{chip}j06.1051.fits', 4500, 4.50, -55.56], # K5 good: 0-7, 10,11,13
     'HD245409': [f'{chip}j222.308.fits', 4000, 4.50, 22.19], # K7 good: 0-7, 10,11,13
@@ -62,15 +62,15 @@ def main():
         rvs = np.array(df['rv_chisq_kms'])
         bc = np.array(df['bc_kms'])
         ZEROPOINTS = {
-            'r': 81.527, # HIRES instrumental velocity ZP on r-chip is 81.527 +/- 0.664 km/s
-            'i': 81.527+5.443, # shift based on M dwarf TiO bands; makes scales consistent
+            'r': 80.956, # HIRES instrumental velocity ZP on r-chip (+/- 0.664 km/s)
+            'i': 80.956+5.443, # shift based on M dwarf TiO bands; makes scales consistent
         }
         ZP = ZEROPOINTS[chip]
 
         rvs = rvs - bc + ZP  # this is the systemic RV!!! (at the order level)
         if chip == 'r':
             if teff >= 4000:
-                chip_good_orders = [0,2,3,4,5,6,11]
+                chip_good_orders = [0,2,3,4,5,6]
             elif teff < 4000:
                 chip_good_orders = [0,2,3,4,5,6]
         elif chip == 'i':
@@ -108,6 +108,7 @@ def main():
 
     zeropoint = 1. * wmean  + ZP
     zeropoint_unc = 1. * wstd
+    print(wmean)
 
     # single order case
     if np.isnan(zeropoint):
@@ -122,7 +123,7 @@ def main():
     ax.set_ylabel("expected RV - my RV - zeropoint")
     title = f'zeropoint ({chip} chip) = {zeropoint:.3f} +/- {zeropoint_unc:.3f} km/s'
     ax.set_title(title)
-    outpath = os.path.join(outdir, "zeropoint.png")
+    outpath = os.path.join(outdir, "{chip}chip_zeropoint.png")
     fig.savefig(outpath, bbox_inches='tight', dpi=300)
 
     print(title)
