@@ -3037,6 +3037,8 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
     Example PHOENIX spectra at
     /Users/luke/Dropbox/proj/hd_34382/data/synthetic_spectra/PHOENIX_MedRes
     # downloaded the δλ = 1A model, fe/h=0, alpha/M=0
+
+	They are from https://phoenix.astro.physik.uni-goettingen.de/?page_id=16
     """
 
     tname = os.path.basename(spectrum_path).replace(".fits", "")
@@ -3052,7 +3054,6 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
     from astropy.coordinates import SkyCoord
     coord = SkyCoord(ra, dec, unit=(u.hourangle, u.deg))
     ra, dec = coord.ra.deg, coord.dec.deg
-    print(ra, dec)
 
     syn_flx, syn_wav = get_synth_spectrum(synth_path)
 
@@ -3140,14 +3141,16 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
         )
         # terribly-modeled regions of the spectra
         MANUAL_TEMPLATE_MASKS = [
-            (swav > 6706) & (swav < 6711), # Li6708 large and variable
+            ( (swav > 5872) & (swav < 5895) ), # He and NaD
+            ( (swav > 6706) & (swav < 6711) ), # Li6708 large and variable
         ]
-        for mask in MANUAL_TEMPLATE_MASKS:
-            sflx[mask] = np.nan
-            sel = ~np.isnan(sflx)
-            sflx = sflx[sel]
-            swav = swav[sel]
-            t_unc = t_unc[sel]
+        final_mask = ~(np.ones(len(swav)).astype(bool))
+        for __ix, mask in enumerate(MANUAL_TEMPLATE_MASKS):
+            final_mask |= mask
+
+        sflx = sflx[~final_mask]
+        swav = swav[~final_mask]
+        t_unc = t_unc[~final_mask]
 
         t_spec = Spectrum1D(spectral_axis = swav*u.AA,
                             flux = sflx*u.dimensionless_unscaled,
@@ -3464,6 +3467,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
 
     outdf = pd.DataFrame({
         'order': orders,
+        'jd': jd,
         'rv_ccf_kms': np.round(rvs_ccf, 4),
         'rv_chisq_kms': np.round(rvs_chisq, 4),
         'bc_kms': np.round(np.ones(len(orders))*bc_kms, 4),
