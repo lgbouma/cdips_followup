@@ -1820,17 +1820,22 @@ def get_Ca_HK_emission(spectrum_path, wvsol_path=None, xshift=None,
 
 
 
-def _given_2d_get_1d_order(wav_2d, flx_2d, target_wav):
+def _given_2d_get_1d_order(wav_2d, flx_2d, target_wav, target='li6708'):
 
     _preorder = np.argmin(np.abs(wav_2d - target_wav), axis=1)
     viable_orders = np.argwhere(
         (_preorder != wav_2d.shape[1]-1) & (_preorder != 0)
     )
-    order = int(
-        viable_orders[np.argmin(
-            np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
-        )]
-    )
+
+    try:
+        order = int(
+            viable_orders[np.argmin(
+                np.abs(_preorder[viable_orders] - wav_2d.shape[1]/2)
+            )]
+        )
+    except ValueError:
+        if target == 'li6708':
+            order = 1
 
     flx, wav = flx_2d[order, :], wav_2d[order, :]
     return flx, wav
