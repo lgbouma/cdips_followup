@@ -30,12 +30,12 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 1           # plot all orders
+    args.do_orders = 0           # plot all orders
     args.do_sms_analysis = 0     # run specmatch-syn analysis
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
     args.do_inspect = 0          # inspect to figure out require rest-frame shift
-    args.do_li_ew = 0            # once rest-frame shift is known
+    args.do_li_ew = 1            # once rest-frame shift is known
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
     args.do_stack_comparison = 0 # compare versus stack
@@ -255,10 +255,15 @@ def main_hires(args):
     outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
     datestr = 'j537'
 
-    #idstring = 'GJ699' # Barnard's
-    #datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/GJ699'
-    #outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
-    #datestr = 'j130'
+    idstring = 'GJ699' # Barnard's
+    datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/GJ699'
+    outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
+    datestr = 'j21'
+
+    idstring = 'Kepler1627'
+    datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/Kepler1627'
+    outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
+    datestr = 'j405'
 
     #idstring = 'TIC353730181'
     #datadir = f"/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/{idstring}"
@@ -298,16 +303,18 @@ def main_hires(args):
         if not os.path.exists(outdir):
             os.mkdir(outdir)
 
-        args.xshift = -0.5
+        args.xshift = 0.
         args.idstring = idstring
         for delta_wav in [2.5,5,7.5]:
-            outname = (
-                f"{args.idstring}_{specname.replace('.fits','')}_"
-                f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
-            )
-            outpath = join(outdir, outname)
-            get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
-                           xshift=args.xshift, outpath=outpath)
+            for spectrum_path in spectrum_paths:
+                specname = os.path.basename(spectrum_path)
+                outname = (
+                    f"{args.idstring}_{specname.replace('.fits','')}_"
+                    f"Li_EW_shift{args.xshift:.2f}_deltawav{delta_wav:.1f}.png"
+                )
+                outpath = join(outdir, outname)
+                get_Li_6708_EW(spectrum_path, wvsol_path=None, delta_wav=delta_wav,
+                               xshift=args.xshift, outpath=outpath)
 
 
     if args.do_balmer_ew:
