@@ -45,8 +45,16 @@ from cdips_followup.utils import ticid_to_toiid
 import datetime as dt
 from astropy.time import Time
 from astropy.coordinates import (
-    get_body, get_sun, get_moon, SkyCoord, EarthLocation
+    get_body, get_sun, SkyCoord, EarthLocation
 )
+try:
+    from astropy.coordinates import get_moon
+except ImportError:
+    # astropy v7 API change.
+    from astropy.coordinates import get_body
+    def get_moon(time, location=None):
+        return get_body("moon", time, location=location)
+
 import astropy.units as u
 
 from astroplan import (
@@ -534,7 +542,7 @@ def make_single_request_from_row(
         min_search_time=Time(dt.datetime.today().isoformat()),
         max_search_time=None, filtermode='ip', telescope_class=None,
         sites=None, ipp_value=1.0, force_acceptability=None,
-        max_airmass_sched=2.0, max_airmass_submit=2.5
+        max_airmass_sched=2.0, max_airmass_submit=2.5, semesterstr=None
     ):
     #
     # require the passed dataframe row has the right format.
@@ -648,6 +656,7 @@ def make_single_request_from_row(
                                     filtermode=filtermode,
                                     telescope_class=telescope_class,
                                     ipp_value=ipp_value,
+                                    semesterstr=semesterstr,
                                     force_acceptability=force_acceptability)
 
     return this

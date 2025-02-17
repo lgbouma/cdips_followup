@@ -24,7 +24,7 @@ def main():
 
     ##########################################
     # CHANGE BELOW
-    savstr = '20240923_hip67522c_25a' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20250217_test_25b' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 0
     submit = 0
@@ -58,7 +58,7 @@ def main():
     # CHANGE ABOVE
     ##########################################
 
-    max_airmass_sched = 2.5 # FIXME usually 2.5
+    max_airmass_sched = 2.5
     manual_ephemeris = False
     manual_ephemeris = True # FIXME
     create_eventclasses = TRANSITTYPEDICT[transit_type]
@@ -92,7 +92,9 @@ def main():
             get_ephemeris_uncertainty(epoch, epoch_unc, period, period_unc, epoch_obs='today')
         )
         if delta_t_tra_today*24 < 0:
-            msg = f'ERR! Got negative ephem unc of {delta_t_tra_today*24:.1f} hr. Need to give a believable ephem unc..'
+            msg = (f'ERR! Got negative ephem unc of '+
+                   f'{delta_t_tra_today*24:.1f} hr. '+
+                   f'Need to give a believable ephem unc..')
             raise ValueError(msg)
         if delta_t_tra_today*24 > 2:
             msg = f'ERR! Got ephem unc of {delta_t_tra_today*24:.1f} hr. This is too high.'

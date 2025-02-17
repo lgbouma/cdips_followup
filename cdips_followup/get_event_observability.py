@@ -3,7 +3,15 @@ import os
 from glob import glob
 
 from astropy.time import Time
-from astropy.coordinates import get_body, get_sun, get_moon, SkyCoord
+from astropy.coordinates import get_body, get_sun, SkyCoord
+try:
+    from astropy.coordinates import get_moon
+except ImportError:
+    # astropy v7 API change.
+    from astropy.coordinates import get_body
+    def get_moon(time, location=None):
+        return get_body("moon", time, location=location)
+
 import astropy.units as u
 
 from astroplan import (FixedTarget, Observer, EclipsingSystem,
@@ -13,6 +21,34 @@ from astroplan import (FixedTarget, Observer, EclipsingSystem,
                        AirmassConstraint, moon)
 
 import datetime as dt
+
+import sys, io, contextlib
+
+class suppress_output:
+    """Context manager to suppress low-level output.
+
+    Redirects file descriptors 1 (stdout) and 2 (stderr) to os.devnull,
+    which captures output from C-level code or libraries that bypass
+    Python’s sys.stdout/sys.stderr.
+    """
+
+    def __init__(self) -> None:
+        self.null_fd = os.open(os.devnull, os.O_RDWR)
+        self.stdout_fd = sys.stdout.fileno()
+        self.stderr_fd = sys.stderr.fileno()
+        self.saved_stdout = os.dup(self.stdout_fd)
+        self.saved_stderr = os.dup(self.stderr_fd)
+
+    def __enter__(self) -> None:
+        os.dup2(self.null_fd, self.stdout_fd)
+        os.dup2(self.null_fd, self.stderr_fd)
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        os.dup2(self.saved_stdout, self.stdout_fd)
+        os.dup2(self.saved_stderr, self.stderr_fd)
+        os.close(self.null_fd)
+        os.close(self.saved_stdout)
+        os.close(self.saved_stderr)
 
 
 def get_event_observability(
@@ -148,10 +184,13 @@ def get_event_observability(
                oib_window, beo_window, ibe_window, oi_window, eo_window]
     is_obs_dict = {}
     for key, window in zip(keys, windows):
-        is_obs_dict[key] = np.array(
-            is_event_observable(constraints, site, target,
-                                times_ingress_egress=window)
-        ).flatten()
+
+        # FIXME NOTE: pretty verbose...
+        with suppress_output():
+            is_obs_dict[key] = np.array(
+                is_event_observable(constraints, site, target,
+                                    times_ingress_egress=window)
+            ).flatten()
 
     is_obs_df = pd.DataFrame(is_obs_dict)
 

@@ -85,7 +85,8 @@ def get_dedicated_request(savstr, source_id, period, epoch, duration,
                     ipp_value=ipp_value,
                     force_acceptability=force_acceptability,
                     max_airmass_sched=max_airmass_sched,
-                    max_airmass_submit=max_airmass_submit
+                    max_airmass_submit=max_airmass_submit,
+                    semesterstr=semesterstr
                 )
             requests.append(req)
 
