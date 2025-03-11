@@ -22,10 +22,12 @@ CALCULATE:
     get_Li_6708_EW: measure Li EW.
     get_line_EW: measure EW for an arbitrary line.
     measure_veloce_vsini: wraps below.
-        measure_vsini: compares target spectrum to broadend NextGen spectra
+        measure_vsini_nextgen: compares target spectrum to broadend NextGen spectra
     given_deltawvlen_get_vsys: convert Δλ to velocity.
     air_to_vac: given air wavelengths, get vacuum wavelengths
     get_naive_rv: order-by-order CCF synthetic template match RV
+    degrade_spectrum: degrade a high-res spectrum to a lower resolution
+    broaden_spectrum: broaden spectrum using rotn broadening kernel
 
 VISUALIZE:
     viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
@@ -2860,8 +2862,8 @@ def get_line_EW(spectrum_path, xshift=None, delta_wav=10, outpath=None,
 
 
 
-def measure_vsini(wav, flx, flxerr=None, teff=6000, logg=4.5, vturb=2, outdir=None,
-                  targetname=None):
+def measure_vsini_nextgen(wav, flx, flxerr=None, teff=6000, logg=4.5,
+                          vturb=2, outdir=None, targetname=None):
 
     if not isinstance(outdir, str):
         raise ValueError
@@ -2961,10 +2963,8 @@ def get_synth_spectrum(synth_path):
     hl = fits.open(synth_path)
     dirname = os.path.dirname(synth_path)
     if "HiRes" in dirname:
-        _hl = fits.open(
-            os.path.join(dirname,
-                         "WAVE_PHOENIX-ACES-AGSS-COND-2011.fits")
-        )
+        wavelength_path = os.path.join(dirname, "WAVE_PHOENIX-ACES-AGSS-COND-2011.fits")
+        _hl = fits.open(wavelength_path)
         syn_wav = _hl[0].data
         _hl.close()
     elif "MedRes" in dirname:
@@ -3034,7 +3034,8 @@ def _compute_chi_sq(
 
 
 def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
-                 run_in_parallel=0, vbroad=0, verbose=0):
+                 run_in_parallel=0, vbroad=0, verbose=0,
+                 specific_orders=None, return_spectra=0, overwrite=0):
     """
     Given a target HIRES spectrum `spectrum_path` and a PHOENIX model spectrum
     `synth_path` guess the RV using an order-by-order CCF.
@@ -3044,6 +3045,10 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
     # downloaded the δλ = 1A model, fe/h=0, alpha/M=0
 
 	They are from https://phoenix.astro.physik.uni-goettingen.de/?page_id=16
+
+    args:
+        specific_orders (list): list of integer orders, if you only
+        want to calculate the RV on a subset of them.
     """
 
     tname = os.path.basename(spectrum_path).replace(".fits", "")
@@ -3085,7 +3090,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
     orders, rvs_ccf, rvs_chisq = [], [], []
 
     outcsvpath = os.path.join(outdir, f'rv_{tname}_{sname}.csv')
-    if os.path.exists(outcsvpath):
+    if os.path.exists(outcsvpath) and not overwrite:
         if verbose:
             print(f"Found {outcsvpath}, return.")
         return pd.read_csv(outcsvpath)
@@ -3094,7 +3099,10 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
 
     #good_orders = [1,2,6,19]
     all_orders = range(n_order)
-    iterable = all_orders # NOTE can tweak
+    if specific_orders is None:
+        iterable = all_orders # NOTE can tweak
+    else:
+        iterable = specific_orders
     for ix in iterable:
 
         wav = wav_2d[ix, :]
@@ -3486,16 +3494,24 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
 
     rvs = np.array(outdf['rv_chisq_minus_bc_kms'])
 
-    if chip == 'r':
+    if chip == 'r' and specific_orders is None:
         chip_good_orders = [0,2,3,4,5,6,11] # previous: [0,2,3,4,5,6,10,11,13]
-    elif chip == 'i':
+        sel_rvs = rvs[np.array(chip_good_orders)]
+    elif chip == 'i' and specific_orders is None:
         chip_good_orders = [4,8] # previous: [0,2,3,4,5,6,10,11,13]
-    sel_rvs = rvs[np.array(chip_good_orders)]
+        sel_rvs = rvs[np.array(chip_good_orders)]
+    elif specific_orders is not None:
+        print(f'Taking mean of orders {specific_orders} for df RV')
+        sel_rvs = np.nanmean(rvs)
 
     outdf['meangoodorder_rv_chisq_minus_bc_kms'] = np.round(np.nanmean(sel_rvs), 4)
 
     outdf.to_csv(outcsvpath, index=False)
     print(f"wrote {outcsvpath}")
+
+    if return_spectra:
+        # return tuple of spectra useful for extra analysis
+        return pd.read_csv(outcsvpath), wav, flx, swav, sflx
 
     return pd.read_csv(outcsvpath)
 
@@ -3503,7 +3519,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
 
 def measure_veloce_vsini(specname, targetname, teff, outdir):
     """
-    wrapper to measure_vsini, which uses a chi-squared grid. returns mean vsini
+    wrapper to measure_vsini_nextgen, which uses a chi-squared grid. returns mean vsini
     over selected orders, and mean wavelength shift over the same.
     """
 
@@ -3530,9 +3546,10 @@ def measure_veloce_vsini(specname, targetname, teff, outdir):
         flxerr = flxerr[sel] / cont_flx[sel]
         wav, flx = cont_norm_spec.wavelength[sel], cont_norm_spec.flux[sel]
 
-        res = measure_vsini(wav, flx, flxerr=flxerr, teff=teff, logg=4.5,
-                            vturb=2, outdir=outdir,
-                            targetname=targetname+'_order{}'.format(o))
+        res = measure_vsini_nextgen(wav, flx, flxerr=flxerr,
+                                    teff=teff, logg=4.5, vturb=2,
+                                    outdir=outdir,
+                                    targetname=targetname+'_order{}'.format(o))
 
         if res is None:
             msg = (
@@ -3752,4 +3769,119 @@ def specmatch_analyze(spectrum_path, wvsol_path=None, region=None, outdir=None,
         f'{idstring}_{region}',
         sm_res=sm_res
     )
+
+
+def degrade_spectrum(wavelength: np.ndarray,
+                     flux: np.ndarray,
+                     R: float) -> np.ndarray:
+    """Degrade a high-resolution spectrum to a lower resolution.
+
+    This function degrades a stellar spectrum using a Gaussian
+    convolution. The Gaussian kernel is computed in pixel space using
+    the central wavelength approximation. The full width at half maximum
+    (FWHM) is computed as FWHM = lambda_c / R, where lambda_c is the median
+    wavelength of the input array. The FWHM is then converted to a Gaussian
+    sigma in wavelength units, and then to sigma in pixel units using the
+    median wavelength spacing.
+
+    Args:
+        wavelength (np.ndarray): 1-D array of wavelength values.
+        flux (np.ndarray): 1-D array of flux values corresponding to the
+            wavelengths.
+        R (float): Target resolution, defined as R = lambda / delta_lambda.
+
+    Returns:
+        np.ndarray: Degraded flux array on the same wavelength grid.
+    """
+    # Use the median wavelength as the central wavelength.
+    lambda_c = np.median(wavelength)
+    # Estimate the typical wavelength spacing.
+    delta_lambda = np.median(np.diff(wavelength))
+    # Compute the FWHM in wavelength space.
+    fwhm = lambda_c / R
+    # Convert FWHM to Gaussian sigma: sigma = FWHM / (2*sqrt(2*ln2)).
+    sigma_wavelength = fwhm / (2 * np.sqrt(2 * np.log(2)))
+    # Convert sigma from wavelength units to pixel units.
+    sigma_pixels = sigma_wavelength / delta_lambda
+    # Define the kernel radius as 3*sigma in pixel space.
+    kernel_radius = int(3 * sigma_pixels)
+    # Create an array for the kernel.
+    x = np.arange(-kernel_radius, kernel_radius + 1)
+    # Compute the Gaussian kernel.
+    kernel = np.exp(-0.5 * (x / sigma_pixels) ** 2)
+    kernel /= np.sum(kernel)
+    # Convolve the flux with the kernel using 'same' mode.
+    degraded_flux = np.convolve(flux, kernel, mode='same')
+
+    return degraded_flux
+
+def broaden_spectrum(wavelength: np.ndarray,
+                     flux: np.ndarray,
+                     vsini: float,
+                     epsilon: float = 0.6) -> np.ndarray:
+    """Broaden a stellar spectrum using a rotational broadening kernel.
+
+    This function broadens a stellar spectrum by convolving it with a
+    rotational broadening kernel that incorporates a linear limb-darkening
+    law. The standard formulation (Gray 2005) is used, where the kernel is
+    defined for |x| <= 1 as:
+        G(x) = [2*(1-epsilon)*sqrt(1-x^2) +
+                (pi*epsilon/2)*(1-x^2)] / [pi*Delta_lambda_max*(1-epsilon/3)]
+    with x = Delta_lambda/Delta_lambda_max and zero elsewhere.
+    Here, Delta_lambda_max is computed as:
+        Delta_lambda_max = (vsini/c) * lambda_c,
+    where lambda_c is the median wavelength of the input array and c is the
+    speed of light in km/s.
+
+    The convolution is performed on the input flux array assuming a near-
+    uniform wavelength grid. The output spectrum is provided on the same
+    wavelength grid as the input.
+
+    Args:
+        wavelength (np.ndarray): 1-D array of wavelength values.
+        flux (np.ndarray): 1-D array of flux values corresponding to the
+            wavelengths.
+        vsini (float): Projected rotational velocity in km/s.
+        epsilon (float, optional): Linear limb-darkening coefficient.
+            Defaults to 0.6.
+
+    Returns:
+        np.ndarray: Broadened flux array on the same wavelength grid.
+    """
+    # Use the median wavelength as the central wavelength.
+    lambda_c = np.median(wavelength)
+    # Estimate the median wavelength spacing.
+    delta_lambda = np.median(np.diff(wavelength))
+    # Convert speed of light to km/s.
+    c_kms = const.c.to('km/s').value
+    # Compute maximum wavelength shift.
+    delta_lambda_max = (vsini / c_kms) * lambda_c
+
+    # If no broadening is required, return the original flux.
+    if delta_lambda_max == 0:
+        return flux
+
+    # Determine kernel half-width in pixels.
+    kernel_half_width = int(np.ceil(delta_lambda_max / delta_lambda))
+    # Create pixel offsets.
+    x_pixels = np.arange(-kernel_half_width, kernel_half_width + 1)
+    # Convert pixel offsets to wavelength offsets.
+    d_lambda = x_pixels * delta_lambda
+    # Normalize the wavelength offsets.
+    x_norm = d_lambda / delta_lambda_max
+    # Initialize the kernel.
+    kernel = np.zeros_like(x_norm)
+
+    # Compute the rotational broadening kernel for |x_norm| <= 1.
+    mask = np.abs(x_norm) <= 1
+    kernel[mask] = (
+        2 * (1 - epsilon) * np.sqrt(1 - x_norm[mask] ** 2) +
+        (np.pi * epsilon / 2) * (1 - x_norm[mask] ** 2)
+    ) / (np.pi * delta_lambda_max * (1 - epsilon / 3))
+    # Normalize the kernel so that its sum is unity.
+    kernel /= kernel.sum()
+
+    # Convolve the flux with the rotational broadening kernel.
+    broadened_flux = np.convolve(flux, kernel, mode='same')
+    return broadened_flux
 
