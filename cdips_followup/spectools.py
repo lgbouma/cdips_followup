@@ -26,8 +26,10 @@ CALCULATE:
     given_deltawvlen_get_vsys: convert Δλ to velocity.
     air_to_vac: given air wavelengths, get vacuum wavelengths
     get_naive_rv: order-by-order CCF synthetic template match RV
-    degrade_spectrum: degrade a high-res spectrum to a lower resolution
+
+    degrade_spectrum: degrade a high-res spectrum to a fixed lower resolution
     broaden_spectrum: broaden spectrum using rotn broadening kernel
+    bin_spectrum: bin a spectrum to fixed wavelength binwidths
 
 VISUALIZE:
     viz_1d_spectrum: flux vs wavelength (with select lins underplotted).
@@ -3815,6 +3817,7 @@ def degrade_spectrum(wavelength: np.ndarray,
 
     return degraded_flux
 
+
 def broaden_spectrum(wavelength: np.ndarray,
                      flux: np.ndarray,
                      vsini: float,
@@ -3885,3 +3888,67 @@ def broaden_spectrum(wavelength: np.ndarray,
     broadened_flux = np.convolve(flux, kernel, mode='same')
     return broadened_flux
 
+
+def bin_spectrum(
+    wavelength: np.ndarray, flux: np.ndarray,
+    bin_width: float, method: str = 'mean'
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Bin flux values of a spectrum into a specified wavelength bin width.
+
+    The function bins the input flux values by averaging (or taking the median)
+    over wavelength bins of a specified width. The returned binned wavelength
+    grid is given by the center of each bin. Bins with no data are assigned
+    NaN values.
+
+    Args:
+        wavelength (np.ndarray): 1D array of wavelengths in angstroms.
+        flux (np.ndarray): 1D array of flux values corresponding to the
+            wavelengths.
+        bin_width (float): The bin width in angstroms for binning.
+        method (str, optional): Statistical method for combining fluxes.
+            Options are 'mean' (default) or 'median'.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]:
+            - The binned wavelength grid (bin centers).
+            - The binned flux values computed per bin.
+            - Error on the binned flux (MAD-adjusted).
+    """
+    if method not in ['mean', 'median']:
+        raise ValueError("Method must be either 'mean' or 'median'.")
+
+    # Determine bin edges covering the full wavelength range.
+    min_wave = wavelength.min()
+    max_wave = wavelength.max()
+    bin_edges = np.arange(min_wave, max_wave + bin_width, bin_width)
+    if bin_edges[-1] < max_wave:
+        bin_edges = np.append(bin_edges, max_wave)
+
+    # Compute bin centers.
+    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+
+    # Assign each wavelength value to a bin.
+    indices = np.digitize(wavelength, bin_edges) - 1
+
+    # Initialize binned flux and error arrays.
+    binned_flux = np.full(len(bin_centers), np.nan, dtype=float)
+    binned_error = np.full(len(bin_centers), np.nan, dtype=float)
+
+    # Process each bin.
+    for i in range(len(bin_centers)):
+        mask = indices == i
+        if np.any(mask):
+            # Compute central flux value.
+            if method == 'mean':
+                central_value = np.mean(flux[mask])
+            else:
+                central_value = np.median(flux[mask])
+            binned_flux[i] = central_value
+
+            # Compute median absolute deviation (MAD) relative to the median.
+            med_flux = np.median(flux[mask])
+            mad = np.median(np.abs(flux[mask] - med_flux))
+            error_scale = 1.48
+            binned_error[i] = error_scale * mad
+
+    return bin_centers, binned_flux, binned_error
