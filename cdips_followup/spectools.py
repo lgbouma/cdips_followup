@@ -1847,7 +1847,8 @@ def _given_2d_get_1d_order(wav_2d, flx_2d, target_wav, target='li6708'):
 
 def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
                    outpath=None, is_template=False, writecsvresults=True,
-                   verbose=True, montecarlo_errors=True):
+                   verbose=True, montecarlo_errors=True, wavflx=None,
+                   fit_continuum=True):
     """
     Shift the spectrum, fit a gaussian, and numerically integrate it over a
     window (+/-1 angstrom, centered on 6707.835A) to get the Li 6708A
@@ -1861,7 +1862,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
     Args:
 
-        spectrum_path: path to PFS, Veloce, TRES, or GALAH spectrum
+        spectrum_path: path to PFS, Veloce, TRES, or GALAH spectrum.  Can be
+        "manual" if you pass wavflx.
 
         wvsol_path: path to PFS wavelength solution (optional)
 
@@ -1876,6 +1878,11 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         noise to the spectrum over each iteration.
 
         outpath: summary figure is written here.
+
+        wavflx (optional Tuple): if passed, wavflx = [wavelength, flux] - i.e.
+        they've already been read and pre-processed elsewhere.
+
+        fit_continuum (bool): default True
 
     Returns:
         pandas DataFrame with keys:
@@ -1935,6 +1942,10 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     elif 'NEID' in spectrum_path:
         wav_2d, flx_2d, _ = read_neid(spectrum_path, read_ccf=False)
         instrument = 'NEID'
+    elif spectrum_path == 'manual':
+        assert wavflx is not None
+        wav, flx = wavflx
+        instrument = 'manual'
     else:
         raise NotImplementedError
 
@@ -2047,11 +2058,12 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
 
     shiftstr = ''
+    from astropy.units.quantity import Quantity
     if isinstance(xshift, (float, int)):
         print(f"Shifting by {xshift} Angstrom")
         wav = deepcopy(wav) - xshift
         shiftstr = '_shift{:.2f}'.format(float(xshift))
-    elif isinstance(xshift, astropy.units.quantity.Quantity):
+    elif isinstance(xshift, Quantity):
         raise NotImplementedError('convert xshift to float or int')
 
     #
@@ -2105,9 +2117,13 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
     spec = Spectrum1D(spectral_axis=wav*u.AA,
                       flux=flx*u.dimensionless_unscaled)
 
-    cont_flx = fit_generic_continuum(
-        spec, exclude_regions=exclude_regions
-    )(spec.spectral_axis)
+    if fit_continuum:
+        cont_flx = fit_generic_continuum(
+            spec, exclude_regions=exclude_regions
+        )(spec.spectral_axis)
+    else:
+        cont_flx = Spectrum1D(spectral_axis=wav*u.AA,
+                              flux=np.ones(len(flx))*u.dimensionless_unscaled)
 
     cont_norm_spec = spec / cont_flx
 
@@ -2164,9 +2180,14 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
             spec = Spectrum1D(spectral_axis=wav*u.AA,
                               flux=(flx+err)*u.dimensionless_unscaled)
 
-            cont_flx = fit_generic_continuum(
-                spec, exclude_regions=exclude_regions
-            )(spec.spectral_axis)
+            if fit_continuum:
+                cont_flx = fit_generic_continuum(
+                    spec, exclude_regions=exclude_regions
+                )(spec.spectral_axis)
+            else:
+                cont_flx = Spectrum1D(spectral_axis=wav*u.AA,
+                                      flux=np.ones(len(flx))*u.dimensionless_unscaled)
+
 
             cont_norm_spec = spec / cont_flx
 
@@ -2414,6 +2435,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
 
     axd['E'].set_xlim([target_wav-1.5, target_wav+1.5])
     axd['F'].set_xlim([target_wav-1.5, target_wav+1.5])
+    if xshift is None:
+        xshift = 0
     axd['F'].set_xlabel('$\lambda$ [angstrom] '+ f'(xshift={xshift:.4f})')
 
     f.tight_layout()
@@ -2438,6 +2461,8 @@ def get_Li_6708_EW(spectrum_path, wvsol_path=None, xshift=None, delta_wav=7.5,
         outdf = pd.DataFrame(outdict, index=[0])
         outdf.to_csv(outpath, index=False)
         print(f'Made {outpath}')
+
+        return outdf
 
 
 def get_line_EW(spectrum_path, xshift=None, delta_wav=10, outpath=None,
