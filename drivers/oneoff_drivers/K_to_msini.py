@@ -4,9 +4,9 @@ Eq 14 of Lovis & Fischer 2010, assuming Mstar >> Mplanet
 import numpy as np
 from astropy import units as u, constants as const
 
-K = 100 * u.m/u.s
-Mstar = 1.1 * u.Msun
-P = 8.3 * u.day
+K = 2.85 * u.km/u.s
+Mstar = 0.18 * u.Msun
+P = 3.93 * u.hour
 e = 0
 
 msini_mjup = (

@@ -24,12 +24,12 @@ def main():
 
     ##########################################
     # CHANGE BELOW
-    savstr = '20250217_test_25b' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
+    savstr = '20250217_toi1224_25b' # eg, 20191207_TOI1098_request_2m_tc_secondary. "ephemupdate" if it is one. (this cancels pending observations)
     overwrite = 1
     validate = 0
     submit = 0
 
-    tic_id = '166527623' # '120105470'
+    tic_id = '299798795' # '120105470'
     source_id = None # '6113920619134019456' # can use instead of TIC
 
     filtermode = 'ip'# 'zs', 'gp', 'ip'
@@ -37,7 +37,7 @@ def main():
     telescope_class = 'special' # '1m0', '2m0', 'special'
     ipp_value = 1 # usually 1
     #max_search_time = Time('2022-12-31 23:59:00')
-    max_search_time = Time('2028-01-31 23:59:00')
+    max_search_time = Time('2027-01-31 23:59:00')
 
     verify_ephemeris_uncertainty = 1 # require t_tra uncertainty < 2 hours
     inflate_duration = 0 # if t_tra uncertainty > 1 hour, inflate tdur by +/- 45 minutes per side
@@ -54,6 +54,7 @@ def main():
     #sites = ['Cerro Paranal'] # Default None for LCOGT. Could do e.g., 'special' and ['Keck Observatory']
 
     force_acceptability = 50 # None or int.
+    semesterstr = '25B'
 
     # CHANGE ABOVE
     ##########################################
@@ -69,13 +70,13 @@ def main():
         source_id = tic_to_gaiadr2(tic_id)
 
     if manual_ephemeris:
-        period = 14.334894
-        period_unc = 1.23e-5
-        epoch = 2457000 + 1602.50236 #  2460259.861 # 2457000 + 1791.2972827806442
+        period = 17.945466
+        period_unc = 0.000012
+        epoch = 2458329.859704
         #epoch = 2460260.25 # half an orbit later
         #epoch = 2460286.71 # the new dip
-        epoch_unc = 8e-4
-        duration = 4 # hr
+        epoch_unc = 0.000828
+        duration = 3
 
     else:
         # get ephemeris from ephemerides.csv
@@ -97,13 +98,13 @@ def main():
                    f'Need to give a believable ephem unc..')
             raise ValueError(msg)
         if delta_t_tra_today*24 > 2:
-            msg = f'ERR! Got ephem unc of {delta_t_tra_today*24:.1f} hr. This is too high.'
+            msg = f'ERR! Got ephem unc of {delta_t_tra_today*24:.3f} hr. This is too high.'
             raise ValueError(msg)
         if delta_t_tra_today*24 > 1:
-            msg = f'WRN! Got ephem unc of {delta_t_tra_today*24:.1f} hr. This is risky.'
+            msg = f'WRN! Got ephem unc of {delta_t_tra_today*24:.3f} hr. This is risky.'
             print(msg)
         else:
-            msg = f'INFO! Got ephem unc of {delta_t_tra_today*24:.1f} hr. This is fine.'
+            msg = f'INFO! Got ephem unc of {delta_t_tra_today*24:.3f} hr. This is fine.'
             print(msg)
 
     if inflate_duration:
@@ -117,6 +118,7 @@ def main():
     # below is each event, in that eventclass.
     requests = get_dedicated_request(
         savstr, source_id, period, epoch, duration, create_eventclasses,
+        semesterstr=semesterstr,
         overwrite=overwrite, max_search_time=max_search_time,
         filtermode=filtermode, telescope_class=telescope_class,
         ipp_value=ipp_value, sites=sites,
