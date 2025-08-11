@@ -30,12 +30,12 @@ class argclass(object):
 def main():
     args = argclass()
 
-    args.do_orders = 0           # plot all orders
+    args.do_orders = 1           # plot all orders
     args.do_sms_analysis = 0     # run specmatch-syn analysis
     args.do_sme_analysis = 0     # specmatch-emp for Teff, Rstar, spec compare
     args.do_sme_viz = 0          # specmatch-emp check
     args.do_inspect = 0          # inspect to figure out require rest-frame shift
-    args.do_li_ew = 1            # once rest-frame shift is known
+    args.do_li_ew = 0            # once rest-frame shift is known
     args.do_vsini = 0            # measure vsini
     args.do_ca_hk = 0            # get Ca HK emission properties
     args.do_stack_comparison = 0 # compare versus stack
@@ -255,15 +255,20 @@ def main_hires(args):
     outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
     datestr = 'j537'
 
-    idstring = 'GJ699' # Barnard's
-    datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/GJ699'
-    outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
-    datestr = 'j21'
+    idstring = 'TIC402980664'
+    datadir = "/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/TIC402980664_RDX"
+    outdir = '/Users/luke/Dropbox/proj/cpv/results/HIRES_results'
+    datestr = 'j547'
 
-    idstring = 'Kepler1627'
-    datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/Kepler1627'
-    outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
-    datestr = 'j405'
+    #idstring = 'GJ699' # Barnard's
+    #datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/GJ699'
+    #outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
+    #datestr = 'j21'
+
+    #idstring = 'Kepler1627'
+    #datadir = '/Users/luke/Dropbox/proj/cdips_followup/data/spectra/HIRES/Kepler1627'
+    #outdir = '/Users/luke/Dropbox/proj/cdips_followup/results/spec_analysis/HIRES'
+    #datestr = 'j405'
 
     #idstring = 'TIC353730181'
     #datadir = f"/Users/luke/Dropbox/proj/cpv/data/spectra/HIRES/{idstring}"

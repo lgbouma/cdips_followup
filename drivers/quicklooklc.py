@@ -22,21 +22,21 @@ def quicklooklc(
     ticid,
     outdir = None,
     cdips = 0,
-    spoc = 0,
-    eleanor = 1,
+    spoc = 1,
+    eleanor = 0,
     unpopular = 0,
     cdipspre = 0,
     kepler = 0,
     qlp = 0,
     detrend = None,#None,#'best', None, 'biweight', 'locor', 'notch', 'minimal'
     do_mag_lcs = 0,
-    do_eleanor_lcs = 1,
-    do_flux_lcs = 0,
+    do_eleanor_lcs = 0,
+    do_flux_lcs = 1,
     do_periodogram = 0,
     do_pf = 0,
     require_quality_zero = 0,
     forceylim = None, #[0.975, 1.03], #[0.998, 1.002], #[0.7,1.1], # [0.93, 1.07]# for the flux light curves
-    bintime = None,
+    bintime = 0.5*24*60*60., # to 12 hours
     period = None,
     epoch = None,
     badtimewindows = None,
@@ -338,6 +338,9 @@ if __name__ == "__main__":
     ticid = '432234964'
     ticid = '234284556' # ptof cousin
     ticid = '167913198' # gliese 710
+    ticid = '367900542' # TOI 6746 for josh simon
+    ticid = '9676822' # RIK 60
+    ticid = '65672998'
 
     # # optional #
     # period = 1.395733 # None

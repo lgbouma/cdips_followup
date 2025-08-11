@@ -37,7 +37,7 @@ def main():
     telescope_class = 'special' # '1m0', '2m0', 'special'
     ipp_value = 1 # usually 1
     #max_search_time = Time('2022-12-31 23:59:00')
-    max_search_time = Time('2027-01-31 23:59:00')
+    max_search_time = Time('2030-01-31 23:59:00')
 
     verify_ephemeris_uncertainty = 1 # require t_tra uncertainty < 2 hours
     inflate_duration = 0 # if t_tra uncertainty > 1 hour, inflate tdur by +/- 45 minutes per side
