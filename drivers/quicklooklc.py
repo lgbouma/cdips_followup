@@ -341,6 +341,7 @@ if __name__ == "__main__":
     ticid = '367900542' # TOI 6746 for josh simon
     ticid = '9676822' # RIK 60
     ticid = '65672998'
+    ticid = '76706043'
 
     # # optional #
     # period = 1.395733 # None

@@ -400,6 +400,8 @@ def get_requests_given_ephem(
         LCO Semester B is June 1 thru Nov 30.
     """
 
+    assert duration > 0, f'{savstr} {targetname} Got bad duration.'
+
     if max_search_time is None:
         max_search_time = MAXTIMEDICT[semesterstr]
 
