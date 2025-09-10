@@ -12,6 +12,7 @@ READ:
     read_gaiaeso: Read GAIA-ESO (DR4) spectrum FITS file. (GIRAFFE and UVES)
     read_winered: Read WINERED 1d FITS file.
     read_dbsp: Read DBSP 1d FITS file, extracted by PypeIt.
+    read_fire: Read FIRE FITS file, extracted by PypeIt
 
 SPECMATCH WRAPPERS:
     specmatch_analyze: shift+cross-correlate to get vsini, Rstar, FeH w/ SME.
@@ -534,6 +535,28 @@ def read_dbsp(spectrum_path):
     hdul.close()
 
     return flx.flatten(), wav.flatten()
+
+
+def read_fire(spectrum_path):
+    # Assuming Echelle -> get 2d flux and wavelength for all objects
+    # Returns lists of names and 1d orderlet spectra for all detected objects.
+
+    hdul = fits.open(spectrum_path)
+
+    n_hdu = len(hdul)
+
+    names, wavs, flxs = [],[],[]
+
+    # First HDU is PRIMARY, last is DET01-DETECTOR
+    for i in range(1, n_hdu-1):
+        names.append(hdul[i].header['NAME'])
+        wavs.append(hdul[i].data['OPT_WAVE'])
+        flxs.append(hdul[i].data['OPT_COUNTS'])
+
+    hdul.close()
+
+    return names, wavs, flxs
+
 
 
 def read_neid(filename, read_ccf=True,
