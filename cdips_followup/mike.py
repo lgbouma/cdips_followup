@@ -147,26 +147,44 @@ def _payload_fields(payload: str) -> List[str]:
     """
 
     ##########################################
-    # NOTE: this manual substitution insanity is effectively giving up on
-    # trying to tease out the myriad ways in which the information written to the
-    # heads can be malformed.
+    ##########################################
+    # NOTE: this substitution insanity is trying to tease out the myriad ways
+    # in which the wavelength solutions written to the headers can be
+    # malformed.  cooking up the right regexes is the game.
 
-    # order 53 insane formatting
-    payload = re.sub(r'(?m)^53 10', '53 1 0', payload)
-    # order 55
-    payload = re.sub(r'073220.0439', '07322 0.0439', payload)
-    # order 67 insane formatting
-    payload = re.sub(r'(?m)^67 10', '67 1 0', payload)
-    # order 69
-    payload = re.sub(r'56737540.035108106', '5673754 0.035108106', payload)
-    # 70
+    # examples and generalization with simple capture
     payload = re.sub(r'(?m)^701 0', '70 1 0', payload)
-    #
-    payload = re.sub(r'40960.000000', '4096 0.000000', payload)
-    # capture / replace
+    payload = re.sub(r'(?m)^811 0', '81 1 0', payload)
+    payload = re.sub(r'(?m)^(\d{2})1 0', r'\1 1 0', payload)
+    # example and generalization
     payload = re.sub(r'(?m)^67 1 0(\d)', r'67 1 0 \1', payload)
+    payload = re.sub(r'(?m)^(?P<first>\d{2,3}) 1 0(?P<digit>\d)',
+                     r'\g<first> 1 0 \g<digit>', payload)
+    # examples and generalization
+    payload = re.sub(r'(?m)^53 10', '53 1 0', payload)
+    payload = re.sub(r'(?m)^67 10', '67 1 0', payload)
+    payload = re.sub(r'(?m)^(?P<first>\d{2,3}) 10 ',
+                     r'\g<first> 1 0 ', payload)
+    # single case
+    payload = re.sub(r'40960.000000', '4096 0.000000', payload)
+    # merge aginst 4096 col requiring at least 10 leading digits
+    payload = re.sub(r'0\.(\d{10,})4096', r'0.\1 4096', payload)
+    # 0.00000 merge on trailing
+    payload = re.sub(r'0\.000000(\d+\.\d+)', r'0.000000 \1', payload)
+    # examples and generalization
+    payload = re.sub(r'165.145000171.165000', r'165.145000 171.165000', payload)
+    payload = re.sub(r'45.88100051.981000', r'45.881000 51.981000', payload)
+    payload = re.sub(r'625.968000631.548000', r'625.968000 631.548000', payload)
+    payload = re.sub(r'705.248000712.048000', r'705.248000 712.048000', payload)
+    payload = re.sub(r'(\d+\.\d{3}000)(\d+\.\d{3}000)', r'\1 \2', payload)
+    # examples and generalization
+    payload = re.sub(r'5125.7401614695380.03667289001350582',
+                     r'5125.740161469538 0.03667289001350582', payload)
+    payload = re.sub(r'4902.2362680530290.03510779602947878',
+                     r'4902.236268053029 0.03510779602947878', payload)
+    payload = re.sub(r'(\d{4,}\.\d+)(0\.0\d+)', r'\1 \2', payload)
 
-
+    ##########################################
     ##########################################
 
     print(payload)
