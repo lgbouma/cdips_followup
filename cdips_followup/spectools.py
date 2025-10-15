@@ -66,6 +66,7 @@ import scipy.ndimage as nd
 from scipy.ndimage import median_filter
 
 from copy import deepcopy
+from glob import glob
 
 from specutils import Spectrum1D, SpectralRegion
 from specutils.fitting import fit_generic_continuum, fit_lines
@@ -458,6 +459,13 @@ def _get_full_hires_spectrum(spectrum_path, verbose=0):
     hdul.close()
 
     return flx_arr, norm_flx_arr, wav_arr, mjd, ra, dec
+
+
+def read_mike(spectrum_path):
+
+    from cdips_followup.mike import read_mike as rm
+
+    return rm(spectrum_path)
 
 
 def read_pfs(spectrum_path, wvlen_soln, verbose=False, is_template=False):
@@ -999,6 +1007,12 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
 def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
                 is_template=False, xshift=0, flat_path=None):
 
+    outnames = f'{idstring}_order*.png'
+    outpaths = glob(join(outdir, outnames))
+    if len(outpaths) > 0:
+        print(f"Found {outpaths} return.")
+        return 1
+
     if not isinstance(outdir, str):
         raise ValueError
     if not os.path.exists(outdir):
@@ -1042,6 +1056,9 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
     elif 'WINERED' in spectrum_path:
         flx, wav = read_winered(spectrum_path)
         raise NotImplementedError
+
+    elif 'MIKE' in spectrum_path:
+        flx_2d, wav_2d = read_mike(spectrum_path)
 
     else:
         raise NotImplementedError
@@ -3096,7 +3113,7 @@ def get_naive_rv(spectrum_path, synth_path, outdir, chip, make_plot=1,
     /Users/luke/Dropbox/proj/hd_34382/data/synthetic_spectra/PHOENIX_MedRes
     # downloaded the δλ = 1A model, fe/h=0, alpha/M=0
 
-	They are from https://phoenix.astro.physik.uni-goettingen.de/?page_id=16
+    They are from https://phoenix.astro.physik.uni-goettingen.de/?page_id=16
 
     args:
         specific_orders (list): list of integer orders, if you only
