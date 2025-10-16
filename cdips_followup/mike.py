@@ -155,7 +155,7 @@ def _payload_fields(payload: str) -> List[str]:
     # examples and generalization with simple capture
     payload = re.sub(r'(?m)^701 0', '70 1 0', payload)
     payload = re.sub(r'(?m)^811 0', '81 1 0', payload)
-    payload = re.sub(r'(?m)^(\d{2})1 0', r'\1 1 0', payload)
+    payload = re.sub(r'(?m)^(\d{2,3})1 0', r'\1 1 0', payload)
     # example and generalization
     payload = re.sub(r'(?m)^67 1 0(\d)', r'67 1 0 \1', payload)
     payload = re.sub(r'(?m)^(?P<first>\d{2,3}) 1 0(?P<digit>\d)',
@@ -183,6 +183,10 @@ def _payload_fields(payload: str) -> List[str]:
     payload = re.sub(r'4902.2362680530290.03510779602947878',
                      r'4902.236268053029 0.03510779602947878', payload)
     payload = re.sub(r'(\d{4,}\.\d+)(0\.0\d+)', r'\1 \2', payload)
+    # edge case
+    # malformed field 6 in blue chip
+    payload = re.sub(r'-0.144000', r'0.144000', payload)
+    payload = re.sub(r'-0.504000', r'0.504000', payload)
 
     ##########################################
     ##########################################

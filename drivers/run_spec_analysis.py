@@ -45,13 +45,14 @@ def main():
     args.is_veloce = 0
     args.is_fies = 0
     args.is_tres = 0
-    args.is_hires = 1
+    args.is_hires = 0
     args.is_neid = 0
     args.is_harps = 0
     args.is_coralie = 0
     args.is_rvs = 0
     args.is_winered = 0
     args.is_dbsp = 0
+    args.is_mike = 1
 
     if args.is_pfs:
 
@@ -109,6 +110,9 @@ def main():
 
     elif args.is_dbsp:
         main_dbsp(args)
+
+    elif args.is_mike:
+        main_mike(args)
 
 
 def main_pfs(args):
@@ -772,6 +776,32 @@ def main_dbsp(args):
                                 xshift=args.xshift, outpath=outpath,
                                 target_wav=6565, isemissionline=True,
                                 dintwav=3.5, dblock=5, linename='halpha')
+
+
+
+def main_mike(args):
+
+    object_id = 'tic3006' # 'DG_CVn'
+    basedir = f'/Users/luke/Dropbox/proj/cpv/data/spectra/MIKE/RAW/20250102/Final-Science-Products'
+    vizdir = join(basedir, 'Viz')
+
+    ylim = None # [0,20000] # None
+
+    for chip in ['red', 'blue']:
+
+        spectrum_paths = np.sort(
+            glob(join(basedir, f'{object_id}{chip}_multi_*fits'))
+        )
+
+        if args.do_orders:
+            # just plot the orders
+            outdir = vizdir
+            if not os.path.exists(outdir): os.mkdir(outdir)
+            for spectrum_path in spectrum_paths:
+
+                specname = os.path.basename(spectrum_path)
+                _idstr = specname.replace(".fits","").replace('_multi', '')
+                plot_orders(spectrum_path, outdir=outdir, idstring=_idstr)
 
 
 
