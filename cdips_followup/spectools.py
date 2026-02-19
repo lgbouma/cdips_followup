@@ -1026,11 +1026,12 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
 
 
 def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
-                is_template=False, xshift=0, flat_path=None, ylabel=None):
+                is_template=False, xshift=0, flat_path=None, ylabel=None,
+                overwrite=False):
 
     outnames = f'{idstring}_order*.png'
     outpaths = glob(join(outdir, outnames))
-    if len(outpaths) > 0:
+    if len(outpaths) > 0 and not overwrite:
         print(f"Found {outpaths} return.")
         return 1
 
