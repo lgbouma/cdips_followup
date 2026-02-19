@@ -13,6 +13,7 @@ READ:
     read_winered: Read WINERED 1d FITS file.
     read_dbsp: Read DBSP 1d FITS file, extracted by PypeIt.
     read_fire: Read FIRE FITS file, extracted by PypeIt
+    read_dumpsterfire: Read FIRE FITS file, extracted by dumpsterfire
 
 SPECMATCH WRAPPERS:
     specmatch_analyze: shift+cross-correlate to get vsini, Rstar, FeH w/ SME.
@@ -232,7 +233,9 @@ LINE_D = [
 
 LINELISTDIR = join(os.path.dirname(__path__[0]), 'data/linelists')
 # from https://physics.nist.gov/PhysRefData/ASD/lines_form.html, 9000A to 12000A
-nir_csvpath = join(LINELISTDIR, "nist_linelist_9000A_to_12000A.csv")
+#nir_csvpath = join(LINELISTDIR, "nist_linelist_9000A_to_12000A.csv")
+ir_csvpath = join(LINELISTDIR, "nist_linelist_9000A_to_25000A_intgt1000.csv")
+oh_csvpath = join(LINELISTDIR, "oh_lines.csv")
 
 def retrieve_integer_digits(string):
     digits = re.findall(r'\d+', string)
@@ -247,18 +250,18 @@ def retrieve_floats(string):
     else:
         return None
 
-df = pd.read_csv(nir_csvpath)
+df = pd.read_csv(ir_csvpath)
 df['intensint'] = df['intens'].apply(retrieve_integer_digits)
 df['obs_wl_air'] = df['obs_wl_air(A)'].apply(retrieve_floats)
 
 # add hydrogen lines btwn 9000-12000A
-sdf = df[df.element == 'H'].drop_duplicates('obs_wl_air')
-for element, wl in zip(sdf.element, sdf.obs_wl_air):
-    LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
+#sdf = df[df.element == 'H'].drop_duplicates('obs_wl_air')
+#for element, wl in zip(sdf.element, sdf.obs_wl_air):
+#    LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
-# add sodium, calcium, potassium, magnesium, helium, silicon lines btwn 9000-12000A
-#for el in ['Na', 'Ca', 'K', 'Mg', 'He', 'Si']:
-for el in ['Ca', 'He', 'Si']:
+# add sodium, calcium, potassium, magnesium, helium, silicon lines
+for el in ['Na', 'Ca', 'K', 'Mg', 'He', 'Si']:
+#for el in ['Ca', 'He', 'Si']:
     sdf = df[df.element == el].drop_duplicates('obs_wl_air')
     for element, wl in zip(sdf.element, sdf.obs_wl_air):
         LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
@@ -270,11 +273,15 @@ sdf = sdf[sdf.intensint > fe_95]
 for element, wl in zip(sdf.element, sdf.obs_wl_air):
     LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
-# take the top 10% strongest Ti lines
+# take the top 5% strongest Ti lines
 sdf = df[df.element == 'Ti'].drop_duplicates('obs_wl_air')
-ti_90 = np.nanpercentile(sdf.intensint, 90)
-sdf = sdf[sdf.intensint > ti_90]
+ti_95 = np.nanpercentile(sdf.intensint, 95)
+sdf = sdf[sdf.intensint > ti_95]
 for element, wl in zip(sdf.element, sdf.obs_wl_air):
+    LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
+
+df = pd.read_csv(oh_csvpath)
+for wl, element in zip(df.wavelength, df.linetype):
     LINE_D.append([element, air_to_vac(wl*u.angstrom).value])
 
 # directories
@@ -565,6 +572,20 @@ def read_fire(spectrum_path):
 
     return names, wavs, flxs
 
+
+def read_dumpsterfire(spectrum_path):
+    # get 2d flux and wavelength
+
+    hdul = fits.open(spectrum_path)
+
+    # NOTE: this is e.g. 'pixel_extract_fire_0083_wave_test.fits'
+    flx = hdul['FLUX_BCORR'].data # blaze corrected
+    wav = hdul['WAVELENGTH'].data
+
+    mask = hdul['MASK'].data.astype(bool)
+    flx[mask] = np.nan
+
+    return flx, wav
 
 
 def read_neid(filename, read_ccf=True,
@@ -1005,7 +1026,7 @@ def viz_1d_spectrum(flx, wav, outpath, xlim=None, vlines=None, names=None,
 
 
 def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
-                is_template=False, xshift=0, flat_path=None):
+                is_template=False, xshift=0, flat_path=None, ylabel=None):
 
     outnames = f'{idstring}_order*.png'
     outpaths = glob(join(outdir, outnames))
@@ -1060,6 +1081,9 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
     elif 'MIKE' in spectrum_path:
         flx_2d, wav_2d = read_mike(spectrum_path)
 
+    elif 'fire' in spectrum_path.lower():
+        flx_2d, wav_2d = read_dumpsterfire(spectrum_path)
+
     else:
         raise NotImplementedError
 
@@ -1071,6 +1095,9 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
         elif "RVS" in spectrum_path:
             start = 0
             end = None
+        elif 'fire' in spectrum_path.lower():
+            start = 100
+            end = -100
         else:
             start = 10
             end = -10
@@ -1088,14 +1115,18 @@ def plot_orders(spectrum_path, wvsol_path=None, outdir=None, idstring=None,
         if isinstance(xshift, (float, int)):
             wav = deepcopy(wav) - xshift
 
-        outname = f'{idstring}_order{str(order).zfill(2)}.png'
+        orderstr = str(order).zfill(2)
+        if 'fire' in spectrum_path.lower():
+            m = 32 - int(order)
+            orderstr = '_m' + str(m).zfill(2)
+        outname = f'{idstring}_order{orderstr}.png'
         outpath = join(outdir, outname)
-        viz_1d_spectrum(flx, wav, outpath)
+        viz_1d_spectrum(flx, wav, outpath, ylabel=ylabel)
 
         if isinstance(flat_path, str):
-            outname = f'{idstring}_order{str(order).zfill(2)}_flat.png'
+            outname = f'{idstring}_order{orderstr}_flat.png'
             outpath = join(outdir, outname)
-            viz_1d_spectrum(flat, wav, outpath)
+            viz_1d_spectrum(flat, wav, outpath, ylabel=ylabel)
 
 
 def plot_stack_comparison(spectrum_paths, wvsol_path=None, outdir=None,
